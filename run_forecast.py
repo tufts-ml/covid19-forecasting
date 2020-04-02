@@ -24,7 +24,9 @@ if __name__ == '__main__':
         print(key, config_dict[key])
 
     ## Summarize the probabilistic model
-    print("---------------------")
+    print("----------------------------------------")
+    print("Loaded SemiMarkovModel from config_file:")
+    print("----------------------------------------")
     states = config_dict['states']
     state_name_to_id = dict()
     next_state_map = dict()
@@ -40,7 +42,6 @@ if __name__ == '__main__':
         print("State #%d %s" % (ss, state))
         print("    prob. %.3f recover" % (p_recover))
         print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
-    print("---------------------")
     state_name_to_id['TERMINAL'] = len(states)
 
     prng = np.random.RandomState(args.random_seed)
@@ -49,6 +50,10 @@ if __name__ == '__main__':
     occupancy_count_TK = np.zeros((10 * T, K), dtype=np.float64)
     discharge_count_TK = np.zeros((10 * T, K), dtype=np.float64)
 
+
+    print("----------------------------------------")
+    print("Simulating for %d timesteps with seed %d" % (T, args.random_seed))
+    print("----------------------------------------")
     ## Simulation what happens to initial population
     for initial_state in states:
         for n in range(config_dict['num_%s' % initial_state]):
@@ -77,7 +82,11 @@ if __name__ == '__main__':
     occupancy_count_TK = occupancy_count_TK[:(T+1)] # Save only the first T + 1 tsteps
     discharge_count_TK = discharge_count_TK[:(T+1)] # Save only the first T + 1 tsteps
 
+
     ## Write results to spreadsheet
+    print("----------------------------------------")
+    print("Writing results to %s" % (args.output_file))
+    print("----------------------------------------")
     col_names = ['n_%s' % s for s in states + ['TERMINAL']]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
     results_df["timestep"] = np.arange(0, T+1)
