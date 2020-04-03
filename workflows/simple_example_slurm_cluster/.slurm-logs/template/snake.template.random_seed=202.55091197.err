@@ -1,0 +1,22 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Conda environments: ignored
+Job counts:
+	count	jobs
+	1	template
+	1
+
+[Fri Apr  3 15:29:07 2020]
+rule template:
+    input: params_simple_example.json, /cluster/tufts/hugheslab/code/covid19-forecasting/run_forecast.py, /cluster/tufts/hugheslab/code/covid19-forecasting/semimarkov_forecaster/__init__.py, /cluster/tufts/hugheslab/code/covid19-forecasting/semimarkov_forecaster/PatientTrajectory.py
+    output: results-random_seed=202.csv
+    jobid: 0
+    wildcards: random_seed=202
+
+
+        python /cluster/tufts/hugheslab/code/covid19-forecasting/run_forecast.py             --config_file "params_simple_example.json"             --random_seed "202"             --output_file "results-random_seed=202.csv"         
+[Fri Apr  3 15:29:16 2020]
+Finished job 0.
+1 of 1 steps (100%) done

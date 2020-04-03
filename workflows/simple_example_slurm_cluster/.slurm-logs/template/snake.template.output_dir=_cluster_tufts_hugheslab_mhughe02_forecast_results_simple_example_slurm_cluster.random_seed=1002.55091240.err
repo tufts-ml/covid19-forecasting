@@ -1,0 +1,21 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Conda environments: ignored
+Job counts:
+	count	jobs
+	1	template
+	1
+
+[Fri Apr  3 17:57:28 2020]
+rule template:
+    input: params_simple_example.json, /cluster/tufts/hugheslab/code/covid19-forecasting/run_forecast.py, /cluster/tufts/hugheslab/code/covid19-forecasting/semimarkov_forecaster/__init__.py, /cluster/tufts/hugheslab/code/covid19-forecasting/semimarkov_forecaster/PatientTrajectory.py
+    output: /cluster/tufts/hugheslab/mhughe02/forecast_results/simple_example_slurm_cluster/results-random_seed=1002.csv
+    jobid: 0
+    wildcards: output_dir=/cluster/tufts/hugheslab/mhughe02/forecast_results/simple_example_slurm_cluster, random_seed=1002
+
+        dirname /cluster/tufts/hugheslab/mhughe02/forecast_results/simple_example_slurm_cluster/results-random_seed=1002.csv | xargs mkdir -p &&         python /cluster/tufts/hugheslab/code/covid19-forecasting/run_forecast.py             --config_file "params_simple_example.json"             --random_seed "1002"             --output_file "/cluster/tufts/hugheslab/mhughe02/forecast_results/simple_example_slurm_cluster/results-random_seed=1002.csv"         
+[Fri Apr  3 17:57:38 2020]
+Finished job 0.
+1 of 1 steps (100%) done

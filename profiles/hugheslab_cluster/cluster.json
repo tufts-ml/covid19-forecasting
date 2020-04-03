@@ -1,0 +1,10 @@
+{
+    "__default__" :
+    {
+        "time" : "00:02:00",
+        "cores" : "1",
+        "partition" : "batch",
+        "priority" : "normal",
+        "memory" : "500M"
+    }
+}

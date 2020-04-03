@@ -1,0 +1,6 @@
+{
+    "output_dir": "/cluster/tufts/hugheslab/$USER/forecast_results/simple_example_slurm_cluster/",
+    "min_random_seed": 1001,
+    "max_random_seed": 1010,
+    "random_seed": 101
+}
