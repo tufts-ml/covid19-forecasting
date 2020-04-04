@@ -1,3 +1,4 @@
+import os
 import json
 import argparse
 import numpy as np
@@ -57,10 +58,10 @@ if __name__ == '__main__':
     sample_func_per_state = dict()
     for state in states:
         try:
-            pmfstr_or_csvfile = config_dict['pmf_num_per_timestep_%s' % states[0]]
+            pmfstr_or_csvfile = config_dict['pmf_num_per_timestep_%s' % state]
         except KeyError:
             continue
-
+        
         if pmfstr_or_csvfile.startswith('scipy.stats'):
             # Avoid evals on too long of strings for safety reasons
             assert len(pmfstr_or_csvfile) < 40
@@ -75,7 +76,7 @@ if __name__ == '__main__':
             csv_df = pd.read_csv(pmfstr_or_csvfile) ## TODO allow replacing wildcards
             # TODO Verify here that all necessary rows are accounted for
             def sample_incoming_count(t, prng):
-                row_ids = np.flatnonzero(pmf_or_df['timestep'] == t)
+                row_ids = np.flatnonzero(csv_df['timestep'] == t)
                 if len(row_ids) == 0:
                     raise ValueError("Error in file %s: No matching timestep for t=%d" % (
                         pmfstr_or_csvfile, t))

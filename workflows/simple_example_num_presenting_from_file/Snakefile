@@ -1,0 +1,33 @@
+'''
+Usage
+------
+$ snakemake --cores 1 --use-conda all
+
+Prerequisites
+-------------
+1) Need local install of anaconda
+2) Need local install of Snakemake
+See README.md for install instructions
+'''
+
+import os
+import numpy as np
+
+rule all:
+    input:
+        params_json="params.json"
+
+    output:
+        output_csv="results.csv"
+
+    conda:
+        "semimarkov_forecaster.yml"
+
+    shell:
+        """
+        python ../../run_forecast.py \
+            --config_file "{input.params_json}" \
+            --random_seed 8675309 \
+            --output_file "{output.output_csv}" \
+        """
+
