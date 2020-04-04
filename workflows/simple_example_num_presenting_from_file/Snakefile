@@ -1,7 +1,11 @@
 '''
 Usage
 ------
-$ snakemake --cores 1 --use-conda all
+Simple example of reading in from presenting-random_seed=101.csv
+$ snakemake --cores 1 --use-conda simple
+
+Example where we can read in a custom file for each random_seed
+snakemake --cores 1 all_wildcard_results
 
 Prerequisites
 -------------
@@ -13,9 +17,10 @@ See README.md for install instructions
 import os
 import numpy as np
 
-rule all:
+rule simple:
     input:
-        params_json="params.json"
+        params_json="params.json",
+        csv_file="presenting-random_seed=101.csv"
 
     output:
         output_csv="results.csv"
@@ -31,3 +36,34 @@ rule all:
             --output_file "{output.output_csv}" \
         """
 
+rule all_wildcard_results:
+    input:
+        ["results-random_seed={random_seed}.csv".format(random_seed=seed) for seed in [101,201,301]]
+
+rule wildcard_template:
+    input:
+        params_json="params_with_wildcard.json",
+        csv_file="presenting-random_seed={random_seed}.csv"
+
+    output:
+        output_csv="results-random_seed={random_seed}.csv"
+
+    conda:
+        "semimarkov_forecaster.yml"
+
+    shell:
+        """
+        python ../../run_forecast.py \
+            --config_file "{input.params_json}" \
+            --random_seed "{wildcards.random_seed}" \
+            --output_file "{output.output_csv}" \
+        """
+
+rule presenting_csv_file:
+    output:
+        "presenting-random_seed={random_seed}.csv"
+
+    shell:
+        """
+        python make_presenting_csv_file.py \
+        """

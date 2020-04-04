@@ -5,7 +5,7 @@
 "num_InICU": 10,
 "num_OnVentInICU": 10,
 "num_timesteps": 120,
-"pmf_num_per_timestep_Presenting": "presenting-random_seed=101.csv",
+"pmf_num_per_timestep_Presenting": "presenting-random_seed={random_seed}.csv",
 "proba_Recovering_given_Presenting": 0.1,
 "proba_Recovering_given_InGeneralWard": 0.1,
 "proba_Recovering_given_InICU": 0.1,

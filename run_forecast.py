@@ -62,6 +62,13 @@ if __name__ == '__main__':
         except KeyError:
             continue
         
+        # First, try to replace wildcards
+        for key, val in args.__dict__.items():
+            wildcard_key = "{%s}" % key
+            if pmfstr_or_csvfile.count(wildcard_key):
+                pmfstr_or_csvfile = pmfstr_or_csvfile.replace(wildcard_key, str(val))
+                print("WILDCARD: %s" % pmfstr_or_csvfile)
+
         if pmfstr_or_csvfile.startswith('scipy.stats'):
             # Avoid evals on too long of strings for safety reasons
             assert len(pmfstr_or_csvfile) < 40
