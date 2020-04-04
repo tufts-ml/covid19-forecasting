@@ -71,7 +71,7 @@ if __name__ == '__main__':
             if pmfstr_or_csvfile.count(wildcard_key):
                 pmfstr_or_csvfile = pmfstr_or_csvfile.replace(wildcard_key, str(val))
                 print("WILDCARD: %s" % pmfstr_or_csvfile)
-
+        
         if pmfstr_or_csvfile.startswith('scipy.stats'):
             # Avoid evals on too long of strings for safety reasons
             assert len(pmfstr_or_csvfile) < 40
@@ -93,7 +93,8 @@ if __name__ == '__main__':
                 if len(row_ids) > 1:
                     raise ValueError("Error in file %s: Must have exactly one matching timestep for t=%d" % (
                         pmfstr_or_csvfile, t))
-                return csv_df['num_%s' % state].values[row_ids[0]]
+                
+                return np.array(csv_df['num_%s' % state].values[row_ids[0]], dtype=int) # guard against float input. 
             sample_func_per_state[state] = sample_incoming_count
         # Parsing failed!
         else:
