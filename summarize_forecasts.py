@@ -49,4 +49,6 @@ if __name__ == '__main__':
     for perc in percentiles:
         summary_TK = np.percentile(counts_TKS, perc, axis=2)
         df = pd.DataFrame(summary_TK, columns=expected_columns)
-        df.to_csv(os.path.join(args.output_dir, "summary-percentile=%06.2f.csv" % perc), index=False)
+        df.to_csv(
+            os.path.join(args.output_dir, "summary-percentile=%06.2f.csv" % perc),
+            index=False, float_format='%.2f')
