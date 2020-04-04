@@ -1,0 +1,31 @@
+'''
+Usage
+------
+snakemake --cores 1 all
+Prerequisites
+-------------
+1) Need local install of anaconda
+2) Need local install of Snakemake
+See README.md for install instructions
+'''
+import os
+import numpy as np
+CHIME_RESULT_DIR = "/media/panagiotis/Samsung_T5/work/Research/covid19-forecasting/example_input"
+rule all:
+    input:
+        ["results-random_seed={random_seed}.csv".format(random_seed=seed) for seed in [1,2,3]]
+rule wildcard_template:
+    input:
+        params_json="params_with_wildcard.json",
+        csv_files=os.path.join(CHIME_RESULT_DIR, "presenting-seed={random_seed}.csv")
+    output:
+        output_csv="results-random_seed={random_seed}.csv"
+    conda:
+        "semimarkov_forecaster.yml"
+    shell:
+        """
+        python ../../run_forecast.py \
+            --config_file "{input.params_json}" \
+            --random_seed "{wildcards.random_seed}" \
+            --output_file "{output.output_csv}" \
+        """
