@@ -12,6 +12,7 @@ dependencies:
   - jupyter>=1.0
   - matplotlib>=2.1
   - seaborn>=0.9 
+  - tqdm>=4.41
   ## Data I/O
   - pandas>=0.22
   - dill>=0.2

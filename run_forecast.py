@@ -11,28 +11,8 @@ if __name__ == '__main__':
     parser.add_argument('--config_file', default=None)
     parser.add_argument('--output_file', default='results.csv')
     parser.add_argument('--random_seed', default=101, type=int)
-    parser.add_argument('--presenting_list', default = None)
-    
-    
-
+  
     args = parser.parse_args()
-
-    use_presenting_list = False
-    if not args.presenting_list is None:
-        
-        print("Reading Presenting List...")
-        presenting = pd.read_csv(args.presenting_list)
-        try:
-            presenting = presenting["hospitalized"].values
-            use_presenting_list = True
-        except KeyError:
-            print("No column named 'hospitalized'. Exiting....")
-            use_presenting_list = False
-            exit()
-
-        print("Done")
-    else:
-        print("No presenting List provided, using config settings...")
 
     config_file = args.config_file
     output_file = args.output_file
@@ -68,9 +48,45 @@ if __name__ == '__main__':
     prng = np.random.RandomState(args.random_seed)
     T = config_dict['num_timesteps']
     K = len(states) + 1 # Num states including terminal
+
+    ## Preallocate discharge and occupancy
     occupancy_count_TK = np.zeros((10 * T, K), dtype=np.float64)
     discharge_count_TK = np.zeros((10 * T, K), dtype=np.float64)
 
+    # Read
+    sample_func_per_state = dict()
+    for state in states:
+        try:
+            pmfstr_or_csvfile = config_dict['pmf_num_per_timestep_%s' % states[0]]
+        except KeyError:
+            continue
+
+        if pmfstr_or_csvfile.startswith('scipy.stats'):
+            # Avoid evals on too long of strings for safety reasons
+            assert len(pmfstr_or_csvfile) < 40
+            pmf = eval(pmfstr_or_csvfile)
+            def sample_incoming_count(t, prng):
+                return pmf.rvs(random_state=prng)
+            sample_func_per_state[state] = sample_incoming_count
+            # TODO other parsing for other ways of specifying a pmf over pos ints?
+
+        elif os.path.exists(pmfstr_or_csvfile):
+            # Read incoming counts from provided file
+            csv_df = pd.read_csv(pmfstr_or_csvfile) ## TODO allow replacing wildcards
+            # TODO Verify here that all necessary rows are accounted for
+            def sample_incoming_count(t, prng):
+                row_ids = np.flatnonzero(pmf_or_df['timestep'] == t)
+                if len(row_ids) == 0:
+                    raise ValueError("Error in file %s: No matching timestep for t=%d" % (
+                        pmfstr_or_csvfile, t))
+                if len(row_ids) > 1:
+                    raise ValueError("Error in file %s: Must have exactly one matching timestep for t=%d" % (
+                        pmfstr_or_csvfile, t))
+                return csv_df['num_%s' % state].values[row_ids[0]]
+            sample_func_per_state[state] = sample_incoming_count
+        # Parsing failed!
+        else:
+            raise ValueError("Bad PMF specification: %s" % pmfstr_or_csvfile)
 
     print("----------------------------------------")
     print("Simulating for %d timesteps with seed %d" % (T, args.random_seed))
@@ -85,24 +101,11 @@ if __name__ == '__main__':
     ## Simulation what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
-            try:
-                pmf = config_dict['pmf_num_per_timestep_%s' % states[0]]
-                if pmf.startswith('scipy.stats') and len(pmf) < 40:
-                    pmf = eval(pmf)
-            except KeyError:
+            if state not in sample_func_per_state:
                 continue
-            except ValueError:
-                raise ValueError("Bad PMF")
-            
-            N=0
-            if not use_presenting_list:
-                # Sample the number entering at current state at current timestep
-                N = pmf.rvs(random_state=prng)
-            else:
-                
-                N=int(presenting[t-1])
-            
-            for n in range(N):
+            sample_incoming_count = sample_func_per_state[state]
+            N_t = sample_incoming_count(t, prng)
+            for n in range(N_t):
                 p = PatientTrajectory(states[0], config_dict, prng, next_state_map, state_name_to_id)
                 occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, t)        
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, t)
