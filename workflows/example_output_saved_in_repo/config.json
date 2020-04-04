@@ -1,0 +1,7 @@
+{
+    "output_dir": "$REPO_ROOT_DIR/example_output/",
+    "min_random_seed": 1001,
+    "max_random_seed": 1100,
+    "random_seed": 1001,
+    "comma_sep_percentiles": "1,2.5,5,10,25,50,75,90,95,97.5,99",
+}
