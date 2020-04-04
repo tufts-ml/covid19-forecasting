@@ -48,13 +48,16 @@ if __name__ == '__main__':
 
     prng = np.random.RandomState(args.random_seed)
     T = config_dict['num_timesteps']
-    K = len(states) + 1 # Num states including terminal
+    K = len(states) # Num states (not including terminal)
 
-    ## Preallocate discharge and occupancy
-    occupancy_count_TK = np.zeros((10 * T, K), dtype=np.float64)
-    discharge_count_TK = np.zeros((10 * T, K), dtype=np.float64)
+    ## Preallocate admit, discharge, and occupancy
+    Tmax = 10 * T
+    occupancy_count_TK = np.zeros((Tmax, K), dtype=np.float64)
+    admit_count_TK = np.zeros((Tmax, K), dtype=np.float64)
+    discharge_count_TK = np.zeros((Tmax, K), dtype=np.float64)
+    terminal_count_T1 = np.zeros((Tmax, 1), dtype=np.float64)
 
-    # Read
+    ## Read functions to sample the incoming admissions to each state
     sample_func_per_state = dict()
     for state in states:
         try:
@@ -80,7 +83,7 @@ if __name__ == '__main__':
 
         elif os.path.exists(pmfstr_or_csvfile):
             # Read incoming counts from provided file
-            csv_df = pd.read_csv(pmfstr_or_csvfile) ## TODO allow replacing wildcards
+            csv_df = pd.read_csv(pmfstr_or_csvfile)
             # TODO Verify here that all necessary rows are accounted for
             def sample_incoming_count(t, prng):
                 row_ids = np.flatnonzero(csv_df['timestep'] == t)
@@ -104,7 +107,9 @@ if __name__ == '__main__':
         for n in range(config_dict['num_%s' % initial_state]):
             p = PatientTrajectory(initial_state, config_dict, prng, next_state_map, state_name_to_id)
             occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, 0)
+            admit_count_TK = p.update_admit_count_matrix(discharge_count_TK, 0)
             discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, 0)
+            terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, 0)
 
     ## Simulation what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
@@ -116,24 +121,34 @@ if __name__ == '__main__':
             for n in range(N_t):
                 p = PatientTrajectory(states[0], config_dict, prng, next_state_map, state_name_to_id)
                 occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, t)        
+                admit_count_TK = p.update_admit_count_matrix(discharge_count_TK, t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, t)
+                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, t)
 
-    occupancy_count_TK = occupancy_count_TK[:(T+1)] # Save only the first T + 1 tsteps
-    discharge_count_TK = discharge_count_TK[:(T+1)] # Save only the first T + 1 tsteps
-
+    # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
+    occupancy_count_TK = occupancy_count_TK[:(T+1)]
+    admit_count_TK = admit_count_TK[:(T+1)]
+    discharge_count_TK = discharge_count_TK[:(T+1)]
+    terminal_count_T1 = terminal_count_T1[:(T+1)]
 
     ## Write results to spreadsheet
     print("----------------------------------------")
     print("Writing results to %s" % (args.output_file))
     print("----------------------------------------")
-    col_names = ['n_%s' % s for s in states + ['TERMINAL']]
+    col_names = ['n_%s' % s for s in states]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
     results_df["timestep"] = np.arange(0, T+1)
+
+    results_df["n_TERMINAL"] = terminal_count_T1[:,0]
+
+    admit_col_names = ['n_admitted_%s' % s for s in states]
+    for k, col_name in enumerate(admit_col_names):
+        results_df[col_name] = admit_count_TK[:, k]
 
     discharge_col_names = ['n_discharged_%s' % s for s in states]
     for k, col_name in enumerate(discharge_col_names):
         results_df[col_name] = discharge_count_TK[:, k]
 
     results_df.to_csv(args.output_file,
-        columns=['timestep'] + col_names + discharge_col_names,
+        columns=['timestep'] + col_names + ['n_TERMINAL'] + admit_col_names + discharge_col_names,
         index=False, float_format="%.0f")
