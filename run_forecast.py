@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import scipy.stats
 import pandas as pd
-
+import tqdm
 from semimarkov_forecaster import PatientTrajectory
 
 if __name__ == '__main__':
@@ -11,7 +11,28 @@ if __name__ == '__main__':
     parser.add_argument('--config_file', default=None)
     parser.add_argument('--output_file', default='results.csv')
     parser.add_argument('--random_seed', default=101, type=int)
+    parser.add_argument('--presenting_list', default = None)
+    
+    
+
     args = parser.parse_args()
+
+    use_presenting_list = False
+    if not args.presenting_list is None:
+        
+        print("Reading Presenting List...")
+        presenting = pd.read_csv(args.presenting_list)
+        try:
+            presenting = presenting["hospitalized"].values
+            use_presenting_list = True
+        except KeyError:
+            print("No column named 'hospitalized'. Exiting....")
+            use_presenting_list = False
+            exit()
+
+        print("Done")
+    else:
+        print("No presenting List provided, using config settings...")
 
     config_file = args.config_file
     output_file = args.output_file
@@ -62,7 +83,7 @@ if __name__ == '__main__':
             discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, 0)
 
     ## Simulation what happens as new patients added at each step
-    for t in range(1, T+1):
+    for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
             try:
                 pmf = config_dict['pmf_num_per_timestep_%s' % states[0]]
@@ -72,8 +93,15 @@ if __name__ == '__main__':
                 continue
             except ValueError:
                 raise ValueError("Bad PMF")
-            # Sample the number entering at current state at current timestep
-            N = pmf.rvs(random_state=prng)
+            
+            N=0
+            if not use_presenting_list:
+                # Sample the number entering at current state at current timestep
+                N = pmf.rvs(random_state=prng)
+            else:
+                
+                N=int(presenting[t-1])
+            
             for n in range(N):
                 p = PatientTrajectory(states[0], config_dict, prng, next_state_map, state_name_to_id)
                 occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, t)        
