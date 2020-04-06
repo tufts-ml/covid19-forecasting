@@ -1,3 +1,4 @@
+import argparse
 import json
 import pandas as pd
 import re
@@ -55,10 +56,31 @@ def make_figure(df):
 
     return figures
 
+def figures_to_html(figs, filename="dashboard.html"):
+    dashboard = open(filename, 'w')
+    dashboard.write("<html><head></head><body><h2>Tufts Medical Center COVID-19 Hospital Impact Dashboard</h2>" + "\n")
+    for fig in figs:
+        inner_html = fig.to_html().split('<body>')[1].split('</body>')[0]
+        dashboard.write(inner_html)
+    dashboard.write("</body></html>" + "\n")
+
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dash', default=True)
+
+    args = parser.parse_args()
+    dash = args.dash
+    print(dash)
+
     df = load_output_data()
-    return make_figure(df)
+    figures = make_figure(df)
+
+    if dash==True:
+        print("Called here.")
+        return figures
+    else:
+        figures_to_html(figures)
 
 
 
