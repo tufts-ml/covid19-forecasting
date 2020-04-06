@@ -71,13 +71,11 @@ def main():
 
     args = parser.parse_args()
     dash = args.dash
-    print(dash)
 
     df = load_output_data()
     figures = make_figure(df)
 
     if dash==True:
-        print("Called here.")
         return figures
     else:
         figures_to_html(figures)
