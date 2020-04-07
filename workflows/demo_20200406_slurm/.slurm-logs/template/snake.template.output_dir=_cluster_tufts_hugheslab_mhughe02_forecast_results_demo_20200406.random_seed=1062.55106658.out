@@ -1,0 +1,40 @@
+states ['Presenting', 'InGeneralWard', 'InICU', 'OnVentInICU']
+num_Presenting 28
+num_InGeneralWard 28
+num_InICU 11
+num_OnVentInICU 5
+num_timesteps 120
+pmf_num_per_timestep_Presenting {'24': 0.1, '25': 0.1, '26': 0.1, '27': 0.1, '28': 0.1, '29': 0.1, '30': 0.1, '31': 0.1, '32': 0.1, '33': 0.1}
+proba_Recovering_given_Presenting 0.214
+proba_Recovering_given_InGeneralWard 0.76
+proba_Recovering_given_InICU 0.25
+proba_Recovering_given_OnVentInICU 0.25
+pmf_timesteps_Declining_Presenting {'1': 1.0}
+pmf_timesteps_Recovering_Presenting {'1': 1.0}
+pmf_timesteps_Declining_InGeneralWard {'3': 0.25, '5': 0.5, '7': 0.25}
+pmf_timesteps_Recovering_InGeneralWard {'4': 0.25, '6': 0.5, '7': 0.25}
+pmf_timesteps_Declining_InICU {'2': 0.25, '3': 0.5, '4': 0.25}
+pmf_timesteps_Recovering_InICU {'4': 0.25, '6': 0.5, '8': 0.25}
+pmf_timesteps_Declining_OnVentInICU {'3': 0.25, '4': 0.5, '5': 0.25}
+pmf_timesteps_Recovering_OnVentInICU {'3': 0.25, '4': 0.5, '5': 0.25}
+----------------------------------------
+Loaded SemiMarkovModel from config_file:
+----------------------------------------
+State #0 Presenting
+    prob. 0.214 recover
+    prob. 0.786 advance to state InGeneralWard
+State #1 InGeneralWard
+    prob. 0.760 recover
+    prob. 0.240 advance to state InICU
+State #2 InICU
+    prob. 0.250 recover
+    prob. 0.750 advance to state OnVentInICU
+State #3 OnVentInICU
+    prob. 0.250 recover
+    prob. 0.750 advance to state TERMINAL
+----------------------------------------
+Simulating for 120 timesteps with seed 1062
+----------------------------------------
+----------------------------------------
+Writing results to /cluster/tufts/hugheslab/mhughe02/forecast_results/demo_20200406/results-random_seed=1062.csv
+----------------------------------------

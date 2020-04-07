@@ -66,13 +66,21 @@ if __name__ == '__main__':
             continue
         
         # First, try to replace wildcards
-        for key, val in args.__dict__.items():
-            wildcard_key = "{%s}" % key
-            if pmfstr_or_csvfile.count(wildcard_key):
-                pmfstr_or_csvfile = pmfstr_or_csvfile.replace(wildcard_key, str(val))
-                print("WILDCARD: %s" % pmfstr_or_csvfile)
+        if isinstance(pmfstr_or_csvfile, str):
+            for key, val in args.__dict__.items():
+                wildcard_key = "{%s}" % key
+                if pmfstr_or_csvfile.count(wildcard_key):
+                    pmfstr_or_csvfile = pmfstr_or_csvfile.replace(wildcard_key, str(val))
+                    print("WILDCARD: %s" % pmfstr_or_csvfile)
         
-        if pmfstr_or_csvfile.startswith('scipy.stats'):
+        if isinstance(pmfstr_or_csvfile, dict):
+            pmfdict = pmfstr_or_csvfile
+            choices = np.fromiter(pmfdict.keys(), dtype=np.int32)
+            probas = np.fromiter(pmfdict.values(), dtype=np.float64)           
+            def sample_incoming_count(t, prng):
+                return prng.choice(choices, p=probas)
+            sample_func_per_state[state] = sample_incoming_count
+        elif pmfstr_or_csvfile.startswith('scipy.stats'):
             # Avoid evals on too long of strings for safety reasons
             assert len(pmfstr_or_csvfile) < 40
             pmf = eval(pmfstr_or_csvfile)
