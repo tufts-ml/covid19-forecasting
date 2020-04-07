@@ -1,0 +1,6 @@
+{
+    "output_dir": "/Users/dianaeastman/covid19-forecasting/example_output/",
+    "summary_file": "summary-percentile=050.00.csv",
+    "summary_upper_file": "summary-percentile=097.50.csv",
+    "summary_lower_file": "summary-percentile=002.50.csv"
+}
