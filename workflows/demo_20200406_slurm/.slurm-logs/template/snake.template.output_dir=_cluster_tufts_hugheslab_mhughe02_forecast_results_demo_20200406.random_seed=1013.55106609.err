@@ -1,22 +1,0 @@
-Building DAG of jobs...
-Using shell: /bin/bash
-Provided cores: 2
-Rules claiming more threads will be scaled down.
-Conda environments: ignored
-Job counts:
-	count	jobs
-	1	template
-	1
-
-[Mon Apr  6 22:56:27 2020]
-rule template:
-    input: params.json, /cluster/tufts/hugheslab/code/covid19-forecasting/run_forecast.py, /cluster/tufts/hugheslab/code/covid19-forecasting/semimarkov_forecaster/__init__.py, /cluster/tufts/hugheslab/code/covid19-forecasting/semimarkov_forecaster/PatientTrajectory.py
-    output: /cluster/tufts/hugheslab/mhughe02/forecast_results/demo_20200406/results-random_seed=1013.csv
-    jobid: 0
-    wildcards: output_dir=/cluster/tufts/hugheslab/mhughe02/forecast_results/demo_20200406, random_seed=1013
-
-        dirname /cluster/tufts/hugheslab/mhughe02/forecast_results/demo_20200406/results-random_seed=1013.csv | xargs mkdir -p &&         python /cluster/tufts/hugheslab/code/covid19-forecasting/run_forecast.py             --config_file "params.json"             --random_seed "1013"             --output_file "/cluster/tufts/hugheslab/mhughe02/forecast_results/demo_20200406/results-random_seed=1013.csv"         
-  0%|          | 0/120 [00:00<?, ?it/s] 13%|█▎        | 16/120 [00:00<00:00, 154.78it/s] 27%|██▋       | 32/120 [00:00<00:00, 156.08it/s] 40%|████      | 48/120 [00:00<00:00, 155.78it/s] 53%|█████▎    | 64/120 [00:00<00:00, 156.51it/s] 68%|██████▊   | 81/120 [00:00<00:00, 158.53it/s] 82%|████████▏ | 98/120 [00:00<00:00, 161.26it/s] 95%|█████████▌| 114/120 [00:00<00:00, 159.53it/s]100%|██████████| 120/120 [00:00<00:00, 159.10it/s]
-[Mon Apr  6 22:56:28 2020]
-Finished job 0.
-1 of 1 steps (100%) done
