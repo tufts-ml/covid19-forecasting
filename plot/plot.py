@@ -5,9 +5,10 @@ import re
 import plotly.graph_objects as go
 
 
-def load_output_data():
-    with open('config.json') as f:
-        config = json.load(f)
+def load_output_data(config=None):
+    if config is None:
+        with open('config.json') as f:
+            config = json.load(f)
 
     path = config.pop('output_dir')
 
@@ -66,21 +67,30 @@ def figures_to_html(figs, filename="dashboard.html"):
 
 
 def main():
+    with open('config.json') as f:
+        config = json.load(f)
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--dash', default=True)
-
+    for key, val in config.items():
+        parser.add_argument('--%s' % key, default=val)
     args = parser.parse_args()
     dash = args.dash
 
-    df = load_output_data()
+    for key in config:
+        if key in args.__dict__:
+            config[key] = args.__dict__[key]
+
+    df = load_output_data(config)
     figures = make_figure(df)
 
-    if dash==True:
+    if dash == True:
         return figures
     else:
         figures_to_html(figures)
 
 
 
-main()
+if __name__ == "__main__":
+    main()
 
