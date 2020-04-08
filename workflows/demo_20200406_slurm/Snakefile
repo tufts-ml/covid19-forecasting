@@ -18,6 +18,7 @@ import os
 import numpy as np
 
 REPO_ROOT_DIR = os.environ.get("REPO_ROOT_DIR", "/cluster/tufts/hugheslab/code/covid19-forecasting/")
+os.environ['REPO_ROOT_DIR'] = os.path.abspath(REPO_ROOT_DIR)
 
 # Specified in configfile:
 # --output_dir
@@ -25,6 +26,51 @@ REPO_ROOT_DIR = os.environ.get("REPO_ROOT_DIR", "/cluster/tufts/hugheslab/code/c
 # --max_random_seed 1100
 # --random_seed 1001
 configfile: "config.json"
+
+rule plot:
+    input:
+        output_dir=os.path.expandvars(config['output_dir']),
+        input_files=[os.path.join(
+                os.path.expandvars(config['output_dir']),
+                "summary-percentile={percentile:06.2f}.csv".format(
+                    percentile=float(perc))
+                )
+            for perc in config['comma_sep_percentiles'].split(',')],
+        plot_script=os.path.join(REPO_ROOT_DIR, 'plot', 'plot.py'),
+        source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'plot', '*.py'))
+
+    shell:
+        """\
+        pushd ../../plot/ && python {input.plot_script} \
+            --dash False \
+            --output_dir "{input.output_dir}" \
+        """ 
+
+
+rule summarize:
+    input:
+        input_dir=os.path.expandvars(config['output_dir']),
+        summarize_script=os.path.join(REPO_ROOT_DIR, 'summarize_forecasts.py'),
+        source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py'))
+
+    output:
+        [os.path.join(
+                os.path.expandvars(config['output_dir']),
+                "summary-percentile={percentile:06.2f}.csv".format(percentile=float(perc))
+                )
+            for perc in config['comma_sep_percentiles'].split(',')]
+
+    conda:
+        os.path.join(REPO_ROOT_DIR, "semimarkov_forecaster.yml")
+
+    shell:
+        """\
+        python {input.summarize_script} \
+            --comma_sep_percentiles "%s" \
+            --input_dir "{input.input_dir}" \
+            --output_dir "{input.input_dir}" \
+        """ % (config['comma_sep_percentiles'])
+
 
 # Target rule to run multiple simulations saved to different CSV files
 #

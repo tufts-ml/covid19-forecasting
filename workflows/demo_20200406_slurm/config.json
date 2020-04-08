@@ -3,5 +3,6 @@
     "output_dir": "/cluster/tufts/hugheslab/$USER/forecast_results/demo_20200406/",
     "min_random_seed": 1001,
     "max_random_seed": 1100,
-    "random_seed": 1001
+    "random_seed": 1001,
+    "comma_sep_percentiles": "1,2.5,10,50,90,97.5,99",
 }
