@@ -92,7 +92,7 @@ def make_figure(df, labels, time_step_format):
                 ),
             )
 
-        figures[y] = fig
+        figures[labels[y]] = fig
 
     return figures
 
