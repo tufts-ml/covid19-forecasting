@@ -1,0 +1,15 @@
+{
+    "n_Presenting": "Patients Presenting",
+    "n_InGeneralWard": "Patients in General Ward",
+    "n_InICU": "Patients in ICU",
+    "n_OnVentInICU": "Patients on Ventilator in ICU",
+    "n_TERMINAL": "Terminal Patients",
+    "n_admitted_Presenting": "Patients Admitted",
+    "n_admitted_InGeneralWard": "Patients Admitted in General Ward",
+    "n_admitted_InICU": "Patients Admitted in ICU",
+    "n_admitted_OnVentInICU": "Patients Admitted on Ventilator in ICU",
+    "n_discharged_Presenting": "Patients Discharged",
+    "n_discharged_InGeneralWard": "Patients Discharged from General Ward",
+    "n_discharged_InICU": "Patients Discharged from ICU",
+    "n_discharged_OnVentInICU": "Patients on Ventilator Discharged from ICU"
+}
