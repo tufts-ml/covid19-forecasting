@@ -1,4 +1,5 @@
 {
+    "output_html_file": "dashboard.html",
     "output_path": "/Users/dianaeastman/covid19-forecasting/example_output/",
     "summary_file": "summary-percentile=050.00.csv",
     "summary_upper_file": "summary-percentile=097.50.csv",

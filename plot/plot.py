@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import re
 import plotly.graph_objects as go
-
+import os
 
 def load_output_data(config=None):
     if config is None:
@@ -18,10 +18,11 @@ def load_output_data(config=None):
     first_time_step_datetime = datetime.strptime(first_time_step, time_step_format)
 
     dataframes = []
-    for file_type, file_name in config.items():
+    summary_files = [(key, val) for (key, val) in config.items() if key.startswith('summary_')]
+    for file_type, file_name in summary_files:
         percentile = re.findall('\d*\.?\d+', file_name)[0]
 
-        df_temp = pd.read_csv(output_path + file_name)
+        df_temp = pd.read_csv(os.path.join(output_path, file_name))
         df_temp['percentile'] = percentile
         df_temp['timestep_formatted'] = df_temp.apply(lambda x: fill_timestep(x.timestep, first_time_step_datetime, time_delta), axis=1)
 
@@ -101,7 +102,7 @@ def figures_to_html(figs, filename="dashboard.html"):
     dashboard = open(filename, 'w')
     dashboard.write("<html>"
                     "<head><link rel='stylesheet' type='text/css' href='assets/style.css'></head>"
-                    "<body><div class='container'><h2>COVID-19 Forecast for Tufts Medical Center</h2>" + "\n")
+                    "<body><div class='container'><h2>COVID-19 Forecast for TMC (Experimental Draft; Do Not Take Seriously)</h2>" + "\n")
     for k, v in figs.items():
         inner_html = v.to_html().split("<body>")[1].split("</body>")[0]
         dashboard.write(inner_html)
@@ -130,7 +131,7 @@ def main():
     if dash == True:
         return figures
     else:
-        figures_to_html(figures)
+        figures_to_html(figures, filename=config['output_html_file'])
 
 
 if __name__ == "__main__":
