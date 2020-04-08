@@ -11,6 +11,8 @@ app = dash.Dash(__name__)
 
 children = []
 children.append(html.H2(children='COVID-19 Forecast for Tufts Medical Center'))
+children.append(html.H4(children='Add or remove charts:'))
+
 plot_dict = plot.main()
 plot_options = plot_dict.keys()
 
@@ -41,4 +43,4 @@ def display_graphs(selected_values):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
