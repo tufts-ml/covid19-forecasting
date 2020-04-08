@@ -116,7 +116,7 @@ if __name__ == '__main__':
         for n in range(config_dict['num_%s' % initial_state]):
             p = PatientTrajectory(initial_state, config_dict, prng, next_state_map, state_name_to_id)
             occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, 0)
-            admit_count_TK = p.update_admit_count_matrix(discharge_count_TK, 0)
+            admit_count_TK = p.update_admit_count_matrix(admit_count_TK, 0)
             discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, 0)
             terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, 0)
 
@@ -130,7 +130,7 @@ if __name__ == '__main__':
             for n in range(N_t):
                 p = PatientTrajectory(states[0], config_dict, prng, next_state_map, state_name_to_id)
                 occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, t)        
-                admit_count_TK = p.update_admit_count_matrix(discharge_count_TK, t)
+                admit_count_TK = p.update_admit_count_matrix(admit_count_TK, t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, t)
                 terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, t)
 
