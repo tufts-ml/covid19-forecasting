@@ -77,7 +77,7 @@ def make_figure(df, labels, time_step_format):
             fig.add_trace(go.Scatter(
                 x=df_filtered.timestep_formatted,
                 y=df_filtered[y],
-                name='%ile: ' + str(p))
+                name='%ile: ' + str(float(p)))
             )
 
             fig.update_layout(hovermode='x unified')
@@ -88,7 +88,7 @@ def make_figure(df, labels, time_step_format):
                 yaxis_title="Patient Count",
                 font=dict(
                     size=14,
-                    color="#888"
+                    color="#464646"
                 ),
             )
 
