@@ -52,3 +52,10 @@ if __name__ == '__main__':
         df.to_csv(
             os.path.join(args.output_dir, "summary-percentile=%06.2f.csv" % perc),
             index=False, float_format='%.2f')
+
+    for func_name, func in [('mean', np.mean), ('stddev', np.std)]:
+        summary_TK = func(counts_TKS, axis=2)
+        df = pd.DataFrame(summary_TK, columns=expected_columns)
+        df.to_csv(
+            os.path.join(args.output_dir, "summary-%s.csv" % func_name),
+            index=False, float_format='%.2f')
