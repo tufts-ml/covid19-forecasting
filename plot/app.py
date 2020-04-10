@@ -10,7 +10,7 @@ external_stylesheets = ['style.css']
 app = dash.Dash(__name__)
 
 children = []
-children.append(html.H2(children='COVID-19 Forecast for Tufts Medical Center'))
+children.append(html.H2(children='COVID-19 Forecast for TMC (Experimental Draft)'))
 children.append(html.H4(children='Add or remove charts:'))
 
 plot_dict = plot.main()
