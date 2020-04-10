@@ -33,6 +33,7 @@ rule plot:
     input:
         input_files=[os.path.join(
                 os.path.expandvars(config['output_dir']),
+                "scenario%s" % config['scenario'],
                 "summary-percentile={percentile:06.2f}.csv".format(
                     percentile=float(perc))
                 )
@@ -41,15 +42,16 @@ rule plot:
         source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'plot', '*.py'))
 
     output:
-        html_file=os.path.join(os.path.expandvars(config['output_dir']), "dashboard.html")
+        html_file=os.path.join(os.path.expandvars(config['output_dir']), "scenario%s" % config['scenario'], "dashboard.html")
 
     shell:
         """\
         pushd ../../plot/ && python {{input.plot_script}} \
             --dash False \
+            --first_time_step 04/10/2020 \
             --output_html_file "{{output.html_file}}" \
             --output_path "{output_dir}" \
-        """.format(output_dir=os.path.expandvars(config['output_dir']))
+        """.format(output_dir=os.path.join(os.path.expandvars(config['output_dir']), "scenario%s" % config['scenario']))
 
 rule summarize:
     input:
@@ -59,6 +61,7 @@ rule summarize:
     output:
         [os.path.join(
                 os.path.expandvars(config['output_dir']),
+                "scenario%s" % config['scenario'],
                 "summary-percentile={percentile:06.2f}.csv".format(percentile=float(perc))
                 )
             for perc in config['comma_sep_percentiles'].split(',')]
@@ -68,13 +71,15 @@ rule summarize:
 
     shell:
         """
-        python {{input.summarize_script}}
-            --comma_sep_percentiles "{perc}"
+        python {{input.summarize_script}} \
+            --comma_sep_percentiles "{perc}" \
             --input_dir "{input_dir}" \
             --output_dir "{input_dir}" \
         """.format(
             perc=config['comma_sep_percentiles'],
-            input_dir=os.path.expandvars(config['output_dir']))
+            input_dir=os.path.join(
+                os.path.expandvars(config['output_dir']),
+                "scenario%s" % config['scenario']))
 
 # Target rule to run multiple simulations saved to different CSV files
 #

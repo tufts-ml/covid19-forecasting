@@ -9,7 +9,7 @@ import warnings
 from semimarkov_forecaster import PatientTrajectory
 
 def run_simulation(random_seed, output_file, config_dict, states, state_name_to_id, next_state_map):
-
+    print("random_seed=%s <<<" % random_seed)
     prng = np.random.RandomState(random_seed)
     T = config_dict['num_timesteps']
     K = len(states) # Num states (not including terminal)
@@ -27,7 +27,10 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         try:
             pmfstr_or_csvfile = config_dict['pmf_num_per_timestep_%s' % state]
         except KeyError:
-            continue
+            try:
+                pmfstr_or_csvfile = config_dict['pmf_num_per_timestep_{state}']
+            except KeyError:
+                continue
         
         # First, try to replace wildcards
         if isinstance(pmfstr_or_csvfile, str):
@@ -56,6 +59,9 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         elif os.path.exists(pmfstr_or_csvfile):
             # Read incoming counts from provided file
             csv_df = pd.read_csv(pmfstr_or_csvfile)
+            state_key = 'num_%s' % state
+            if state_key not in csv_df.columns:
+                continue
             # TODO Verify here that all necessary rows are accounted for
             def sample_incoming_count(t, prng):
                 row_ids = np.flatnonzero(csv_df['timestep'] == t)
@@ -69,7 +75,6 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
                 if len(row_ids) > 1:
                     raise ValueError("Error in file %s: Must have exactly one matching timestep for t=%d" % (
                         pmfstr_or_csvfile, t))
-                
                 return np.array(csv_df['num_%s' % state].values[row_ids[0]], dtype=int) # guard against float input. 
             sample_func_per_state[state] = sample_incoming_count
         # Parsing failed!
@@ -87,7 +92,6 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
             admit_count_TK = p.update_admit_count_matrix(admit_count_TK, 0)
             discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, 0)
             terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, 0)
-
     ## Simulation what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
@@ -96,11 +100,12 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
             sample_incoming_count = sample_func_per_state[state]
             N_t = sample_incoming_count(t, prng)
             for n in range(N_t):
-                p = PatientTrajectory(states[0], config_dict, prng, next_state_map, state_name_to_id)
+                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id)
                 occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, t)        
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, t)
                 terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, t)
+
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
     occupancy_count_TK = occupancy_count_TK[:(T+1)]
@@ -175,8 +180,9 @@ if __name__ == '__main__':
         print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
     state_name_to_id['TERMINAL'] = len(states)
 
+    output_file_base = output_file
     for seed in range(args.random_seed, args.random_seed + args.num_seeds):
-        output_file = output_file.replace("{{random_seed}}", str(seed))
+        output_file = output_file_base.replace("random_seed=%s" % args.random_seed, "random_seed=%s" % str(seed))
         run_simulation(seed, output_file, config_dict, states, state_name_to_id, next_state_map)
 
 
