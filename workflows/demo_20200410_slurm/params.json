@@ -5,9 +5,7 @@
 "num_InICU": 20,
 "num_OnVentInICU": 10,
 "num_timesteps": 40,
-"pmf_num_per_timestep_Presenting": {
-    "pmf_num_per_timestep_Presenting": "incoming-counts-{scenario}.csv",
-    },
+"pmf_num_per_timestep_Presenting": "incoming-counts-{scenario}.csv",
 "proba_Recovering_given_Presenting": 0.25,
 "proba_Recovering_given_InGeneralWard": 0.697,
 "proba_Recovering_given_InICU": 0.30,

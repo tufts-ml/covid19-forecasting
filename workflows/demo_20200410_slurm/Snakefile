@@ -2,10 +2,10 @@
 Usage
 ------
 To run a specific random seed
-$ snakemake --config random_seed=101 --profile ../../profiles/hugheslab_cluster/ single_simulation_following_template
+$ snakemake --config scenario=1 random_seed=101 --profile ../../profiles/hugheslab_cluster/ single_simulation_following_template
 
 To run with multiple random seeds (prespecified in a config file)
-$ snakemake --profile ../../profiles/hugheslab_cluster/ many_simulations_following_template
+$ snakemake --config scenario=2 --profile ../../profiles/hugheslab_cluster/ many_simulations_following_template
 
 Prerequisites
 -------------
@@ -13,6 +13,7 @@ Prerequisites
 2) Need local install of Snakemake
 See README.md for install instructions
 '''
+import itertools
 import glob
 import os
 import numpy as np
@@ -21,6 +22,7 @@ REPO_ROOT_DIR = os.environ.get("REPO_ROOT_DIR", "/cluster/tufts/hugheslab/code/c
 os.environ['REPO_ROOT_DIR'] = os.path.abspath(REPO_ROOT_DIR)
 
 # Specified in configfile:
+# --scenario {1,2,3,4}
 # --output_dir
 # --min_random_seed 1001
 # --max_random_seed 1100
@@ -81,9 +83,12 @@ rule many_simulations_following_template:
     input:
         [os.path.join(
                 os.path.expandvars(config['output_dir']),          
+                "scenario{scenario}".format(scenario=scenario),
                 "results-random_seed={random_seed}.csv".format(random_seed=seed)
                 )
-            for seed in range(config['min_random_seed'], config['max_random_seed'])]
+            for scenario, seed in itertools.product(
+                config['comma_sep_scenarios'].split(','),
+                range(config['min_random_seed'], config['max_random_seed']))]
 
 
 # Target rule to run one specific simulation (with seed provided by manual command line input)
@@ -93,18 +98,20 @@ rule single_simulation_following_template:
     input:
         os.path.join(
             os.path.expandvars(config['output_dir']),
+            "scenario{scenario}".format(scenario=config['scenario']),
             "results-random_seed={random_seed}.csv".format(random_seed=config['random_seed']),
             )
 
 rule template:
     input:
-        config_json="params.json",
+        params_json="params.json",
         script=glob.glob(os.path.join(REPO_ROOT_DIR, 'run_forecast.py')),
         source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py'))
 
     output:
         output_csv=os.path.join(
             os.path.expandvars("{output_dir}"),
+            "scenario{scenario}",
             "results-random_seed={random_seed}.csv")
 
     conda:
@@ -114,8 +121,9 @@ rule template:
         """\
         dirname {output.output_csv} | xargs mkdir -p && \
         python {input.script} \
-            --config_file "{input.config_json}" \
+            --config_file "{input.params_json}" \
             --random_seed "{wildcards.random_seed}" \
             --output_file "{output.output_csv}" \
+            --scenario "{wildcards.scenario}" \
         """
 

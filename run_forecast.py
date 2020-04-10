@@ -5,48 +5,12 @@ import numpy as np
 import scipy.stats
 import pandas as pd
 import tqdm
+import warnings
 from semimarkov_forecaster import PatientTrajectory
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config_file', default=None)
-    parser.add_argument('--output_file', default='results.csv')
-    parser.add_argument('--random_seed', default=101, type=int)
-  
-    args = parser.parse_args()
+def run_simulation(random_seed, output_file, config_dict, states, state_name_to_id, next_state_map):
 
-    config_file = args.config_file
-    output_file = args.output_file
-
-    ## Load JSON
-    with open(config_file, 'r') as f:
-        config_dict = json.load(f)
-
-    for key in config_dict:
-        print(key, config_dict[key])
-
-    ## Summarize the probabilistic model
-    print("----------------------------------------")
-    print("Loaded SemiMarkovModel from config_file:")
-    print("----------------------------------------")
-    states = config_dict['states']
-    state_name_to_id = dict()
-    next_state_map = dict()
-    for ss, state in enumerate(states):
-        state_name_to_id[state] = ss
-        if ss < len(states) - 1:
-            next_state_map[state] = states[ss+1]
-        else:
-            next_state_map[state] = 'TERMINAL'
-        p_recover = config_dict["proba_Recovering_given_%s" % state]
-        p_decline = 1.0 - p_recover
-
-        print("State #%d %s" % (ss, state))
-        print("    prob. %.3f recover" % (p_recover))
-        print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
-    state_name_to_id['TERMINAL'] = len(states)
-
-    prng = np.random.RandomState(args.random_seed)
+    prng = np.random.RandomState(random_seed)
     T = config_dict['num_timesteps']
     K = len(states) # Num states (not including terminal)
 
@@ -67,7 +31,7 @@ if __name__ == '__main__':
         
         # First, try to replace wildcards
         if isinstance(pmfstr_or_csvfile, str):
-            for key, val in args.__dict__.items():
+            for key, val in list(args.__dict__.items()) + list(unk_dict.items()):
                 wildcard_key = "{%s}" % key
                 if pmfstr_or_csvfile.count(wildcard_key):
                     pmfstr_or_csvfile = pmfstr_or_csvfile.replace(wildcard_key, str(val))
@@ -96,8 +60,12 @@ if __name__ == '__main__':
             def sample_incoming_count(t, prng):
                 row_ids = np.flatnonzero(csv_df['timestep'] == t)
                 if len(row_ids) == 0:
-                    raise ValueError("Error in file %s: No matching timestep for t=%d" % (
-                        pmfstr_or_csvfile, t))
+                    if t < 10:
+                        raise ValueError("Error in file %s: No matching timestep for t=%d" % (
+                            pmfstr_or_csvfile, t))
+                    else:
+                        warnings.warn("No matching timestep found in file %s. Assuming 0" % (pmfstr_or_csvfile)) 
+                        return 0
                 if len(row_ids) > 1:
                     raise ValueError("Error in file %s: Must have exactly one matching timestep for t=%d" % (
                         pmfstr_or_csvfile, t))
@@ -142,7 +110,7 @@ if __name__ == '__main__':
 
     ## Write results to spreadsheet
     print("----------------------------------------")
-    print("Writing results to %s" % (args.output_file))
+    print("Writing results to %s" % (output_file))
     print("----------------------------------------")
     col_names = ['n_%s' % s for s in states]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
@@ -158,6 +126,57 @@ if __name__ == '__main__':
     for k, col_name in enumerate(discharge_col_names):
         results_df[col_name] = discharge_count_TK[:, k]
 
-    results_df.to_csv(args.output_file,
+    results_df.to_csv(output_file,
         columns=['timestep'] + col_names + ['n_TERMINAL'] + admit_col_names + discharge_col_names,
         index=False, float_format="%.0f")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config_file', default=None)
+    parser.add_argument('--output_file', default='results.csv')
+    parser.add_argument('--random_seed', default=101, type=int)
+    parser.add_argument('--num_seeds', default=1, type=int)
+
+    args, unknown_args = parser.parse_known_args()
+
+    unk_keys = map(lambda s: s[2:].strip(), unknown_args[::2])
+    unk_vals = unknown_args[1::2]
+    unk_dict = dict(zip(unk_keys, unk_vals))
+
+    config_file = args.config_file
+    output_file = args.output_file
+
+    ## Load JSON
+    with open(config_file, 'r') as f:
+        config_dict = json.load(f)
+
+    for key in config_dict:
+        print(key, config_dict[key])
+
+    ## Summarize the probabilistic model
+    print("----------------------------------------")
+    print("Loaded SemiMarkovModel from config_file:")
+    print("----------------------------------------")
+    states = config_dict['states']
+    state_name_to_id = dict()
+    next_state_map = dict()
+    for ss, state in enumerate(states):
+        state_name_to_id[state] = ss
+        if ss < len(states) - 1:
+            next_state_map[state] = states[ss+1]
+        else:
+            next_state_map[state] = 'TERMINAL'
+        p_recover = config_dict["proba_Recovering_given_%s" % state]
+        p_decline = 1.0 - p_recover
+
+        print("State #%d %s" % (ss, state))
+        print("    prob. %.3f recover" % (p_recover))
+        print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
+    state_name_to_id['TERMINAL'] = len(states)
+
+    for seed in range(args.random_seed, args.random_seed + args.num_seeds):
+        output_file = output_file.replace("{{random_seed}}", str(seed))
+        run_simulation(seed, output_file, config_dict, states, state_name_to_id, next_state_map)
+
+
