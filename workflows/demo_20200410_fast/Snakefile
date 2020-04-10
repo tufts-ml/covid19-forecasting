@@ -18,8 +18,8 @@ import glob
 import os
 import numpy as np
 
+PLOT_REPO_ROOT_DIR = os.environ.get("PLOT_REPO_ROOT_DIR", "/cluster/tufts/hugheslab/code/c19-dashboard/")
 REPO_ROOT_DIR = os.environ.get("REPO_ROOT_DIR", "/cluster/tufts/hugheslab/code/covid19-forecasting/")
-os.environ['REPO_ROOT_DIR'] = os.path.abspath(REPO_ROOT_DIR)
 
 # Specified in configfile:
 # --scenario {1,2,3,4}
@@ -46,8 +46,9 @@ rule temp_plot:
                     percentile=float(perc))
                 )
             for perc in [50]],
-        plot_script=os.path.join(REPO_ROOT_DIR, 'plot', 'plot.py'),
-        source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'plot', '*.py'))
+        plot_dir=PLOT_REPO_ROOT_DIR,
+        plot_script=os.path.join(PLOT_REPO_ROOT_DIR, 'plot.py'),
+        source_files=glob.glob(os.path.join(PLOT_REPO_ROOT_DIR, '*.json'))
 
     output:
         html_file=os.path.join(
@@ -56,7 +57,7 @@ rule temp_plot:
 
     shell:
         """\
-        pushd ../../plot/ && python {{input.plot_script}} \
+        pushd {{input.plot_dir}} && python {{input.plot_script}} \
             --dash False \
             --first_time_step 04/10/2020 \
             --output_html_file "{{output.html_file}}" \
