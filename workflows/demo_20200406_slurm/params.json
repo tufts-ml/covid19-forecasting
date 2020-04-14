@@ -1,8 +1,8 @@
 {
-"states": ["Presenting", "InGeneralWard", "InICU", "OnVentInICU"],
+"states": ["Presenting", "InGeneralWard", "OffVentInICU", "OnVentInICU"],
 "num_Presenting": 28,
 "num_InGeneralWard": 28,
-"num_InICU": 11,
+"num_OffVentInICU": 11,
 "num_OnVentInICU": 5,
 "num_timesteps": 120,
 "pmf_num_per_timestep_Presenting": {
@@ -10,7 +10,7 @@
     "29": 0.1, "30":0.1, "31": 0.1, "32": 0.1, "33": 0.1},
 "proba_Recovering_given_Presenting": 0.214,
 "proba_Recovering_given_InGeneralWard": 0.76,
-"proba_Recovering_given_InICU": 0.25,
+"proba_Recovering_given_OffVentInICU": 0.25,
 "proba_Recovering_given_OnVentInICU": 0.25,
 "pmf_timesteps_Declining_Presenting": {
     "1": 1.00},
@@ -20,9 +20,9 @@
     "3": 0.25, "5": 0.50, "7": 0.25},
 "pmf_timesteps_Recovering_InGeneralWard": {
     "4": 0.25, "6": 0.50, "7": 0.25},
-"pmf_timesteps_Declining_InICU": {
+"pmf_timesteps_Declining_OffVentInICU": {
     "2": 0.25, "3": 0.50, "4": 0.25},
-"pmf_timesteps_Recovering_InICU": {
+"pmf_timesteps_Recovering_OffVentInICU": {
     "4": 0.25, "6": 0.50, "8": 0.25},
 "pmf_timesteps_Declining_OnVentInICU": {
     "3": 0.25, "4": 0.50, "5": 0.25},
