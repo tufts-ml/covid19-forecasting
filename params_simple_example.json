@@ -1,5 +1,6 @@
 {
 "states": ["Presenting", "InGeneralWard", "InICU", "OnVentInICU"],
+"age_groups": ["0-19", "20-44", "45-64", "65+"],
 "num_Presenting": 0,
 "num_InGeneralWard": 10,
 "num_InICU": 10,
