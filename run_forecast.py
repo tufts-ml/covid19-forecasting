@@ -17,10 +17,16 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
 
     ## Preallocate admit, discharge, and occupancy
     Tmax = 10 * T
+    occupancy_count_TK = np.zeros((Tmax, K), dtype=np.float64)
+    admit_count_TK = np.zeros((Tmax, K), dtype=np.float64)
+    discharge_count_TK = np.zeros((Tmax, K), dtype=np.float64)
+    terminal_count_T1 = np.zeros((Tmax, 1), dtype=np.float64)
+    
+    ## age dependent pre-allocation
     occupancy_count_TKA = np.zeros((Tmax, K, A), dtype=np.float64)
     admit_count_TKA = np.zeros((Tmax, K, A), dtype=np.float64)
     discharge_count_TKA = np.zeros((Tmax, K, A), dtype=np.float64)
-    terminal_count_T1 = np.zeros((Tmax, 1), dtype=np.float64)
+    terminal_count_T1A = np.zeros((Tmax, 1, A), dtype=np.float64)
 
     ## Read functions to sample the incoming admissions to each state
     sample_func_per_state = dict()
@@ -87,47 +93,76 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     print("----------------------------------------")
     ## Simulation what happens to initial population
     for initial_state in states:
-        for age_group in config_dict['age_groups']:
-            # get count in current age group and state
-            num_current_state_age_group = config_dict['num_%s' % initial_state]*config_dict['proba_Presenting_given_%s' % age_group ]
-            # round the count to the next integer
-            num_current_state_age_group = int(np.max([np.ceil(num_current_state_age_group),1]))
-            for n in range(num_current_state_age_group):
-                p = PatientTrajectory(initial_state, config_dict, prng, next_state_map, state_name_to_id, age_group_to_id[age_group])
-                occupancy_count_TKA = p.update_count_matrix(occupancy_count_TKA, 0)
-                admit_count_TKA = p.update_admit_count_matrix(admit_count_TKA, 0)
-                discharge_count_TKA = p.update_discharge_count_matrix(discharge_count_TKA, 0)
-                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, 0)
+        for n in range(config_dict['num_%s' % initial_state]):
+            p = PatientTrajectory(initial_state, config_dict, prng, next_state_map, state_name_to_id)
+            occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, 0)
+            admit_count_TK = p.update_admit_count_matrix(admit_count_TK, 0)
+            discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, 0)
+            terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, 0)
+            
+            # Uncomment if you want to track counts by age
+            occupancy_count_TKA = p.update_count_by_age_matrix(occupancy_count_TKA, 0)
+            admit_count_TKA = p.update_admit_count_by_age_matrix(admit_count_TKA, 0)
+            discharge_count_TKA = p.update_discharge_count_by_age_matrix(discharge_count_TKA, 0)
+            terminal_count_T1A = p.update_terminal_count_by_age_matrix(terminal_count_T1A, 0)
+            
     ## Simulation what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
             if state not in sample_func_per_state:
                 continue
-            for age_group in config_dict['age_groups']:
-            # normalize incoming count by age group probability
-                sample_incoming_count = sample_func_per_state[state]
-                N_t = sample_incoming_count(t, prng)*config_dict['proba_Presenting_given_%s' % age_group]
-                # round the count to the next integer
-                N_t = int(np.max([np.ceil(N_t),1])) 
-                for n in range(N_t):
-                    p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id, age_group_to_id[age_group])
-                    occupancy_count_TKA = p.update_count_matrix(occupancy_count_TKA, t)        
-                    admit_count_TKA = p.update_admit_count_matrix(admit_count_TKA, t)
-                    discharge_count_TKA = p.update_discharge_count_matrix(discharge_count_TKA, t)
-                    terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, t)
-
+            sample_incoming_count = sample_func_per_state[state]
+            N_t = sample_incoming_count(t, prng)
+            for n in range(N_t):
+                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id)
+                occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, t)        
+                admit_count_TK = p.update_admit_count_matrix(admit_count_TK, t)
+                discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, t)
+                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, t)
+                
+                # Uncomment if you want to track counts by age
+                occupancy_count_TKA = p.update_count_by_age_matrix(occupancy_count_TKA, t)
+                admit_count_TKA = p.update_admit_count_by_age_matrix(admit_count_TKA, t)
+                discharge_count_TKA = p.update_discharge_count_by_age_matrix(discharge_count_TKA, t)
+                terminal_count_T1A = p.update_terminal_count_by_age_matrix(terminal_count_T1A, t)
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
-    occupancy_count_TKA = occupancy_count_TKA[:(T+1)]
-    admit_count_TKA = admit_count_TKA[:(T+1)]
-    discharge_count_TKA = discharge_count_TKA[:(T+1)]
+    occupancy_count_TK = occupancy_count_TK[:(T+1)]
+    admit_count_TK = admit_count_TK[:(T+1)]
+    discharge_count_TK = discharge_count_TK[:(T+1)]
     terminal_count_T1 = terminal_count_T1[:(T+1)]
     
-    # Sum across age groups to get counts per state
-    occupancy_count_TK = np.sum(occupancy_count_TKA, axis=2)
-    admit_count_TK = np.sum(admit_count_TKA, axis=2)
-    discharge_count_TK = np.sum(discharge_count_TKA, axis=2)
+    # sanity check, all counts summed over age groups must be equal to total counts
+#     occupancy_count_TKA = occupancy_count_TKA[:(T+1)]
+#     admit_count_TKA = admit_count_TKA[:(T+1)]
+#     discharge_count_TKA = discharge_count_TKA[:(T+1)]
+#     terminal_count_T1A = terminal_count_T1A[:(T+1)]
     
+#     occupancy_count_TK_age_sum = np.sum(occupancy_count_TKA, axis=2)
+#     admit_count_TK_age_sum = np.sum(admit_count_TKA, axis=2)
+#     discharge_count_TK_age_sum = np.sum(discharge_count_TKA, axis=2)
+#     terminal_count_TK_age_sum = np.sum(terminal_count_T1A, axis=2)
+#     from IPython import embed; embed()
+    
+    print("----------------------------------------------")
+    print("Printing Age Group Counts for 5 time steps")
+    print("----------------------------------------------")
+    for t in range(5):
+        print("----------------------------------------------")
+        print('Time Step : %d'%t)
+        print("----------------------------------------------")
+        age_counts_dict = dict()
+        for age_idx,age_group in enumerate(age_groups):
+            age_counts_dict['occupancy_%s'%age_group]=occupancy_count_TKA[t,:,age_idx]
+        age_counts_dict['occupancy_total']=occupancy_count_TK[t,:]
+#             age_counts_dict['admitted_%s'%age_group]=admit_count_TKA[t,:,age_idx]
+#             age_counts_dict['discharged_%s'%age_group]=discharge_count_TKA[t,:,age_idx]
+#             age_counts_dict['terminal_%s'%age_group]=terminal_count_T1A[t,0,age_idx]
+        print(age_counts_dict)
+    #         for state_idx,state in enumerate(states): 
+
+            
+            
     ## Write results to spreadsheet
     print("----------------------------------------")
     print("Writing results to %s" % (output_file))
