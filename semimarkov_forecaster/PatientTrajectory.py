@@ -110,63 +110,32 @@ class PatientTrajectory(object):
 			self.simulate_trajectory(start_state, config_dict, prng, next_state_map, state_name_to_id)
 
 	def simulate_trajectory(self, start_state, config_dict, prng, next_state_map, state_name_to_id):
-        #每次initialize 一个person, 在init中会call simulate_trajectory, 并完成simulate 此person的trajectory.
 
-		print('Simulating trajectory for this person: \n')       
-		print('Inside simulate_trajectory, passed in start_state is {}\n'.format(start_state))
-		print('Inside simulate_trajectory, avaliable progressions are: {}'.format(next_state_map.keys()))        
 		## Simulate trajectory
 		state = start_state
 		health_state_id = 0 
 		while health_state_id < 2 and state != 'TERMINAL': #meaning this person did not die, did not full recover
-			#health_state_id = prng.rand() < config_dict['proba_Recovering_given_%s' % state]
 			#when arrive at each state, toss the coin to decide what health_state this person will get
 			conditional_health_state_pmf = [config_dict["proba_Declining_given_%s" % state], config_dict["proba_MildRecovering_given_%s" % state], config_dict["proba_FullRecovering_given_%s" % state]]
-			print('conditional_health_state_pmf at current state is {}'.format(conditional_health_state_pmf))
 			assert np.isclose(np.sum(conditional_health_state_pmf),1), 'not valid conditional health state pmf at current state, sum is %s'%np.sum(conditional_health_state_pmf)            
 			health_state_id = prng.choice([0,1,2], 1, p=conditional_health_state_pmf)[0]
-            
-			print('at state {}, this person is {} \n'.format(state, HEALTH_STATE_ID_TO_NAME[int(health_state_id)]))
-			print('Using {}:'.format('pmf_timesteps_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state))) 
-            
+                        
 			choices_and_probas_dict = config_dict['pmf_timesteps_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
-			print('Inside simulate_trajectory, choices_and_probas_dict for start_state {} is {}'.format(start_state, choices_and_probas_dict))
-            #print
-			#print('Inside simulate_trajectory, choices_and_probas_dict is {}'.format(choices_and_probas_dict))
             
 			choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
-            #print
-			print('Inside simulate_trajectory, choices is {}'.format(choices))
             
 			probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-            #print
-			print('Inside simulate_trajectory, probas is {}'.format(probas))
             
 			duration = prng.choice(choices, p=probas)
-            #print
-			print('Inside simulate_trajectory, duration is {}'.format(duration))
             
 			self.state_ids.append(state_name_to_id[state]) #not know state_name_to_id
-			print('Inside simulate_trajectory, self.state_ids is {}'.format(self.state_ids))            
 			self.health_state_ids.append(health_state_id)
-			print('Inside simulate_trajectory, self.health_state_ids is {}'.format(self.health_state_ids))
 			self.durations.append(duration)
-			print('Inside simulate_trajectory, self.durations is {}'.format(self.durations)) 
-			#hz: here need to change
 			if health_state_id < 2:
 				state = next_state_map['%s_%s' % (state, HEALTH_STATE_ID_TO_NAME[health_state_id])] 
-				print('This person advancing to {} \n'.format(state))
 			else:
-				print('This person recovered from current state')
+				pass
 			self.is_terminal_0 = (state == 'TERMINAL')                
-# 			state = next_state_map[state]
-# 			if  health_state_id < 1:            
-# 				print('This person advancing to {} \n'.format(state))
-# 			else:
-# 				print('This person recovered from current state')         
-# 			self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
-		print('##########End of this person####### \n')          
-
 
 	def update_count_matrix(self, count_TK, t_start):
 		''' Update count matrix tracking population of each state at each time

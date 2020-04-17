@@ -13,8 +13,8 @@
 "proba_MildRecovering_given_InGeneralWard1": 0.0,
 "proba_Declining_given_InGeneralWard1": 0.9,
 "proba_FullRecovering_given_InICU1": 0.1,
-"proba_MildRecovering_given_InICU1": 0.0,
-"proba_Declining_given_InICU1": 0.9,
+"proba_MildRecovering_given_InICU1": 0.5,
+"proba_Declining_given_InICU1": 0.4,
 "proba_FullRecovering_given_OnVentInICU": 0.1,
 "proba_MildRecovering_given_OnVentInICU": 0.2,
 "proba_Declining_given_OnVentInICU": 0.7,
@@ -35,6 +35,8 @@
 "pmf_timesteps_Declining_InICU1": {
     "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
 "pmf_timesteps_FullRecovering_InICU1": {
+    "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
+"pmf_timesteps_MildRecovering_InICU1": {
     "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
 "pmf_timesteps_Declining_OnVentInICU": {
     "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
