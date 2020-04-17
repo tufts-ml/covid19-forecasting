@@ -8,11 +8,12 @@ import tqdm
 import warnings
 from semimarkov_forecaster import PatientTrajectory
 
-def run_simulation(random_seed, output_file, config_dict, states, state_name_to_id, next_state_map):
+def run_simulation(random_seed, output_file, config_dict, states, state_name_to_id, next_state_map, age_groups, age_group_to_id):
     print("random_seed=%s <<<" % random_seed)
     prng = np.random.RandomState(random_seed)
     T = config_dict['num_timesteps']
     K = len(states) # Num states (not including terminal)
+    A = len(age_groups)
 
     ## Preallocate admit, discharge, and occupancy
     Tmax = 10 * T
@@ -20,6 +21,12 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     admit_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     discharge_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     terminal_count_T1 = np.zeros((Tmax, 1), dtype=np.float64)
+    
+    ## age dependent pre-allocation
+    occupancy_count_TKA = np.zeros((Tmax, K, A), dtype=np.float64)
+    admit_count_TKA = np.zeros((Tmax, K, A), dtype=np.float64)
+    discharge_count_TKA = np.zeros((Tmax, K, A), dtype=np.float64)
+    terminal_count_T1A = np.zeros((Tmax, 1, A), dtype=np.float64)
 
     ## Read functions to sample the incoming admissions to each state
     sample_func_per_state = dict()
@@ -92,6 +99,13 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
             admit_count_TK = p.update_admit_count_matrix(admit_count_TK, 0)
             discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, 0)
             terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, 0)
+            
+            # Uncomment if you want to track counts by age
+            occupancy_count_TKA = p.update_count_by_age_matrix(occupancy_count_TKA, 0)
+            admit_count_TKA = p.update_admit_count_by_age_matrix(admit_count_TKA, 0)
+            discharge_count_TKA = p.update_discharge_count_by_age_matrix(discharge_count_TKA, 0)
+            terminal_count_T1A = p.update_terminal_count_by_age_matrix(terminal_count_T1A, 0)
+            
     ## Simulation what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
@@ -105,14 +119,50 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, t)
                 terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, t)
-
+                
+                # Uncomment if you want to track counts by age
+                occupancy_count_TKA = p.update_count_by_age_matrix(occupancy_count_TKA, t)
+                admit_count_TKA = p.update_admit_count_by_age_matrix(admit_count_TKA, t)
+                discharge_count_TKA = p.update_discharge_count_by_age_matrix(discharge_count_TKA, t)
+                terminal_count_T1A = p.update_terminal_count_by_age_matrix(terminal_count_T1A, t)
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
     occupancy_count_TK = occupancy_count_TK[:(T+1)]
     admit_count_TK = admit_count_TK[:(T+1)]
     discharge_count_TK = discharge_count_TK[:(T+1)]
     terminal_count_T1 = terminal_count_T1[:(T+1)]
+    
+    # sanity check, all counts summed over age groups must be equal to total counts
+#     occupancy_count_TKA = occupancy_count_TKA[:(T+1)]
+#     admit_count_TKA = admit_count_TKA[:(T+1)]
+#     discharge_count_TKA = discharge_count_TKA[:(T+1)]
+#     terminal_count_T1A = terminal_count_T1A[:(T+1)]
+    
+#     occupancy_count_TK_age_sum = np.sum(occupancy_count_TKA, axis=2)
+#     admit_count_TK_age_sum = np.sum(admit_count_TKA, axis=2)
+#     discharge_count_TK_age_sum = np.sum(discharge_count_TKA, axis=2)
+#     terminal_count_TK_age_sum = np.sum(terminal_count_T1A, axis=2)
+#     from IPython import embed; embed()
+    
+    print("----------------------------------------------")
+    print("Printing Age Group Counts for 5 time steps")
+    print("----------------------------------------------")
+    for t in range(5):
+        print("----------------------------------------------")
+        print('Time Step : %d'%t)
+        print("----------------------------------------------")
+        age_counts_dict = dict()
+        for age_idx,age_group in enumerate(age_groups):
+            age_counts_dict['occupancy_%s'%age_group]=occupancy_count_TKA[t,:,age_idx]
+        age_counts_dict['occupancy_total']=occupancy_count_TK[t,:]
+#             age_counts_dict['admitted_%s'%age_group]=admit_count_TKA[t,:,age_idx]
+#             age_counts_dict['discharged_%s'%age_group]=discharge_count_TKA[t,:,age_idx]
+#             age_counts_dict['terminal_%s'%age_group]=terminal_count_T1A[t,0,age_idx]
+        print(age_counts_dict)
+    #         for state_idx,state in enumerate(states): 
 
+            
+            
     ## Write results to spreadsheet
     print("----------------------------------------")
     print("Writing results to %s" % (output_file))
@@ -164,8 +214,10 @@ if __name__ == '__main__':
     print("Loaded SemiMarkovModel from config_file:")
     print("----------------------------------------")
     states = config_dict['states']
+    age_groups = config_dict['age_groups']
     state_name_to_id = dict()
     next_state_map = dict()
+    age_group_to_id=dict()
     for ss, state in enumerate(states):
         state_name_to_id[state] = ss
         if ss < len(states) - 1:
@@ -174,6 +226,9 @@ if __name__ == '__main__':
             next_state_map[state] = 'TERMINAL'
         p_recover = config_dict["proba_Recovering_given_%s" % state]
         p_decline = 1.0 - p_recover
+        
+    for ss, age_group in enumerate(age_groups):
+        age_group_to_id[age_group] = ss
 
         print("State #%d %s" % (ss, state))
         print("    prob. %.3f recover" % (p_recover))
@@ -183,6 +238,6 @@ if __name__ == '__main__':
     output_file_base = output_file
     for seed in range(args.random_seed, args.random_seed + args.num_seeds):
         output_file = output_file_base.replace("random_seed=%s" % args.random_seed, "random_seed=%s" % str(seed))
-        run_simulation(seed, output_file, config_dict, states, state_name_to_id, next_state_map)
+        run_simulation(seed, output_file, config_dict, states, state_name_to_id, next_state_map, age_groups, age_group_to_id)
 
 
