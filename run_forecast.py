@@ -11,11 +11,13 @@ from semimarkov_forecaster import PatientTrajectory
 def run_simulation(random_seed, output_file, config_dict, states, state_name_to_id, next_state_map):
     print("random_seed=%s <<<" % random_seed)
     prng = np.random.RandomState(random_seed)
+    
+    Tpast = config_dict['num_past_timesteps']
     T = config_dict['num_timesteps']
     K = len(states) # Num states (not including terminal)
 
     ## Preallocate admit, discharge, and occupancy
-    Tmax = 10 * T
+    Tmax = 10 * T + Tpast
     occupancy_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     admit_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     discharge_count_TK = np.zeros((Tmax, K), dtype=np.float64)
@@ -70,7 +72,8 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
                         raise ValueError("Error in file %s: No matching timestep for t=%d" % (
                             pmfstr_or_csvfile, t))
                     else:
-                        warnings.warn("No matching timestep found in file %s. Assuming 0" % (pmfstr_or_csvfile)) 
+                        warnings.warn("No matching timesteps t>%d found in file %s. Assuming 0" % (
+                            csv_df['timestep'].max(), pmfstr_or_csvfile)) 
                         return 0
                 if len(row_ids) > 1:
                     raise ValueError("Error in file %s: Must have exactly one matching timestep for t=%d" % (
@@ -85,13 +88,20 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     print("Simulating for %d timesteps with seed %d" % (T, args.random_seed))
     print("----------------------------------------")
     ## Simulation what happens to initial population
-    for initial_state in states:
-        for n in range(config_dict['num_%s' % initial_state]):
-            p = PatientTrajectory(initial_state, config_dict, prng, next_state_map, state_name_to_id)
-            occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, 0)
-            admit_count_TK = p.update_admit_count_matrix(admit_count_TK, 0)
-            discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, 0)
-            terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, 0)
+    for t in range(-Tpast, 1, 1):
+        for state in states:
+            N_new_dict = config_dict['init_num_%s' % state]
+            if isinstance(N_new_dict, dict):
+                N_new = N_new_dict["%s" % t]
+            else:
+                N_new = int(N_new_dict)
+            for n in range(N_new):
+                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id)
+                occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, Tpast + t)
+                admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
+                discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
+                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
+
     ## Simulation what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
@@ -101,17 +111,19 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
             N_t = sample_incoming_count(t, prng)
             for n in range(N_t):
                 p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id)
-                occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, t)        
-                admit_count_TK = p.update_admit_count_matrix(admit_count_TK, t)
-                discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, t)
-                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, t)
+                occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, Tpast + t)        
+                admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
+                discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
+                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
 
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
-    occupancy_count_TK = occupancy_count_TK[:(T+1)]
-    admit_count_TK = admit_count_TK[:(T+1)]
-    discharge_count_TK = discharge_count_TK[:(T+1)]
-    terminal_count_T1 = terminal_count_T1[:(T+1)]
+    t0 = Tpast
+    tf = T + Tpast + 1
+    occupancy_count_TK = occupancy_count_TK[t0:tf]
+    admit_count_TK = admit_count_TK[t0:tf]
+    discharge_count_TK = discharge_count_TK[t0:tf]
+    terminal_count_T1 = terminal_count_T1[t0:tf]
 
     ## Write results to spreadsheet
     print("----------------------------------------")
