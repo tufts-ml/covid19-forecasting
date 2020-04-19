@@ -1,9 +1,9 @@
 {
 "states": ["Presenting", "InGeneralWard", "OffVentInICU", "OnVentInICU"],
-"num_Presenting": 20,
-"num_InGeneralWard": 45,
-"num_OffVentInICU": 20,
-"num_OnVentInICU": 10,
+"init_num_Presenting": 20,
+"init_num_InGeneralWard": 45,
+"init_num_OffVentInICU": 20,
+"init_num_OnVentInICU": 10,
 "num_timesteps": 40,
 "pmf_num_per_timestep_Presenting": "incoming-counts-{scenario}.csv",
 "pmf_num_per_timestep_OffVentInICU": "incoming-counts-{scenario}.csv",

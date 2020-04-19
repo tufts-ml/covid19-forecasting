@@ -1,9 +1,9 @@
 {
 "states": ["Presenting", "InGeneralWard", "OffVentInICU", "OnVentInICU"],
-"num_Presenting": 0,
-"num_InGeneralWard": 10,
-"num_OffVentInICU": 10,
-"num_OnVentInICU": 10,
+"init_num_Presenting": 0,
+"init_num_InGeneralWard": 10,
+"init_num_OffVentInICU": 10,
+"init_num_OnVentInICU": 10,
 "num_timesteps": 120,
 "pmf_num_per_timestep_Presenting": "scipy.stats.poisson(10)",
 "proba_Recovering_given_Presenting": 0.1,
