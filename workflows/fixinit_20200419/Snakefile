@@ -1,0 +1,180 @@
+'''
+Usage
+------
+To run a specific random seed
+$ snakemake --config scenario=1 random_seed=101 --profile ../../profiles/hugheslab_cluster/ single_simulation_following_template
+
+To run with multiple random seeds (prespecified in a config file)
+$ snakemake --config scenario=2 --profile ../../profiles/hugheslab_cluster/ many_simulations_following_template
+
+Prerequisites
+-------------
+1) Need local install of anaconda
+2) Need local install of Snakemake
+See README.md for install instructions
+'''
+import itertools
+import glob
+import os
+import numpy as np
+
+PLOT_REPO_ROOT_DIR = os.environ.get("PLOT_REPO_ROOT_DIR", "/cluster/tufts/hugheslab/code/c19-dashboard/")
+REPO_ROOT_DIR = os.environ.get("REPO_ROOT_DIR", "/cluster/tufts/hugheslab/code/covid19-forecasting/")
+
+# Specified in configfile:
+# --comma_sep_scenarios "1,2,3,4"
+# --output_dir
+# --min_random_seed 1001
+# --max_random_seed 1100
+# --random_seed 1001
+configfile: "config.json"
+
+rule plot_all:
+    input:
+        html_files=[
+            os.path.join(
+                os.path.expandvars(config['output_dir']),
+                "scenario%s" % scenario, "dashboard.html")
+            for scenario in config['comma_sep_scenarios'].split(',')]
+
+rule temp_plot:
+    input:
+        input_files=[os.path.join(
+                os.path.expandvars("{output_dir}"),
+                "scenario{scenario}",
+                "summary-percentile={percentile:06.2f}.csv".format(
+                    percentile=float(perc))
+                )
+            for perc in [50]],
+        plot_dir=PLOT_REPO_ROOT_DIR,
+        plot_script=os.path.join(PLOT_REPO_ROOT_DIR, 'plot.py'),
+        source_files=glob.glob(os.path.join(PLOT_REPO_ROOT_DIR, '*.json'))
+
+    output:
+        html_file=os.path.join(
+            os.path.expandvars("{output_dir}"),
+            "scenario{scenario}", "dashboard.html")
+
+    shell:
+        """\
+        pushd {{input.plot_dir}} && python {{input.plot_script}} \
+            --dash False \
+            --first_time_step 04/14/2020 \
+            --num_scenarios 1 \
+            --output_html_file "{{output.html_file}}" \
+            --output_path "{out_dir}" \
+        """.format(
+            out_dir=os.path.join("{wildcards.output_dir}", "scenario{wildcards.scenario}"))
+
+
+
+rule summarize_all:
+    input:
+        [os.path.join(
+                os.path.expandvars(config['output_dir']),
+                "scenario{scenario}".format(scenario=scen),
+                "summary-percentile={percentile:06.2f}.csv".format(percentile=float(perc))
+                )
+            for (perc, scen) in itertools.product(
+                [50.0],
+                config['comma_sep_scenarios'].split(','))]
+
+rule summarize_scenario:
+    input:
+        [os.path.join(
+                os.path.expandvars(config['output_dir']),
+                "scenario{scenario}".format(scenario=scen),
+                "summary-percentile={percentile:06.2f}.csv".format(percentile=float(perc))
+                )
+            for (perc, scen) in itertools.product(
+                [50.0],
+                [config['scenario']])]
+
+rule temp_summarize_scenario:
+    input:
+        summarize_script=os.path.join(REPO_ROOT_DIR, 'summarize_forecasts.py'),
+        source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py')),
+        forecast_results=[os.path.join(
+                os.path.expandvars("{output_dir}"),
+                "scenario{scenario}",
+                "results-random_seed={seed}.csv".format(seed=seed)
+                )
+            for seed in range(config['min_random_seed'], config['max_random_seed'], config['num_seeds_per_run'])]
+
+    output:
+        [os.path.join(
+                os.path.expandvars("{output_dir}"),
+                "scenario{scenario}",
+                "summary-percentile={percentile:06.2f}.csv".format(percentile=float(50.0))
+                )
+            ]
+
+    conda:
+        os.path.join(REPO_ROOT_DIR, "semimarkov_forecaster.yml")
+
+    shell:
+        """\
+        python {{input.summarize_script}} \
+            --comma_sep_percentiles "{perc}" \
+            --input_dir "{input_dir}" \
+            --output_dir "{input_dir}" \
+        """.format(
+            perc=config['comma_sep_percentiles'],
+            input_dir=os.path.join("{wildcards.output_dir}", "scenario{wildcards.scenario}"))
+
+
+# --------
+# run_forecast
+# --------
+
+# Rule to run multiple simulations saved to different CSV files
+#
+# Uses the 'template' defined below
+rule many_simulations_following_template:
+    input:
+        [os.path.join(
+                os.path.expandvars(config['output_dir']),          
+                "scenario{scenario}".format(scenario=scenario),
+                "results-random_seed={random_seed}.csv".format(random_seed=seed)
+                )
+            for scenario, seed in itertools.product(
+                config['comma_sep_scenarios'].split(','),
+                range(config['min_random_seed'], config['max_random_seed'], config['num_seeds_per_run']))]
+
+# Target rule to run one specific simulation (with seed provided by manual command line input)
+#
+# Uses the 'template' defined below
+rule single_simulation_following_template:
+    input:
+        os.path.join(
+            os.path.expandvars(config['output_dir']),
+            "scenario{scenario}".format(scenario=config['scenario']),
+            "results-random_seed={random_seed}.csv".format(random_seed=config['random_seed']),
+            )
+
+rule template:
+    input:
+        params_json="params.json",
+        script=glob.glob(os.path.join(REPO_ROOT_DIR, 'run_forecast.py')),
+        source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py'))
+
+    output:
+        output_csv=os.path.join(
+            os.path.expandvars("{output_dir}"),
+            "scenario{scenario}",
+            "results-random_seed={random_seed}.csv")
+
+    conda:
+        "semimarkov_forecaster.yml"
+
+    shell:
+        """\
+        dirname {output.output_csv} | xargs mkdir -p && \
+        python {input.script} \
+            --config_file "{input.params_json}" \
+            --random_seed "{wildcards.random_seed}" \
+            --output_file "{output.output_csv}" \
+            --scenario "{wildcards.scenario}" \
+            --num_seeds %s \
+        """ % (config['num_seeds_per_run'])
+

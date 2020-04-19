@@ -1,0 +1,11 @@
+{
+    "nickname": "demo_20200414_fast",
+    "scenario": "1",
+    "comma_sep_scenarios": "1,2,3,4",
+    "output_dir": "/cluster/tufts/hugheslab/$USER/forecast_results/demo_20200414_fast/",
+    "min_random_seed": 1000,
+    "max_random_seed": 3000,
+    "random_seed": 1001,
+    "num_seeds_per_run": 1,
+    "comma_sep_percentiles": "1,2.5,10,50,90,97.5,99",
+}
