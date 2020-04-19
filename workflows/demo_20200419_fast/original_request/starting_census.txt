@@ -1,0 +1,3 @@
+General ward: 38 patients
+ICU NOT on vent: 15
+ICU on vent: 40
