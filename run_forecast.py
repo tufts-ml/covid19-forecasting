@@ -12,9 +12,12 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     print("random_seed=%s <<<" % random_seed)
     prng = np.random.RandomState(random_seed)
     
-    Tpast = config_dict['num_past_timesteps']
     T = config_dict['num_timesteps']
     K = len(states) # Num states (not including terminal)
+
+    ## Number of *previous* timesteps to simulate
+    # Defaults to 0 if not provided
+    Tpast = config_dict.get('num_past_timesteps', 0)
 
     ## Preallocate admit, discharge, and occupancy
     Tmax = 10 * T + Tpast
