@@ -59,11 +59,12 @@ rule temp_plot:
         """\
         pushd {{input.plot_dir}} && python {{input.plot_script}} \
             --dash False \
-            --first_time_step 04/14/2020 \
+            --first_time_step {first_tstep} \
             --num_scenarios 1 \
             --output_html_file "{{output.html_file}}" \
             --output_path "{out_dir}" \
         """.format(
+            first_tstep=config['first_timestep'],
             out_dir=os.path.join("{wildcards.output_dir}", "scenario{wildcards.scenario}"))
 
 
