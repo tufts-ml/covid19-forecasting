@@ -99,7 +99,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
             else:
                 N_new = int(N_new_dict)
             for n in range(N_new):
-                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id)
+                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id, t)
                 occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, Tpast + t)
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
@@ -113,7 +113,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
             sample_incoming_count = sample_func_per_state[state]
             N_t = sample_incoming_count(t, prng)
             for n in range(N_t):
-                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id)
+                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id, t)
                 occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, Tpast + t)        
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
