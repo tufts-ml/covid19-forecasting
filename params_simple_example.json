@@ -10,6 +10,11 @@
 "proba_Recovering_given_InGeneralWard": 0.1,
 "proba_Recovering_given_OffVentInICU": 0.1,
 "proba_Recovering_given_OnVentInICU": 0.1,
+"age_groups": ["0-19", "20-44", "45-64", "65+"],
+"proba_Presenting_given_0-19": 0.01, 
+"proba_Presenting_given_20-44": 0.17, 
+"proba_Presenting_given_45-64": 0.36, 
+"proba_Presenting_given_65+": 0.46,
 "pmf_timesteps_Declining_Presenting": {
     "1": 1.00},
 "pmf_timesteps_Recovering_Presenting": {
