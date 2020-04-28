@@ -1,9 +1,9 @@
 {
 "states": ["Presenting", "InGeneralWard", "OffVentInICU", "OnVentInICU"],
-"num_Presenting": 28,
-"num_InGeneralWard": 28,
-"num_OffVentInICU": 11,
-"num_OnVentInICU": 5,
+"init_num_Presenting": 28,
+"init_num_InGeneralWard": 28,
+"init_num_OffVentInICU": 11,
+"init_num_OnVentInICU": 5,
 "num_timesteps": 120,
 "pmf_num_per_timestep_Presenting": {
     "24":0.1, "25": 0.1, "26": 0.1, "27": 0.1, "28": 0.1,

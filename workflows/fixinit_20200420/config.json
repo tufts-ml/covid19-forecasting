@@ -1,0 +1,14 @@
+{
+    "first_timestep": "04/20/2020",
+    "nickname": "fixinit_20200420",
+    "scenario": "1",
+    "scenario_title": "Scenario1",
+    "comma_sep_scenarios": "1,2,3",
+    "comma_sep_titles": "Scenario1: Optimistic,Scenario2: Central,Scenario3: Pessimistic",
+    "output_dir": "/cluster/tufts/hugheslab/$USER/forecast_results/fixinit_20200420/",
+    "min_random_seed": 1000,
+    "max_random_seed": 5000,
+    "random_seed": 1001,
+    "num_seeds_per_run": 200,
+    "comma_sep_percentiles": "1,2.5,10,50,90,97.5,99",
+}
