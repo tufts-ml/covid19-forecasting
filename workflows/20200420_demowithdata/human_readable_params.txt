@@ -1,0 +1,22 @@
+----------------------------------------
+State #0 Presenting
+    prob. 0.250 recover
+    prob. 0.750 advance to state InGeneralWard
+    Recovering Duration: mean 1.0 (1.0, 1.0) | 1st% 1.0   10th% 1.0   90th% 1.0   99th% 1
+    Declining Duration:  mean 1.0 (1.0, 1.0) | 1st% 1.0   10th% 1.0   90th% 1.0   99th% 1
+State #1 InGeneralWard
+    prob. 0.697 recover
+    prob. 0.303 advance to state OffVentInICU
+    Recovering Duration: mean 3.8 (1.0, 10.0) | 1st% 1.0   10th% 2.0   90th% 8.0   99th% 10
+    Declining Duration:  mean 2.5 (1.0, 6.0) | 1st% 1.0   10th% 1.0   90th% 5.0   99th% 6
+State #2 OffVentInICU
+    prob. 0.300 recover
+    prob. 0.700 advance to state OnVentInICU
+    Recovering Duration: mean 3.0 (1.0, 8.0) | 1st% 1.0   10th% 1.0   90th% 6.0   99th% 8
+    Declining Duration:  mean 2.1 (1.0, 5.0) | 1st% 1.0   10th% 1.0   90th% 4.0   99th% 5
+State #3 OnVentInICU
+    prob. 0.200 recover
+    prob. 0.800 advance to state TERMINAL
+    Recovering Duration: mean 8.8 (4.0, 16.0) | 1st% 4.0   10th% 5.0   90th% 14.0   99th% 16
+    Declining Duration:  mean 7.6 (2.0, 14.0) | 1st% 2.0   10th% 3.0   90th% 14.0   99th% 14
+----------------------------------------

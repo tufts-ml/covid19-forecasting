@@ -121,7 +121,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
 
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
-    t0 = Tpast
+    t0 = 0
     tf = T + Tpast + 1
     occupancy_count_TK = occupancy_count_TK[t0:tf]
     admit_count_TK = admit_count_TK[t0:tf]
@@ -134,7 +134,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     print("----------------------------------------")
     col_names = ['n_%s' % s for s in states]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
-    results_df["timestep"] = np.arange(0, T+1)
+    results_df["timestep"] = np.arange(-Tpast, -Tpast + tf)
 
     results_df["n_TERMINAL"] = terminal_count_T1[:,0]
 
