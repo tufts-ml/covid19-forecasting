@@ -10,7 +10,7 @@ Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation)
 
 ### Getting Started
 
-Here's a very simple example, that will run our probabilistic progression model (with dummy initial conditions and dummy parameters) to forecast ahead for 120 days.
+Here's a very simple example, that will run our probabilistic progression model (with dummy initial conditions and dummy parameters) to forecast ahead for 120 days. (Requires you have already [installed this project's conda environment](#installation)
 
 ```console
 $ conda activate semimarkov_forecaster
@@ -89,6 +89,13 @@ Follow the instructions here: <https://conda.io/projects/conda/en/latest/user-gu
 $ conda install -c bioconda -c conda-forge snakemake-minimal
 ```
 Having trouble? See the full install instructions: <https://snakemake.readthedocs.io/en/stable/getting_started/installation.html>
+
+#### 3. Install `semimarkov_forecaster` conda environment
+
+Use the project's included YAML file to specify all packages needed: [semimarkov_forecaster.yml](./semimarkov_forecaster.yml)
+```
+conda env create -f semimarkov_forecaster.yml
+```
 
 
 # Modeling
