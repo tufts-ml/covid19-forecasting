@@ -95,12 +95,13 @@ Having trouble? See the full install instructions: <https://snakemake.readthedoc
 
 We have developed a probabilistic "semi-Markov" model to simulate individual patient trajectories through the major stages or levels of care within the hospital (present with symptoms, general ward, ICU, ICU with mechanical ventilation). When entering a stage, the patient first draws a new health status (recovering or declining), and then based on this status samples a “dwell time” duration (number of days to remain at current care stage) from a status-specific distribution. After the dwell time expires, recovering patients improve and leave the model, while declining patients progress to the next stage.
 
-In math, we can formalize this as follows. At each timestep, a patient can be described by:
-* a binary health state $h_t$ ('Recovering' or 'Declining')
-* an ordinal location state $\ell_t$ (e.g. 'Presenting', 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
+At each timestep, a patient can be described by:
+* a binary health state ('Recovering' or 'Declining')
+* an ordinal location state (e.g. 'Presenting', 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
+* the time left before transition to the next location state
 
 Every parameter governing these distributions can be specified by the user, and all are readily estimated from local data or the literature (e.g. by counting the fraction of ventilator patients who recover).
 
 We take an initial population, and run the model forward for a desired number of days.
 
-By reading parameters in from a plain text file [example](./workflows/simple_example/params.json), the model transparently facilitates communication of assumptions and invites modifications.
+By reading parameters in from a plain text file [example](./workflows/example_simple/params.json), the model transparently facilitates communication of assumptions and invites modifications.
