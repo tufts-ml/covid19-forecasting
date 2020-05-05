@@ -1,0 +1,15 @@
+{
+    "date_at_timestep0": "04/20/2020",
+    "min_timestep_to_show_forecast": 0,
+    "nickname": "20200420_demo",
+    "scenario": "1",
+    "scenario_title": "Scenario1",
+    "comma_sep_scenarios": "1,2,3,4",
+    "comma_sep_titles": "Scenario1: Optimistic,Scenario2: Central,Scenario3: Pessimistic,Scenario4: OptimisticLite",
+    "output_dir": "/cluster/tufts/hugheslab/$USER/forecast_results/20200420_demo/",
+    "min_random_seed": 1000,
+    "max_random_seed": 3000,
+    "random_seed": 1001,
+    "num_seeds_per_run": 250,
+    "comma_sep_percentiles": "1,2.5,10,50,90,97.5,99",
+}

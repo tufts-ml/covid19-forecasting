@@ -51,7 +51,7 @@ rule single_simulation_following_template:
 
 rule template:
     input:
-        config_json="params_simple_example.json",
+        config_json="params.json",
         script=glob.glob(os.path.join(REPO_ROOT_DIR, 'run_forecast.py')),
         source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py'))
 
