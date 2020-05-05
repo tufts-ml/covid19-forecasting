@@ -4,9 +4,13 @@ Simulation software for forecasting demand at various stages of hospitalization
 
 PI: Michael C. Hughes
 
-## Usage
+Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation)
+
+# Usage
 
 ### Getting Started
+
+Here's a very simple example, that will run our probabilistic progression model (with dummy initial conditions and dummy parameters) to forecast ahead for 120 days.
 
 ```console
 $ conda activate semimarkov_forecaster
@@ -43,26 +47,37 @@ Writing results to /tmp/results-101.csv
 ----------------------------------------
 ```
 
+This will write a CSV file to /tmp/results-101.csv, with columns for each census count and a row for each day
 
-### With Snakemake for reproducibility
+See an example output in (example_output/](.example_output/)
+
+### Using Snakemake workflows for reproducibility
 
 Run the following, which will install all necessary python packages in a separate environment, and then run a single simple simulation with results saved to file `results.csv`
 
 ```
+$ cd /path/to/covid19-forecasting/workflows/simple_example
 $ snakemake --use-conda --cores 1 run_simple_example_simulation
 ```
 
-## Summary
+### Using Snakemake workflows on the Tufts HPC cluster
 
-`params.json` specifies the parameters for a "semi-Markov" model of patient progression through the hospital system.
+If you are in the hugheslab group and have access to the HPC cluster, you can 
 
-At each timestep, a patient can be described by:
-* a binary health state ('Recovering' or 'Declining')
-* an ordinal location state (e.g. 'Presenting', 'InGeneralWard', 'InICU', 'OnVentInICU')
+PREREQUISITE bashrc settings:
+```
+export PATH="/cluster/tufts/hugheslab/miniconda2/bin:$PATH"
+```
 
-We take an initial population, and run the model forward for a desired number of days.
+Then login to the HPC system and do:
+```
+$ conda activate semimarkov_forecaster
+$ pushd /cluster/tufts/hugheslab/code/covid19-forecasting/workflows/simple_example/
+$ snakemake --cores 1 run_simple_example_simulation # Do NOT use '--use-conda' here, you already have the environment
+```
 
-## Install
+
+# Installation
 
 #### 1. Install Anaconda
 
@@ -74,3 +89,18 @@ Follow the instructions here: <https://conda.io/projects/conda/en/latest/user-gu
 $ conda install -c bioconda -c conda-forge snakemake-minimal
 ```
 Having trouble? See the full install instructions: <https://snakemake.readthedocs.io/en/stable/getting_started/installation.html>
+
+
+# Modeling
+
+We have developed a probabilistic "semi-Markov" model to simulate individual patient trajectories through the major stages or levels of care within the hospital (present with symptoms, general ward, ICU, ICU with mechanical ventilation). When entering a stage, the patient first draws a new health status (recovering or declining), and then based on this status samples a “dwell time” duration (number of days to remain at current care stage) from a status-specific distribution. After the dwell time expires, recovering patients improve and leave the model, while declining patients progress to the next stage.
+
+In math, we can formalize this as follows. At each timestep, a patient can be described by:
+* a binary health state $h_t$ ('Recovering' or 'Declining')
+* an ordinal location state $\ell_t$ (e.g. 'Presenting', 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
+
+Every parameter governing these distributions can be specified by the user, and all are readily estimated from local data or the literature (e.g. by counting the fraction of ventilator patients who recover).
+
+We take an initial population, and run the model forward for a desired number of days.
+
+By reading parameters in from a plain text file [example](./workflows/simple_example/params.json), the model transparently facilitates communication of assumptions and invites modifications.
