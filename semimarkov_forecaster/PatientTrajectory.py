@@ -115,7 +115,7 @@ class PatientTrajectory(object):
         health_state_id = 0
         while health_state_id < 1 and state != 'TERMINAL':
             health_state_id = prng.rand() < config_dict['proba_Recovering_given_%s' % state]
-            choices_and_probas_dict = config_dict['pmf_timesteps_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
+            choices_and_probas_dict = config_dict['pmf_duration_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
             choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
             probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
             assert np.allclose(1.0, np.sum(probas))
