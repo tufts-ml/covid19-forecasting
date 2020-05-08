@@ -43,7 +43,7 @@ rule all:
 # Target rule to run one specific simulation (with seed provided by manual command line input)
 #
 # Uses the 'template' defined below
-rule single_simulation_following_template:
+rule run_example_simulation:
     input:
         #"results-random_seed={random_seed}.csv".format(random_seed=config['random_seed'])
         os.path.join(
