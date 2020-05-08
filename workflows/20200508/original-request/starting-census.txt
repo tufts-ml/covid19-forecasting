@@ -1,0 +1,31 @@
+General ward: 26 patients
+ICU NOT on vent: 10
+ICU on vent: 29
+
+Notes:
+
+(1) Jeanne Ramano's 5/7 email reports 
+
+	55 confirmed COVID patients, 
+	of which 33 are in the ICU, and 
+	10 PUIs.
+
+(2) John Wong's 5/7 email reports:
+
+	26 ICU/vented, confirmed COVID+ patients
+	3 ICU/vented PUIs
+	7 ICU/non-vented, confirmed COVID+ patients
+	3 ICU/non-vented, PUIs.
+
+ICU counts
+
+	ICU/vented - summed 26 COVID+ confirmed and 3 PUIs: N = 29.
+	ICU/non-vented - summed 7 confirmed COVID+ and 3 PUIs: N = 10.
+	
+General ward
+
+	Confirmed COVID+ = total patient count of 55, minus 33 Confirmed COVID+ in ICU: N = 22.
+	PUIs - Total of 10 PUIs, minus 6 PUIs in the ICU, equals 4 PUIs in the general ward: N = 4.
+	Total is 22 + 4 = 26.
+
+
