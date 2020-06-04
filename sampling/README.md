@@ -20,10 +20,10 @@ The sampling code is in file `sampling.py`. I have documented it as much as poss
 What has been implemented:
     1) Running multiple simulations with a fixed set of parameters, in order to explore the average distance between the simulated and true summary statistics.
     2) A hill-climbing-like sampling procedure that accepts new parameters (theta) if they produce summary statistics that are closer to the truth than the current best parameters. This procedure achieves reasonable results.
-    3) ABC Sampling procedure as described in https://arxiv.org/pdf/1001.2058.pdf, Table 1.2. It currently does not work. I think I have implemented it correctly, but it currently is too strict on the value of epsilon.
+    3) ABC Sampling procedure as described in https://arxiv.org/pdf/1001.2058.pdf, Table 1.2. It currently does not work perfectly. I think I have implemented it correctly. I have tried by starting with a high value of epsilon and then annealing it over iterations. One issue is how to decide on a lower bound. Zero is not a viable option since it is basically impossible to achieve the same exact summary statistics even with the true parameters (try it yourself with my implementation that runs multiple simulations using the same parameters).
 
 **Dependencies**
     - Those in semimarkov_forecaster.yml, plus *copy*. @Mike please add it to semimarkov_forecaster.yml (I am not sure how to do it).
 
 ## TODO
-    - Anneal epsilon: start from a high value, and anneal it. The issue is how to decide on a lower bound. Zero is not a viable option since it is basically impossible to achieve the same exact summary statistics even with the true parameters (try it yourself with my implementation that runs multiple simulations using the same parameters)
+    - Try a simulated-annealing-like procedure: start from implementation #2 and modify it so it becomes more like simulated annealing.

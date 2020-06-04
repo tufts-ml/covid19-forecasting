@@ -161,9 +161,11 @@ SUMMARY_STATISTICS_NAMES = ["n_InGeneralWard", "n_OffVentInICU", "n_OnVentInICU"
 
 class ABCSampler(object):
 
-    def __init__(self, seed, epsilon, T_y, config_dict, num_timesteps, num_simulations):
+    def __init__(self, seed, start_epsilon, lowest_epsilon, annealing_constant, T_y, config_dict, num_timesteps, num_simulations):
         self.T_y = T_y
-        self.epsilon = epsilon
+        self.epsilon = start_epsilon
+        self.lowest_epsilon = lowest_epsilon
+        self.annealing_constant = annealing_constant
         self.seed = seed
         self.config_dict = config_dict
         self.num_timesteps = num_timesteps
@@ -244,27 +246,6 @@ class ABCSampler(object):
             RANDOM WALK
             '''
 
-            for s in range(len(theta['durations'])):
-                # draw from proposal distribution
-                theta_durations_prime = deepcopy(theta['durations'])
-                p_prime_D = self.draw_proposal_distribution_categorical(theta_durations_prime[s], scale)
-                theta_durations_prime[s] = p_prime_D
-
-                # create a theta_prime and simulate dataset
-                theta_prime = deepcopy(theta)
-                theta_prime['durations'] = theta_durations_prime
-                T_x = self.simulate_dataset(theta_prime)
-
-                distance = self.calc_distance(T_x)
-                if distance < best_distance:
-                    theta = deepcopy(theta_prime)
-                    accepted_thetas.append(theta)
-                    num_accepted += 1
-                    best_distance = distance
-
-            '''
-            ABC MCMC
-            '''
             # for s in range(len(theta['durations'])):
             #     # draw from proposal distribution
             #     theta_durations_prime = deepcopy(theta['durations'])
@@ -276,28 +257,55 @@ class ABCSampler(object):
             #     theta_prime['durations'] = theta_durations_prime
             #     T_x = self.simulate_dataset(theta_prime)
 
-            #     # calculate alpha(theta, theta_prime)
-            #     log_pi_eps_prime = self.calc_log_pi_epsilon(T_x)
-            #     # print(log_pi_eps_prime)
-            #     log_prior_prime = np.sum([self.calc_log_proba_prior(p_prime_D) for p_prime_D in theta_prime['durations']])
-            #     log_prop_prime = 0.0
-            #     log_prop_prev = 0.0
-            #     for s in range(len(theta_prime['durations'])):
-            #         log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations'][s], theta_prime['durations'][s], scale)
-            #         log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations'][s], theta['durations'][s], scale)
-
-            #     # eq. 1.3.2
-            #     alpha = (log_pi_eps_prime + log_prior_prime + log_prop_prime) - (log_pi_eps_prev + log_prior_prev + log_prop_prev)
-            #     print(np.exp(alpha))
-
-            #     if np.random.random() < np.exp(alpha):
+            #     distance = self.calc_distance(T_x)
+            #     if distance < best_distance:
             #         theta = deepcopy(theta_prime)
             #         accepted_thetas.append(theta)
             #         num_accepted += 1
-            #         log_pi_eps_prev = log_pi_eps_prime
-            #         log_prior_prev = log_prior_prime
+            #         best_distance = distance
+
+            '''
+            ABC MCMC
+            '''
+            for s in range(len(theta['durations'])):
+                # draw from proposal distribution
+                theta_durations_prime = deepcopy(theta['durations'])
+                p_prime_D = self.draw_proposal_distribution_categorical(theta_durations_prime[s], scale)
+                theta_durations_prime[s] = p_prime_D
+
+                # create a theta_prime and simulate dataset
+                theta_prime = deepcopy(theta)
+                theta_prime['durations'] = theta_durations_prime
+                T_x = self.simulate_dataset(theta_prime)
+
+                if self.accept(T_x):
+                    # calculate alpha(theta, theta_prime)
+                    # log_pi_eps_prime = self.calc_log_pi_epsilon(T_x)
+                    # print(log_pi_eps_prime)
+                    log_prior_prime = np.sum([self.calc_log_proba_prior(p_prime_D) for p_prime_D in theta_prime['durations']])
+                    log_prop_prime = 0.0
+                    log_prop_prev = 0.0
+                    for s in range(len(theta_prime['durations'])):
+                        log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations'][s], theta_prime['durations'][s], scale)
+                        log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations'][s], theta['durations'][s], scale)
+
+                    # eq. 1.3.2
+                    alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
+                    print(np.exp(alpha))
+
+                    if np.random.random() < np.exp(alpha):
+                        theta = deepcopy(theta_prime)
+                        accepted_thetas.append(theta)
+                        num_accepted += 1
+                        # log_pi_eps_prev = log_pi_eps_prime
+                        log_prior_prev = log_prior_prime
+
+                self.update_epsilon()
 
         return accepted_thetas, num_accepted
+
+    def update_epsilon(self):
+        self.epsilon = max(self.epsilon * self.annealing_constant, self.lowest_epsilon)
 
     def calc_distance(self, T_x):
         # euclidean distance
@@ -351,7 +359,9 @@ if __name__ == '__main__':
     parser.add_argument('--num_iterations', default=100, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic prameter vector
     parser.add_argument('--num_simulations', default=5, type=int)
-    parser.add_argument('--epsilon', default=10.0, type=float)
+    parser.add_argument('--start_epsilon', default=80.0, type=float)
+    parser.add_argument('--lowest_epsilon', default=10.0, type=float)
+    parser.add_argument('--annealing_constant', default=0.99)
     parser.add_argument('--scale', default=50, type=int) # scale parameter for the dirichlet proposal distribution
 
     args, unknown_args = parser.parse_known_args()
@@ -366,7 +376,9 @@ if __name__ == '__main__':
     seed = int(args.random_seed)
     num_iterations = int(args.num_iterations)
     num_simulations = int(args.num_simulations)
-    epsilon = float(args.epsilon)
+    start_epsilon = float(args.start_epsilon)
+    lowest_epsilon = float(args.lowest_epsilon)
+    annealing_constant = float(args.annealing_constant)
     scale = int(args.scale)
 
     ## Load JSON
@@ -381,7 +393,7 @@ if __name__ == '__main__':
         T_y.append(true_df[col_name])
     T_y = np.asarray(T_y).flatten()
 
-    sampler = ABCSampler(seed, epsilon, T_y, config_dict, num_timesteps, num_simulations)
+    sampler = ABCSampler(seed, start_epsilon, lowest_epsilon, annealing_constant, T_y, config_dict, num_timesteps, num_simulations)
 
     # various initializations
     true = np.array([0.5, 0.25, 0.125, 0.0625, 0.0625])
