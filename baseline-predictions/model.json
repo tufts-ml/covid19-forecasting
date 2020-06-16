@@ -1,0 +1,25 @@
+{
+    "likelihood": "NegativeBinomial",
+    "window_size": 4,
+    "priors": {
+        "intercept": [
+            "Normal",
+            0,
+            10
+        ],
+        "beta": [
+            "Normal",
+            0,
+            1
+        ],
+        "beta_recent": [
+            "Normal",
+            1,
+            1
+        ],
+        "alpha": [
+            "HalfNormal",
+            1000
+        ]
+    }
+}
