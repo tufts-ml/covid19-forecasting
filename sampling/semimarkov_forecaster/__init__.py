@@ -1,2 +1,2 @@
-# from .PatientTrajectory import PatientTrajectory
-from .SimplePatientTrajectory import PatientTrajectory
+from .PatientTrajectory import PatientTrajectory
+# from .SimplePatientTrajectory import PatientTrajectory
