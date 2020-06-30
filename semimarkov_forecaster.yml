@@ -18,6 +18,8 @@ dependencies:
   - dill>=0.2
   ## Machine Learning
   - scikit-learn>=0.21
+
   ## Pip-only packages
   - pip:
     - dash>=1.10.0
+    - pymc3>=3.9.2
