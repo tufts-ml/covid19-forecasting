@@ -1,3 +1,10 @@
+'''
+NegativeBinomialRegression.py
+-----------------------------
+Defines a generalized autoregressive model with Negative Binomial likelihood.
+Contains fit, score, and forecast methods.
+'''
+
 import pymc3 as pm
 import numpy as np
 import pandas as pd
@@ -10,9 +17,9 @@ class NegativeBinomialRegression:
     init
     ----
     Takes in dictionary that specifies the model parameters.
+    For Normal priors, mean is 1st value in array, stddev is 2nd value in array.
     
-    Example input
-    -------------
+    --- Example input ---
     {
         "window_size": 4,
         "intercept": [0, 10],
@@ -22,10 +29,10 @@ class NegativeBinomialRegression:
     }
     
     window_size: number of previous timesteps to condition on
-    intercept: mu and sigma for Normal prior for bias weight
-    beta: mu and sigma for Normal prior for weights on all previous timesteps except most recent
-    beta_recent: mu and sigma for Normal prior for weight on most recent timestep
-    alpha: mu and sigma for TruncatedNormal (lower=0) prior for alpha parameter of NegativeBinomial
+    intercept: bias weight (Normal prior)
+    beta: array of weights on all previous timesteps except most recent (Normal prior)
+    beta_recent: weight on most recent timestep (Normal prior)
+    alpha: Negative Binomial disperson parameter (TruncatedNormal(low=0) prior)
     '''
     def __init__(self, model_dict=None):
         if model_dict is None:
@@ -33,7 +40,7 @@ class NegativeBinomialRegression:
             self.intercept = [0, 10]
             self.beta = [0, 1]
             self.beta_recent = [1, 1]
-            self.alpha = [500, 500]
+            self.alpha = [1000, 500]
         else:
             self.W = model_dict['window_size']
             self.intercept = model_dict['intercept']
@@ -44,8 +51,9 @@ class NegativeBinomialRegression:
     '''
     fit
     ---
-    Defines a PyMC3 model for linear regression with Negative Binomial likelihood.
-    Estimates model parameters by sampling from the posterior and taking the mean of samples.
+    Fits a PyMC3 model for linear regression with Negative Binomial likelihood
+    to the given data.
+    Samples all model parameters from the posterior.
 
     Args: x_train: shape (N, W)
           y_train: shape (N,)
@@ -65,9 +73,10 @@ class NegativeBinomialRegression:
 
             Y_obs = pm.NegativeBinomial('Y_obs', mu=mu, alpha=alpha, observed=y_train)
 
-            trace = pm.sample(500, init='adapt_diag', chains=1, tune=1000,
-                              compute_convergence_checks=False)
+            trace = pm.sample(500, init='adapt_diag', tune=1000, target_accept=.90)
+                              # compute_convergence_checks=False)
 
+        self.trace = trace
         self.post_mean = pm.summary(trace)['mean'].to_dict()
         self.post_mean['alpha_lowerbound__'] = np.log(self.post_mean['alpha'])
         beta = np.zeros(self.W-1)
@@ -78,7 +87,7 @@ class NegativeBinomialRegression:
     '''
     score
     -----
-    Returns log probability of given dataset under the model.
+    Returns the log probability of the given dataset under the model.
 
     Args: x_train: shape (N, W)
           y_train: shape (N,)
@@ -98,7 +107,16 @@ class NegativeBinomialRegression:
 
             Y_obs = pm.NegativeBinomial('Y_obs', mu=mu, alpha=alpha, observed=y_valid)
 
-        score = model['Y_obs'].logp(self.post_mean) / len(y_valid)
+        # Score by Monte Carlo integration on posterior samples
+        logp_list = np.zeros(len(self.trace))
+        for i in range(len(self.trace)):
+            if i % 100 == 0:
+                print(f'Scored {i} samples...')
+            logp_list[i] = model['Y_obs'].logp(self.trace[i])
+        score = np.mean(logp_list) / len(y_valid)
+
+        # Score on mean of posterior
+        # score = model['Y_obs'].logp(self.post_mean) / len(y_valid)
         return score
 
     '''
@@ -112,7 +130,7 @@ class NegativeBinomialRegression:
         get_mu
         ------
         Returns mean of predictive distribution for next timestep given last W timesteps:
-            inner_prod(Weights, history)
+            inner_prod(weights, history)
         Returns 1 if computed mean <= 0 (mean of Negative Binomial must be positive).
         '''
         def get_mu(history):
@@ -129,7 +147,7 @@ class NegativeBinomialRegression:
         alpha = self.post_mean['alpha']
 
         for i in range(n_samples):
-            if(i % 10 == 0):
+            if(i % 100 == 0):
                 print(f'Collected {i} samples...')
             
             for j in range(n_predictions):
