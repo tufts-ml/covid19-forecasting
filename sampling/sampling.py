@@ -132,6 +132,7 @@ def run_simulation(random_seed, config_dict, states, state_name_to_id, next_stat
     # Only considering census counts
     col_names = ['n_%s' % s for s in states]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
+
     results_df["timestep"] = np.arange(-Tpast, -Tpast + tf)
 
     results_df["n_TERMINAL"] = terminal_count_T1[:,0]
@@ -157,7 +158,7 @@ theta:
     theta['health'] = list of length S, each containing array of shape (2,) (treating health probas as 2-dim dirichlet)
     theta['durations'] = list of length S with arrays of shape (H, D) [(D,) in simple example]
 '''
-SUMMARY_STATISTICS_NAMES = ["n_InGeneralWard", "n_OffVentInICU", "n_OnVentInICU", "n_TERMINAL"]
+SUMMARY_STATISTICS_NAMES = ["n_InGeneralWard", "n_OffVentInICU", "n_OnVentInICU", "n_TERMINAL", "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
 HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering', 'Declining': 0, 'Recovering': 1}
 
 class ABCSampler(object):
@@ -212,7 +213,10 @@ class ABCSampler(object):
             # condensing the results in a summary vector
             T_x = []
             for col_name in SUMMARY_STATISTICS_NAMES:
-                T_x.append(results_df[col_name])
+                if col_name == "n_InICU":
+                    T_x.append(results_df["n_OffVentInICU"] + results_df["n_OnVentInICU"]) # extra!
+                else:
+                    T_x.append(results_df[col_name])
             T_x = np.asarray(T_x).flatten()
 
             # accumulating summary statistics from multiple runs
@@ -486,15 +490,17 @@ if __name__ == '__main__':
     parser.add_argument('--config_template', default='example_simple/params_simple') # template for config_file
     parser.add_argument('--output_file', default='example_output/test.txt') # currently not using it
     parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
-    parser.add_argument('--algorithm', default='abc')
+    parser.add_argument('--algorithm', default='sa')
     parser.add_argument('--num_timesteps', default=100, type=int) # number of timesteps to simulate
-    parser.add_argument('--num_iterations', default=5, type=int) # number of sampling iterations 
+    parser.add_argument('--num_iterations', default=20, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic prameter vector
     parser.add_argument('--num_simulations', default=5, type=int)
     parser.add_argument('--start_epsilon', default=80.0, type=float)
     parser.add_argument('--lowest_epsilon', default=25.0, type=float)
     parser.add_argument('--annealing_constant', default=0.996)
     parser.add_argument('--scale', default=100, type=int) # scale parameter for the dirichlet proposal distribution
+
+    parser.add_argument('--fixed_type', default='uniform') # only relevant for experiments with the 'fixed' algorithm
 
     args, unknown_args = parser.parse_known_args()
 
@@ -513,6 +519,7 @@ if __name__ == '__main__':
     annealing_constant = float(args.annealing_constant)
     scale = int(args.scale)
     algorithm = args.algorithm
+    fixed_type = args.fixed_type
 
     ## Load JSON
     with open(config_template + '-%ddays.json' % num_timesteps, 'r') as f:
@@ -523,7 +530,10 @@ if __name__ == '__main__':
     # condensing the true results in a summary vector
     T_y = []
     for col_name in SUMMARY_STATISTICS_NAMES:
-        T_y.append(true_df[col_name])
+        if col_name == "n_InICU":
+            T_y.append(true_df["n_OffVentInICU"] + true_df["n_OnVentInICU"]) # extra!
+        else:
+            T_y.append(true_df[col_name])
     T_y = np.asarray(T_y).flatten()
 
     sampler = ABCSampler(seed, start_epsilon, lowest_epsilon, annealing_constant, T_y, config_dict, num_timesteps, num_simulations)
@@ -534,12 +544,77 @@ if __name__ == '__main__':
     almost_true = np.array([0.5, 0.25, 0.0625, 0.125, 0.0625])
     good = np.array([0.4, 0.2, 0.1, 0.2, 0.1])
     uniform = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
+    twoD_fake = np.array([0.4, 0.6])
     twoD_true = np.array([0.9, 0.1])
+    twoD_almost_true = np.array([0.8, 0.2])
+    twoD_good = np.array([0.75, 0.25])
     twoD_uniform = np.array([0.5, 0.5])
 
-    theta_init = {'num timesteps': num_timesteps, 'health': [np.copy(twoD_uniform), np.copy(twoD_uniform), np.copy(twoD_uniform)], 'transitions': None, 'durations': {'Declining': [np.copy(uniform), np.copy(uniform), np.copy(uniform)], 'Recovering': [np.copy(uniform), np.copy(uniform), np.copy(uniform)]}}
+    if fixed_type == 'true':
+        health = [np.copy(twoD_true), np.copy(twoD_true), np.copy(twoD_true)]
+        declining = [np.copy(true), np.copy(true), np.copy(true)]
+        recovering = [np.copy(true), np.copy(true), np.copy(true)]
+    elif fixed_type == 'fake':
+        health = [np.copy(twoD_fake), np.copy(twoD_fake), np.copy(twoD_fake)]
+        declining = [np.copy(fake), np.copy(fake), np.copy(fake)]
+        recovering = [np.copy(fake), np.copy(fake), np.copy(fake)]
+    elif fixed_type == 'almost_true':
+        health = [np.copy(twoD_almost_true), np.copy(twoD_almost_true), np.copy(twoD_almost_true)]
+        declining = [np.copy(almost_true), np.copy(almost_true), np.copy(almost_true)]
+        recovering = [np.copy(almost_true), np.copy(almost_true), np.copy(almost_true)]
+    elif fixed_type == 'good':
+        health = [np.copy(twoD_good), np.copy(twoD_good), np.copy(twoD_good)]
+        declining = [np.copy(good), np.copy(good), np.copy(good)]
+        recovering = [np.copy(good), np.copy(good), np.copy(good)]
+    elif fixed_type == 'health_is_fake':
+        health = [np.copy(twoD_fake), np.copy(twoD_fake), np.copy(twoD_fake)]
+        declining = [np.copy(true), np.copy(true), np.copy(true)]
+        recovering = [np.copy(true), np.copy(true), np.copy(true)]
+    elif fixed_type == 'uniform':
+        health = [np.copy(twoD_uniform), np.copy(twoD_uniform), np.copy(twoD_uniform)]
+        declining = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]
+        recovering = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]  
+    elif fixed_type == 'general_ward_is_fake':
+        health = [np.copy(twoD_fake), np.copy(twoD_true), np.copy(twoD_true)]
+        declining = [np.copy(fake), np.copy(true), np.copy(true)]
+        recovering = [np.copy(fake), np.copy(true), np.copy(true)]
+    elif fixed_type == 'off_vent_in_icu_is_fake':
+        health = [np.copy(twoD_true), np.copy(twoD_fake), np.copy(twoD_true)]
+        declining = [np.copy(true), np.copy(fake), np.copy(true)]
+        recovering = [np.copy(true), np.copy(fake), np.copy(true)]
+    elif fixed_type == 'on_vent_in_icu_is_fake':
+        health = [np.copy(twoD_true), np.copy(twoD_true), np.copy(twoD_fake)]
+        declining = [np.copy(true), np.copy(true), np.copy(fake)]
+        recovering = [np.copy(true), np.copy(true), np.copy(fake)]
+    elif fixed_type == 'general_ward_health_is_fake':
+        health = [np.copy(twoD_fake), np.copy(twoD_true), np.copy(twoD_true)]
+        declining = [np.copy(true), np.copy(true), np.copy(true)]
+        recovering = [np.copy(true), np.copy(true), np.copy(true)]
+    elif fixed_type == 'general_ward_is_good':
+        health = [np.copy(twoD_good), np.copy(twoD_true), np.copy(twoD_true)]
+        declining = [np.copy(good), np.copy(true), np.copy(true)]
+        recovering = [np.copy(good), np.copy(true), np.copy(true)]
+    elif fixed_type == 'off_vent_in_icu_is_good':
+        health = [np.copy(twoD_true), np.copy(twoD_good), np.copy(twoD_true)]
+        declining = [np.copy(true), np.copy(good), np.copy(true)]
+        recovering = [np.copy(true), np.copy(good), np.copy(true)]
+    elif fixed_type == 'on_vent_in_icu_is_good':
+        health = [np.copy(twoD_true), np.copy(twoD_true), np.copy(twoD_good)]
+        declining = [np.copy(true), np.copy(true), np.copy(good)]
+        recovering = [np.copy(true), np.copy(true), np.copy(good)]
+    else:
+        health = [np.copy(twoD_uniform), np.copy(twoD_uniform), np.copy(twoD_uniform)]
+        declining = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]
+        recovering = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]   
+
+    theta_init = {'num timesteps': num_timesteps, 'health': health, 'transitions': None, 'durations': {'Declining': declining, 'Recovering': recovering}}
 
     accepted_thetas, accepted_distances, num_accepted, all_distances = sampler.draw_samples(theta_init, algorithm, num_iterations, scale)
+    df = pd.read_csv('example_output/fixed_experiment_max_summary_%d_timesteps.csv' % num_timesteps, index_col='score')
+    df[fixed_type] = [np.mean(all_distances), np.std(all_distances)]
+    df.to_csv('example_output/fixed_experiment_max_summary_%d_timesteps.csv' % num_timesteps)
+
+    print('Avg. distance: %.3f +/- %.3f' % (np.mean(all_distances), np.std(all_distances)))
 
     num_to_save = 10
     out = open(output_file, 'w+')
