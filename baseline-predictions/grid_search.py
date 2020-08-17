@@ -1,10 +1,10 @@
 '''
 grid_search.py
 --------------
-Runs grid search for GLM and/or GGP.
-User can specify -l to run grid search for GLM only, or -g for GGP only.
+Runs grid search for GAR and/or GGP.
+User can specify -a to run grid search for GAR only, or -g for GGP only.
 Defaults to using both models and producing side-by-side plots of performance.
-Plots heldout log likelihood vs window size for GLM, and heldout log likelihood
+Plots heldout log likelihood vs window size for GAR, and heldout log likelihood
 vs time-scale prior for GGP.
 '''
 
@@ -14,27 +14,25 @@ import arg_types
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from glm_grid_search import glm_grid_search
+
+from gar_grid_search import gar_grid_search
 from ggp_grid_search import ggp_grid_search
 
 if __name__ == '__main__':
 
-	# logger = logging.getLogger('pymc3')
-	# logger.setLevel(logging.ERROR)
-	logger = logging.getLogger('arviz')
-	logger.setLevel(logging.ERROR)
-
 	parser = argparse.ArgumentParser()
 
 	parser.add_argument('input_csv_file', type=arg_types.csv_file, help='name of input CSV file')
-	parser.add_argument('-c', '--target_col_name', default='cases',
-	                    help='column of CSV file with counts to make predictions on, default \'cases\'')
+	parser.add_argument('-c', '--target_col_name',
+		                default='hospitalized_total_covid_patients_suspected_and_confirmed_including_icu',
+	                    help='column of CSV file with counts to make predictions on, \
+	                    	  default \'hospitalized_total_covid_patients_suspected_and_confirmed_including_icu\'')
 
-	parser.add_argument('-l', '--linear_model', action='store_true', help='only use GLM')
-	parser.add_argument('-g', '--gaussian_process', action='store_true', help='only use GGP')
+	parser.add_argument('-a', '--autoregressive', action='store_true', help='only use autoregressive model')
+	parser.add_argument('-g', '--gaussian', action='store_true', help='only use gaussian process')
 
-	parser.add_argument('-m', '--glm_model_file', type=arg_types.json_file, default='glm_model.json',
-						help='name of JSON file to write GLM model parameters to, default \'glm_model.json\'')
+	parser.add_argument('-m', '--gar_model_file', type=arg_types.json_file, default='gar_model.json',
+						help='name of JSON file to write GAR model parameters to, default \'gar_model.json\'')
 	parser.add_argument('-f', '--ggp_model_file', type=arg_types.json_file, default='ggp_model.json',
 	                    help='name of JSON file to write GGP model parameters to, default \'ggp_model.json\'')
 
@@ -43,24 +41,32 @@ if __name__ == '__main__':
 	
 	args = parser.parse_args()
 
+	print(f'Input file: {args.input_csv_file}\n')
+
 	train_df = pd.read_csv(args.input_csv_file)
-	counts = train_df[args.target_col_name].values
+	counts = train_df[args.target_col_name].astype(float)
+
+	dates = train_df['date'].values
+	end = dates[-1]
 
 	np.random.seed(42)
 
-	if args.linear_model:
-		fig,ax = plt.subplots()
-		glm_grid_search(counts, args.glm_model_file, ax)
+	if args.autoregressive:
+		fig1,perf_ax = plt.subplots(figsize=(8,6))
+		fig2,forecast_ax = plt.subplots(figsize=(8,6))
+		gar_grid_search(counts, args.gar_model_file, perf_ax, forecast_ax, end)
 
-	elif args.gaussian_process:
-		fig,ax = plt.subplots()
-		ggp_grid_search(counts, args.ggp_model_file, ax)
+	elif args.gaussian:
+		fig1,perf_ax = plt.subplots(figsize=(8,6))
+		fig2,forecast_ax = plt.subplots(figsize=(8,6))
+		ggp_grid_search(counts, args.ggp_model_file, perf_ax, forecast_ax, end)
 
 	else:
-		fig,ax = plt.subplots(ncols=2, sharey=True, figsize=(12,6))
-		glm_grid_search(counts, args.glm_model_file, ax[0])
-		ggp_grid_search(counts, args.ggp_model_file, ax[1])
+		fig1,perf_ax = plt.subplots(ncols=2, sharey=True, figsize=(16,6))
+		fig2,forecast_ax = plt.subplots(ncols=2, sharey=True, figsize=(16,6))
+		gar_grid_search(counts, args.gar_model_file, perf_ax[0], forecast_ax[0], end)
+		ggp_grid_search(counts, args.ggp_model_file, perf_ax[1], forecast_ax[1], end)
 
-	plt.savefig(args.plot_file)
-	# plt.show()
+	fig1.savefig(args.plot_file)
+	fig2.savefig('heldout_forecasts.png')
 

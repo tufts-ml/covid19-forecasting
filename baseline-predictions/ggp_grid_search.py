@@ -22,25 +22,21 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import json
 import itertools
-from NegativeBinomialGP import NegativeBinomialGP
+from datetime import date
+from datetime import timedelta
 
-def ggp_grid_search(counts, output_model_file, ax):
-    T = len(counts)
-    t = np.arange(T)[:,None]
+from NegBinGP import NegBinGP
+from plot_forecasts import plot_forecasts
 
-    # Holding out last 20% of counts
-    n_valid = int(.2 * len(counts))
-    t_tr = t[:-n_valid]
-    t_va = t[-n_valid:]
-    y_tr = counts[:-n_valid]
-    y_va = counts[-n_valid:]
+def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
+    T = int(.8 * len(counts))
+    y_tr = counts[:T]
+    y_va = counts[T:]
+    F = len(y_va)
 
     ### Initialize hyperparameter spaces ###
-    l_mus = [1, 4, 7, 10, 13, 16]
-    c_mus = [1, 4, 7, 10]
-    a_mus = [1, 4, 7, 10]
-    alpha_mus = [500, 1000, 1500, 2000, 2500, 3000]
-    params_to_search = list(itertools.product(c_mus, a_mus, alpha_mus))
+    l_mus = [0, 4, 8, 12, 16, 20]
+    c_mus = [4]
 
     score_per_time_scale = list()
     params_per_time_scale = list()
@@ -49,31 +45,28 @@ def ggp_grid_search(counts, output_model_file, ax):
 
         score_list = list()
 
-        for c_mu, a_mu, alpha_mu in params_to_search:
+        for c_mu in c_mus:
 
             ### Fit and score a model with the current parameters ###
             model_dict = {
-                "c": [c_mu, 10],
-                "a": [a_mu, 10],
-                "l": [l, 5],
-                "alpha": [alpha_mu, 500]
+                'c': [c_mu, 2],
+                'a': 2,
+                'l': [l, 2],
             }
 
-            model = NegativeBinomialGP(model_dict)
-            model.fit(t_tr, y_tr)
-            score = model.score(t_va, y_va)
-            printf(f'\nScore on heldout set = {score}')
+            model = NegBinGP(model_dict)
+            model.fit(y_tr, F)
+            score = model.score(y_va)
+            print(f'\nScore on heldout set = {score}')
             score_list.append(score)
 
         ### Choose the best model for the current time-scale ###
         best_id = np.argmax(score_list)
         best_score = score_list[best_id]
-        best_params = params_to_search[best_id]
+        best_params = c_mus[best_id]
 
         print(f'Best prior params for l = {l}: ', end='')
-        print(f'mean = {best_params[0]} | ', end='')
-        print(f'amplitude = {best_params[1]} | ', end='')
-        print(f'alpha = {best_params[2]}')
+        print(f'mean = {best_params} | ', end='')
         print(f'score = {best_score}\n')
 
         score_per_time_scale.append(best_score)
@@ -86,24 +79,31 @@ def ggp_grid_search(counts, output_model_file, ax):
 
     print('Best prior params overall: ', end='')
     print(f'l = {l_mus[best_id]} | ', end='')
-    print(f'mean = {best_params[0]} | ', end='')
-    print(f'amplitude = {best_params[1]} | ', end='')
-    print(f'alpha = {best_params[2]} | ', end='')
+    print(f'mean = {best_params} | ', end='')
     print(f'score = {best_score}\n')
 
     ### Plot best score for each timescale prior assumption ###
-    ax.set_title('GGP Performance vs Time-Scale Prior')
-    ax.set_xlabel('Time-scale prior mean')
-    ax.set_ylabel('Heldout log lik')
-    ax.plot(l_mus, score_per_time_scale, 's-')
+    perf_ax.set_title('GGP Performance vs Time-Scale Prior')
+    perf_ax.set_xlabel('Time-scale prior mean')
+    perf_ax.set_ylabel('Heldout log lik')
+    perf_ax.plot(l_mus, score_per_time_scale, 's-')
 
     ### Write best model parameters to json file ###
     model = dict()
-    model["c"] = [best_params[0], 10]
-    model["a"] = [best_params[1], 10]
-    model["l"] = [l_mus[best_id], 5]
-    model["alpha"] = [best_params[2], 500]
+    model['c'] = [best_params, 2]
+    model['a'] = 2
+    model['l'] = [l_mus[best_id], 2]
 
     with open(output_model_file, 'w') as f:
         json.dump(model, f, indent=4)
+
+    ### Plot heldout forecasts using best model ###
+    best_model = NegBinGP(model)
+    best_model.fit(y_tr, F)
+    samples = best_model.forecast(1000)
+    forecast_ax.set_title('GGP Forecasts')
+    start = date.fromisoformat(end) - timedelta(F-1)
+    plot_forecasts(samples, start, forecast_ax, y_va, future=False)
+
+
 

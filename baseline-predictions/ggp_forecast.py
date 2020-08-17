@@ -8,16 +8,17 @@ and returns array of forecasts.
 '''
 
 import numpy as np
-from NegativeBinomialGP import NegativeBinomialGP
+from NegBinGP import NegBinGP
+from plot_forecasts import plot_forecasts
 
-def ggp_forecast(model_dict, counts, n_samples, n_predictions, output_csv_file_pattern):
+def ggp_forecast(model_dict, counts, n_samples, n_predictions,
+				 output_csv_file_pattern, start, ax):
+	
 	T = len(counts)
-	t = np.arange(T)[:,None]
 
-	model = NegativeBinomialGP(model_dict)
-	model.fit(t, counts)
-	score = model.score(t, counts)
-	print(f'\nScore on training data = {score}\n')
+	model = NegBinGP(model_dict)
+	model.fit(counts, n_predictions)
 
-	samples = model.forecast(counts, n_samples, n_predictions, output_csv_file_pattern)
-	return samples
+	samples = model.forecast(n_samples, output_csv_file_pattern)
+	ax.set_title('GGP Forecasts')
+	plot_forecasts(samples, start, ax, counts[-5:])
