@@ -8,7 +8,7 @@ import json
 from datetime import date
 from datetime import timedelta
 
-from NegBinAutoregression import NegBinAutoregression
+from GPAR import GPAR
 from plot_forecasts import plot_forecasts
 
 def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
@@ -35,7 +35,7 @@ def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
                 'beta': [0, beta_sigma]
             }
 
-            model = NegBinAutoregression(model_dict)
+            model = GPAR(model_dict)
             model.fit(y_tr, F)
             score = model.score(y_va)
             score_list.append(score)
@@ -68,12 +68,13 @@ def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
         json.dump(model, f, indent=4)
 
     # Plot heldout forecasts using best model
+    '''
     best_model = NegBinAutoregression(model)
     best_model.fit(y_tr, F)
     samples = best_model.forecast(1000)
     forecast_ax.set_title('GAR Best Model Heldout Forecasts')
     start = date.fromisoformat(end) - timedelta(F-1)
     plot_forecasts(samples, start, forecast_ax, y_va, future=False)
-
+    '''
 
 

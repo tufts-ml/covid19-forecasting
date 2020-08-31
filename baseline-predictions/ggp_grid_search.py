@@ -25,7 +25,7 @@ import itertools
 from datetime import date
 from datetime import timedelta
 
-from NegBinGP import NegBinGP
+from GPGP import GPGP
 from plot_forecasts import plot_forecasts
 
 def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
@@ -35,7 +35,7 @@ def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
     F = len(y_va)
 
     ### Initialize hyperparameter spaces ###
-    l_mus = [0, 4, 8, 12, 16, 20]
+    l_mus = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40]
     c_mus = [4]
 
     score_per_time_scale = list()
@@ -54,7 +54,7 @@ def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
                 'l': [l, 2],
             }
 
-            model = NegBinGP(model_dict)
+            model = GPGP(model_dict)
             model.fit(y_tr, F)
             score = model.score(y_va)
             print(f'\nScore on heldout set = {score}')
@@ -98,12 +98,13 @@ def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
         json.dump(model, f, indent=4)
 
     ### Plot heldout forecasts using best model ###
+    '''
     best_model = NegBinGP(model)
     best_model.fit(y_tr, F)
     samples = best_model.forecast(1000)
     forecast_ax.set_title('GGP Forecasts')
     start = date.fromisoformat(end) - timedelta(F-1)
     plot_forecasts(samples, start, forecast_ax, y_va, future=False)
-
+    '''
 
 

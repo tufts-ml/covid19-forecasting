@@ -72,7 +72,7 @@ class GPGP:
             self.lam = pm.TruncatedNormal('lam', mu=0, sigma=0.1, lower=-1, upper=1)
             y_past = GenPoisson('y_past', theta=tt.exp(self.f[:T]), lam=self.lam, observed=y_tr)
 
-            self.trace = pm.sample(500, tune=1000, target_accept=.99, chains=2, random_seed=42, cores=1)
+            self.trace = pm.sample(5000, tune=1000, target_accept=.98, chains=2, random_seed=42, cores=1, init='adapt_diag')
 
             summary = pm.summary(self.trace)['mean'].to_dict()
             for key in ['mean', 'amplitude', 'time-scale', 'lam']:

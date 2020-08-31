@@ -63,7 +63,7 @@ class GPAR:
             self.lam = pm.TruncatedNormal('lam', mu=0, sigma=0.1, lower=-1, upper=1)
             y_past = GenPoisson('y_past', theta=tt.exp(self.f[:T]), lam=self.lam, observed=y_tr)
 
-            self.trace = pm.sample(5000, tune=1000, max_treedepth=12, init='adapt_diag', random_seed=42, chains=2, cores=1)
+            self.trace = pm.sample(5000, tune=1000, max_treedepth=15, init='adapt_diag', random_seed=42, chains=2, cores=1)
 
             summary = pm.summary(self.trace)['mean'].to_dict()
             for i in range(self.W+1):

@@ -1,4 +1,4 @@
-from NegBinAutoregression import NegBinAutoregression
+from GPAR import GPAR
 from plot_forecasts import plot_forecasts
 
 def gar_forecast(model_dict, counts, n_samples, n_predictions,
@@ -6,7 +6,7 @@ def gar_forecast(model_dict, counts, n_samples, n_predictions,
 
     T = len(counts)
 
-    model = NegBinAutoregression(model_dict)
+    model = GPAR(model_dict)
     model.fit(counts, n_predictions)
 
     samples = model.forecast(n_samples, output_csv_file_pattern)

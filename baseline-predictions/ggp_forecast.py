@@ -8,7 +8,7 @@ and returns array of forecasts.
 '''
 
 import numpy as np
-from NegBinGP import NegBinGP
+from GPGP import GPGP
 from plot_forecasts import plot_forecasts
 
 def ggp_forecast(model_dict, counts, n_samples, n_predictions,
@@ -16,7 +16,7 @@ def ggp_forecast(model_dict, counts, n_samples, n_predictions,
 	
 	T = len(counts)
 
-	model = NegBinGP(model_dict)
+	model = GPGP(model_dict)
 	model.fit(counts, n_predictions)
 
 	samples = model.forecast(n_samples, output_csv_file_pattern)
