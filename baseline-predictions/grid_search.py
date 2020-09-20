@@ -68,5 +68,5 @@ if __name__ == '__main__':
 		ggp_grid_search(counts, args.ggp_model_file, perf_ax[1], forecast_ax[1], end)
 
 	fig1.savefig(args.plot_file)
-	fig2.savefig('heldout_forecasts.png')
+	# fig2.savefig('heldout_forecasts.png')
 

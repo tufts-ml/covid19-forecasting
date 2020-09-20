@@ -1,3 +1,20 @@
+'''
+gar_grid_search.py
+------------------
+Perform grid search over a set of hyperparameters for a Generalized Autoregressive
+Process (GAR) fit to the given count data.
+Score model on last 20% of examples (i.e., most recent counts).
+Write best model parameters to JSON file with the given filename.
+Plot best heldout log likelihood for each timescale prior on the given axis.
+
+Model: Autoregressive Process with Generalized Poisson likelihood
+              --- Parameters ---                    --- Priors ---
+                 window size                            fixed
+                 bias weight                     Normal(0, bias_sigma)
+weight on most recent timestep (beta_recent)     Normal(1, beta_sigma)
+weights on all other previous timesteps (beta)   Normal(0, beta_sigma)
+'''
+
 import argparse
 import arg_types
 import numpy as np
@@ -8,7 +25,7 @@ import json
 from datetime import date
 from datetime import timedelta
 
-from GPAR import GPAR
+from GenPoissonAutoregression import GenPoissonAutoregression
 from plot_forecasts import plot_forecasts
 
 def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
@@ -18,7 +35,7 @@ def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
     F = len(y_va)
 
     window_sizes = [1, 2, 3, 4, 5, 6, 7]
-    prior_sigmas = [(0.5, 0.1), (0.1, 0.1), (0.1, 0.01), (0.01, 0.01)]
+    prior_sigmas = [(0.5, 0.1), (0.1, 0.1), (0.1, 0.01), (0.01, 0.01)] # (bias_sigma, beta_sigma)
     
     score_per_window_size = list()
     params_per_window_size = list()
@@ -35,7 +52,7 @@ def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
                 'beta': [0, beta_sigma]
             }
 
-            model = GPAR(model_dict)
+            model = GenPoissonAutoregression(model_dict)
             model.fit(y_tr, F)
             score = model.score(y_va)
             score_list.append(score)

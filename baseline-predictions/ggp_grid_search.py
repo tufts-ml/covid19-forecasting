@@ -1,19 +1,17 @@
 '''
 ggp_grid_search.py
 ------------------
-Perform grid search over a set of hyperparameters for a GGP fit to the given count data.
+Perform grid search over a set of hyperparameters for a Generalized Gaussian
+Process (GGP) fit to the given count data.
 Score model on last 20% of examples (i.e., most recent counts).
 Write best model parameters to JSON file with the given filename.
 Plot best heldout log likelihood for each timescale prior on the given axis.
 
-Model: Gaussian Process with Negative Binomial likelihood
-
---- Parameters ---                                --- Priors ---
-                                        TruncatedNormal (lower bounded at 0)
-c:     value of Constant mean fn for GP         mu=TUNED, sigma=10
-a:     amplitude of SqExp cov fn for GP         mu=TUNED, sigma=10
-l:     time-scale of SqExp cov fn for GP        mu=TUNED, sigma=5
-alpha: Negative Binomial dispersion parameter   mu=TUNED, sigma=500
+Model: Gaussian Process with Generalized Poisson likelihood
+         --- Parameters ---                   --- Priors ---
+c: value of Constant mean fn for GP     TruncNorm(c_mu, 2, lower=0)
+a: amplitude of SqExp cov fn for GP     TruncNorm(0,    2, lower=0)
+l: time-scale of SqExp cov fn for GP    TruncNorm(l_mu, 2, lower=0)
 '''
 
 import pymc3 as pm
@@ -25,7 +23,7 @@ import itertools
 from datetime import date
 from datetime import timedelta
 
-from GPGP import GPGP
+from GenPoissonGaussianProcess import GenPoissonGaussianProcess
 from plot_forecasts import plot_forecasts
 
 def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
@@ -35,8 +33,8 @@ def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
     F = len(y_va)
 
     ### Initialize hyperparameter spaces ###
-    l_mus = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40]
-    c_mus = [4]
+    l_mus = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40] # time-scale
+    c_mus = [4] # mean
 
     score_per_time_scale = list()
     params_per_time_scale = list()
@@ -54,7 +52,7 @@ def ggp_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
                 'l': [l, 2],
             }
 
-            model = GPGP(model_dict)
+            model = GenPoissonGaussianProcess(model_dict)
             model.fit(y_tr, F)
             score = model.score(y_va)
             print(f'\nScore on heldout set = {score}')

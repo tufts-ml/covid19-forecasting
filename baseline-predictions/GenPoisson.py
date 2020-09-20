@@ -1,3 +1,9 @@
+'''
+GenPoisson.py
+-------------
+Defines a Generalized Poisson distribution as a PyMC3 custom Discrete distribution
+'''
+
 import pymc3 as pm
 from pymc3.distributions.dist_math import bound, logpow, factln
 from pymc3.distributions.distribution import draw_values, generate_samples
@@ -23,6 +29,12 @@ class GenPoisson(pm.Discrete):
                                 theta=theta, lam=lam,
                                 size=size)
 
+'''
+genpoisson_logp
+---------------
+Returns the log likelihood of the GenPoisson distribution with the given
+parameters evaluated at the specified value
+'''
 def genpoisson_logp(theta, lam, value):
     log_prob = bound(np.log(theta) + logpow(theta + lam * value, value - 1)
                      - (theta + lam * value) - factln(value),
@@ -33,6 +45,13 @@ def genpoisson_logp(theta, lam, value):
     return tt.switch(theta + value * lam <= 0,
                      0, log_prob)
 
+'''
+genpoisson_rvs
+--------------
+Returns a random sample from the GenPoisson distribution with the given
+parameters and shape
+Analogous to the `scipy.stats.<dist_name>.rvs`
+'''
 def genpoisson_rvs(theta, lam, size=None):
     if size is not None:
         assert size == theta.shape
