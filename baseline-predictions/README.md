@@ -6,28 +6,28 @@ of `gar_grid_search.py` and lines 36-37 of `ggp_grid_search.py`. If you want to 
 `prior_sigmas = [(0.1, 0.1)]`. For GGP, `c` is the constant mean function for the Gaussian Process, so `c_mu` should be roughly equal
 to the log of the average count in the dataset. We are plotting performance across `window_size` and `l_mu` so those hyperparameter
 spaces are meant to encompass a wide and equispaced range of values.
-2. Set up your conda environment, and edit `do_experiment.slurm` to reflect where you have the environment set up.
+3. Set up your conda environment, and edit `do_experiment.slurm` to reflect where you have the environment set up.
 I'm using `spr_2020_env` from Mike's class, and I installed PyMC3 by running the following command: `conda install -c conda-forge pymc3`.
-3. Create the following subdirectories:
-  - `gar_models` - GAR model files
-  - `ggp_models` - GGP model files
-  - `gar_samples` - GAR forecast samples
-  - `ggp_samples` - GGP forecast samples
-    - Note: The way I have it set up, the forecasts are all being dumped into `gar_samples` and `ggp_samples`, so the samples get replaced
+4. Create the following subdirectories:
+    - `gar_models` - GAR model files
+    - `ggp_models` - GGP model files
+    - `gar_samples` - GAR forecast samples
+    - `ggp_samples` - GGP forecast samples
+        - Note: The way I have it set up, the forecasts are all being dumped into `gar_samples` and `ggp_samples`, so the samples get replaced
 every time the program is run. If you want to actually save all the forecasts, you could create separate subdirectories for each
 dataset and then update `launch_experiments.sh` to create a variable for the folder names, and update `do_experiment.slurm` to supply
 them as command line arguments.
-  - `performance` - model performance plots
-  - `forecasts` - forecast plots
-  - `output` - stdout and stderr files
-4. Upload your datasets to the main directory with all the code. Make sure they are CSV files with a column `date` with dates in ISO format.
-5. Update `do_experiment.slurm` with the name of the CSV column with your data by adding `-c <target_col_name>` to both commands.
-6. Run `./launch_experiments.sh submit`. The whole process could take a day or two depending how large the grid search is.
-7. Check stdout to see posterior means and heldout likelihood for each set of parameters. Check stderr for convergence warnings.
+    - `performance` - model performance plots
+    - `forecasts` - forecast plots
+    - `output` - stdout and stderr files
+5. Upload your datasets to the main directory with all the code. Make sure they are CSV files with a column `date` with dates in ISO format.
+6. Update `do_experiment.slurm` with the name of the CSV column with your data by adding `-c <target_col_name>` to both commands.
+7. Run `./launch_experiments.sh submit`. The whole process could take a day or two depending how large the grid search is.
+8. Check stdout to see posterior means and heldout likelihood for each set of parameters. Check stderr for convergence warnings.
 It's good to check these periodically to make sure the parameters you've set are appropriate for the data. I've had to play around with the
 arguments for the PyMC3 `sample()` method (line 67 in `GenPoissonAutoregression.py` and line 75 in `GenPoissonGaussianProcess.py`) to get
 the MCMC chains to converge nicely, so they've been carefully selected for the mass.gov datasets but might not work well with other datasets.
-8. Check `performance` and `forecasts` for plots.
+9. Check `performance` and `forecasts` for plots.
 
 Detailed specifications of the models and how they translate to code can be
 found in the [Jupyter notebooks](https://github.com/tufts-ml/covid19-forecasting/tree/al-baseline-predictions/baseline-predictions/notebooks).
