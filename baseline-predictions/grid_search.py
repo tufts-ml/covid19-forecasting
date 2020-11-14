@@ -33,11 +33,13 @@ if __name__ == '__main__':
 
 	parser.add_argument('-m', '--gar_model_file', type=arg_types.json_file, default='gar_model.json',
 						help='name of JSON file to write GAR model parameters to, default \'gar_model.json\'')
-	parser.add_argument('-f', '--ggp_model_file', type=arg_types.json_file, default='ggp_model.json',
+	parser.add_argument('-o', '--ggp_model_file', type=arg_types.json_file, default='ggp_model.json',
 	                    help='name of JSON file to write GGP model parameters to, default \'ggp_model.json\'')
 
-	parser.add_argument('-p', '--plot_file', type=arg_types.png_file, default='performance.png',
+	parser.add_argument('-p', '--performance_plot_file', type=arg_types.png_file, default='performance.png',
 						help='name of PNG file to save plot as, default \'performance.png\'')
+	parser.add_argument('-f', '--forecast_plot_file', type=arg_types.png_file, default='heldout_forecasts.png',
+						help='name of PNG file to save plot as, default \'heldout_forecasts.png\'')
 	
 	args = parser.parse_args()
 
@@ -67,6 +69,6 @@ if __name__ == '__main__':
 		gar_grid_search(counts, args.gar_model_file, perf_ax[0], forecast_ax[0], end)
 		ggp_grid_search(counts, args.ggp_model_file, perf_ax[1], forecast_ax[1], end)
 
-	fig1.savefig(args.plot_file)
-	# fig2.savefig('heldout_forecasts.png')
+	fig1.savefig(args.performance_plot_file)
+	fig2.savefig(args.forecast_plot_file)
 

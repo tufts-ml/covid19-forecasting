@@ -70,13 +70,24 @@ class GenPoissonGaussianProcess:
             self.f = self.gp.prior('f', X=t)
 
             self.lam = pm.TruncatedNormal('lam', mu=0, sigma=0.1, lower=-1, upper=1)
-            y_past = GenPoisson('y_past', theta=tt.exp(self.f[:T]), lam=self.lam, observed=y_tr)
+            y_past = GenPoisson('y_past', theta=tt.exp(self.f[:T]), lam=self.lam, observed=y_tr, testval=1)
+            y_past_logp = pm.Deterministic('y_past_logp', y_past.logpt)
 
             self.trace = pm.sample(5000, tune=1000, target_accept=.98, chains=2, random_seed=42, cores=1, init='adapt_diag')
 
             summary = pm.summary(self.trace)['mean'].to_dict()
+            print('Posterior Means:')
             for key in ['mean', 'amplitude', 'time-scale', 'lam']:
                 print(key, summary[key])
+            print()
+
+            print('Training Scores:')
+            print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=0)))) / T)
+            print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=1)))) / T)
+            print()
+
+            pm.traceplot(self.trace)
+            plt.savefig('traceplot_mgh.png')
 
     '''
     score
@@ -91,6 +102,10 @@ class GenPoissonGaussianProcess:
             lik = pm.Deterministic('lik', y_future.logpt)
             logp_list = pm.sample_posterior_predictive(self.trace, vars=[lik], keep_size=True)
 
+        print('Heldout Scores:')
+        print(np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F)
+        print(np.log(np.mean(np.exp(logp_list['lik'][1]))) / self.F)
+        print()
         score = np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F
         return score
 
@@ -100,14 +115,14 @@ class GenPoissonGaussianProcess:
     Returns n_samples from the posterior predictive distribution for n_predictions days.
     Writes forecasted values to CSV files with the given filename pattern.
     '''
-    def forecast(self, n_samples, output_csv_file_pattern=None):
+    def forecast(self, output_csv_file_pattern=None):
         with self.model:
-            y_future = GenPoisson('y_future', theta=tt.exp(self.f[-self.F:]), lam=self.lam, shape=self.F, testval=1)
-            forecasts = pm.sample_posterior_predictive(self.trace, vars=[y_future], samples=n_samples, random_seed=42)
-        samples = forecasts['y_future']
+            y_pred = GenPoisson('y_pred', theta=tt.exp(self.f[-self.F:]), lam=self.lam, shape=self.F, testval=1)
+            forecasts = pm.sample_posterior_predictive(self.trace, vars=[y_pred], keep_size=True, random_seed=43)
+        samples = forecasts['y_pred'][0]
 
         if output_csv_file_pattern != None:
-            for i in range(n_samples):
+            for i in range(len(samples)):
                 if(i % 1000 == 0):
                     print(f'Saved {i} forecasts...')
                 output_dict = {'forecast': samples[i]}

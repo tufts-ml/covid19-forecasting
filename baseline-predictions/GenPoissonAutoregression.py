@@ -8,6 +8,7 @@ Contains fit, score, and forecast methods.
 import pymc3 as pm
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import theano.tensor as tt
 from datetime import date
 from datetime import timedelta
@@ -32,7 +33,7 @@ class GenPoissonAutoregression:
     def __init__(self, model_dict=None):
         if model_dict is None:
             self.W = 1
-            self.bias = [0, 0.5]
+            self.bias = [0, 0.1]
             self.beta_recent = [1, 0.1]
             self.beta = [0, 0.1]
         else:
@@ -59,17 +60,28 @@ class GenPoissonAutoregression:
             for i in range(2, self.W+1):
                 beta = pm.Normal(f'beta[{i}]', mu=self.beta[0], sigma=self.beta[1])
                 rho.append(beta)
-            self.f = pm.AR('f', rho, sigma=0.01, constant=True, shape=T+self.F)
+            tau = pm.HalfNormal('tau', sigma=0.1)
+            self.f = pm.AR('f', rho, sigma=tau, constant=True, shape=T+self.F)
             
-            self.lam = pm.TruncatedNormal('lam', mu=0, sigma=0.1, lower=-1, upper=1)
-            y_past = GenPoisson('y_past', theta=tt.exp(self.f[:T]), lam=self.lam, observed=y_tr)
+            self.lam = pm.TruncatedNormal('lam', mu=0, sigma=0.3, lower=-1, upper=1)
+            y_past = GenPoisson('y_past', theta=tt.exp(self.f[:T]), lam=self.lam, observed=y_tr, testval=1)
+            y_past_logp = pm.Deterministic('y_past_logp', y_past.logpt)
 
-            self.trace = pm.sample(5000, tune=1000, max_treedepth=15, init='adapt_diag', random_seed=42, chains=2, cores=1)
+            self.trace = pm.sample(5000, tune=2000, init='adapt_diag', max_treedepth=15,
+                                   target_accept=0.99, random_seed=42, chains=2, cores=1)
 
-            summary = pm.summary(self.trace)['mean'].to_dict()
-            for i in range(self.W+1):
-                print(f'beta[{i}]', summary[f'beta[{i}]'])
-            print('lambda', summary['lam'])
+        summary = pm.summary(self.trace)['mean'].to_dict()
+        print('Posterior Means:')
+        for i in range(self.W+1):
+            print(f'beta[{i}]', summary[f'beta[{i}]'])
+        print('tau', summary['tau'])
+        print('lambda', summary['lam'])
+        print()
+
+        print('Training Scores:')
+        print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=0)))) / T)
+        print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=1)))) / T)
+        print()
 
     '''
     score
@@ -84,6 +96,10 @@ class GenPoissonAutoregression:
             lik = pm.Deterministic('lik', y_future.logpt)
             logp_list = pm.sample_posterior_predictive(self.trace, vars=[lik], keep_size=True)
 
+        print('Heldout Scores:')
+        print(np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F)
+        print(np.log(np.mean(np.exp(logp_list['lik'][1]))) / self.F)
+        print()
         score = np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F
         return score
 
@@ -93,14 +109,14 @@ class GenPoissonAutoregression:
     Takes n_samples from the joint predictive distribution for n_predictions days.
     Writes forecasted values to CSV files with the given filename pattern.
     '''
-    def forecast(self, n_samples, output_csv_file_pattern=None):
+    def forecast(self, output_csv_file_pattern=None):
         with self.model:
-            y_future = GenPoisson('y_future', theta=tt.exp(self.f[-self.F:]), lam=self.lam, shape=self.F, testval=1)
-            forecasts = pm.sample_posterior_predictive(self.trace, vars=[y_future], samples=n_samples, random_seed=42)
-        samples = forecasts['y_future']
+            y_pred = GenPoisson('y_pred', theta=tt.exp(self.f[-self.F:]), lam=self.lam, shape=self.F, testval=1)
+            forecasts = pm.sample_posterior_predictive(self.trace, vars=[y_pred], keep_size=True, random_seed=42)
+        samples = forecasts['y_pred'][0]
 
         if output_csv_file_pattern != None:
-            for i in range(n_samples):
+            for i in range(len(samples)):
                 if(i % 1000 == 0):
                     print(f'Saved {i} forecasts...')
                 output_dict = {'forecast': samples[i]}

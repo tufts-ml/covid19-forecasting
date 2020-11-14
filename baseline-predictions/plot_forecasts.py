@@ -48,14 +48,16 @@ def plot_forecasts(forecasts, start, ax, observed, future=True):
         x_past = np.arange(-len(observed), 0)
         ax.plot(x_past, observed, 's', label='observed')
         dates = np.full(len(observed) + n_predictions, start)
-        for i in range(-len(observed), n_predictions):
-            dates[i] = start + timedelta(i)
+        j = -len(observed)
+        for i in range(len(dates)):
+            dates[i] = start + timedelta(j)
+            j += 1
         ax.set_xticks(np.concatenate((x_past, x_future)))
 
     else:
         ax.plot(x_future, observed, 's', label='observed')
         dates = np.full(n_predictions, start)
-        for i in range(n_predictions):
+        for i in range(len(dates)):
             dates[i] = start + timedelta(i)
         ax.set_xticks(x_future)
 
