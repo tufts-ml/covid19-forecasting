@@ -46,8 +46,8 @@ Otherwise defaults to running both models and producing side-by-side plots.
     -c, --target_col_name       'hospitalized_total_covid_patients_suspected_and_confirmed_including_icu'
     -m, --gar_model_file        'gar_model.json'
     -o, --ggp_model_file        'ggp_model.json'
-    -p, --performance_plot_file 'performance.png'
-    -f, --forecast_plot_file    'heldout_forecasts.png'
+    -p, --performance_plot_file 'performance.pdf'
+    -f, --forecast_plot_file    'heldout_forecasts.pdf'
 
 **Output**
 * Plot of best score for each window size (GAR)

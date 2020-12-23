@@ -16,7 +16,7 @@ def json_file(text):
         raise argparse.ArgumentTypeError('Not a valid json file name.')
     return text
 
-def png_file(text):
-    if not text.endswith('.png'):
-        raise argparse.ArgumentTypeError('Not a valid png file name.')
+def pdf_file(text):
+    if not text.endswith('.pdf'):
+        raise argparse.ArgumentTypeError('Not a valid pdf file name.')
     return text

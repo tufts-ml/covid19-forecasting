@@ -35,10 +35,10 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--ggp_model_file', type=arg_types.json_file, default='ggp_model.json',
 	                    help='name of JSON file to write GGP model parameters to, default \'ggp_model.json\'')
 
-	parser.add_argument('-p', '--performance_plot_file', type=arg_types.png_file, default='performance.png',
-						help='name of PNG file to save plot as, default \'performance.png\'')
-	parser.add_argument('-f', '--forecast_plot_file', type=arg_types.png_file, default='heldout_forecasts.png',
-						help='name of PNG file to save plot as, default \'heldout_forecasts.png\'')
+	parser.add_argument('-p', '--performance_plot_file', type=arg_types.pdf_file, default='performance.pdf',
+						help='name of PDF file to save plot as, default \'performance.pdf\'')
+	parser.add_argument('-f', '--forecast_plot_file', type=arg_types.pdf_file, default='heldout_forecasts.pdf',
+						help='name of PDF file to save plot as, default \'heldout_forecasts.pdf\'')
 	
 	args = parser.parse_args()
 
