@@ -34,7 +34,7 @@ def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
     y_va = counts[-2*F:-F]
     y_tr = counts[:-2*F]
 
-    window_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    window_sizes = [1, 2, 5, 7, 10, 14]
     prior_sigmas = [(0.1, 0.1)]
     
     score_per_window_size = list()
@@ -90,6 +90,6 @@ def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
     samples = best_model.forecast()
     forecast_ax.set_title('Single-site GAR Heldout Forecasts')
     start = date.fromisoformat(end) - timedelta(F-1)
-    plot_forecasts(samples, start, forecast_ax, y_te, future=False)
+    plot_forecasts(samples, start, forecast_ax, y_va, y_te, future=False)
 
 

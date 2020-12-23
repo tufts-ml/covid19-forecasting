@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import theano.tensor as tt
 from datetime import date
 from datetime import timedelta
+import scipy
 from GenPoisson import GenPoisson
 
 class GenPoissonAutoregression:
@@ -79,8 +80,16 @@ class GenPoissonAutoregression:
         print()
 
         print('Training Scores:')
-        print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=0)))) / T)
-        print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=1)))) / T)
+        logp_samples = self.trace.get_values('y_past_logp', chains=0)
+        scores = np.zeros(10)
+        for i in range(10):
+            scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / T
+        print(f'Chain 1: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
+        logp_samples = self.trace.get_values('y_past_logp', chains=1)
+        scores = np.zeros(10)
+        for i in range(10):
+            scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / T
+        print(f'Chain 2: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
         print()
 
     '''
@@ -93,15 +102,23 @@ class GenPoissonAutoregression:
 
         with self.model:
             y_future = GenPoisson('y_future', theta=tt.exp(self.f[-self.F:]), lam=self.lam, observed=y_va)
-            lik = pm.Deterministic('lik', y_future.logpt)
-            logp_list = pm.sample_posterior_predictive(self.trace, vars=[lik], keep_size=True)
+            y_logp = pm.Deterministic('y_logp', y_future.logpt)
+            logp_list = pm.sample_posterior_predictive(self.trace, vars=[y_logp], keep_size=True)
 
         print('Heldout Scores:')
-        print(np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F)
-        print(np.log(np.mean(np.exp(logp_list['lik'][1]))) / self.F)
+        logp_samples = logp_list['y_logp'][0]
+        scores = np.zeros(10)
+        for i in range(10):
+            scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / self.F
+        mean_score = np.mean(scores)
+        print(f'Chain 1: {mean_score} ± {scipy.stats.sem(scores)}')
+        logp_samples = logp_list['y_logp'][1]
+        scores = np.zeros(10)
+        for i in range(10):
+            scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / self.F
+        print(f'Chain 2: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
         print()
-        score = np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F
-        return score
+        return mean_score
 
     '''
     forecast

@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import theano.tensor as tt
 import os
+import scipy
 from datetime import date
 from datetime import timedelta
 
@@ -76,7 +77,7 @@ var_names = ['tau']
 for i in range(H):
     var_names.append(f'lam[{i}]')
 pm.traceplot(trace, var_names=var_names)
-plt.savefig(f'multi_site_gar/traceplot.png')
+plt.savefig(f'multi_site_gar/traceplot.pdf')
 plt.close()
 
 print(f'Training Scores on Train+Valid')
@@ -100,8 +101,16 @@ print(f'Heldout Scores on Test Set')
 print('--------------------------')
 for i in range(H):
     print(input_files[i])
-    print(np.log(np.mean(np.exp(logp_list[f'y_logp[{i}]'][0]))) / F)
-    print(np.log(np.mean(np.exp(logp_list[f'y_logp[{i}]'][1]))) / F)
+    logp_samples = logp_list[f'y_logp[{i}]'][0]
+    scores = np.zeros(10)
+    for j in range(10):
+        scores[j] = np.log(np.mean(np.exp(logp_samples[500*j : 500*j+500]))) / F
+    print(f'Chain 1: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
+    logp_samples = logp_list[f'y_logp[{i}]'][1]
+    scores = np.zeros(10)
+    for j in range(10):
+        scores[j] = np.log(np.mean(np.exp(logp_samples[500*j : 500*j+500]))) / F
+    print(f'Chain 2: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
     print()
 
 ''' HELDOUT FORECASTS ON TEST SET'''
@@ -112,8 +121,8 @@ with model:
         fig, ax = plt.subplots(figsize=(8,6))
         ax.set_title(f'Site-Specific Lambda Heldout Forecasts W={W}')
         start = date.fromisoformat(dates[i][-1]) - timedelta(F-1)
-        plot_forecasts(samples[f'y_pred[{i}]'][0], start, ax, y_te[i], future=False)
-        fig.savefig(f'multi_site_gar/{input_files[i][:-4]}.png')
+        plot_forecasts(samples[f'y_pred[{i}]'][0], start, ax, y_va[i], y_te[i], future=False)
+        fig.savefig(f'multi_site_gar/{input_files[i][:-4]}.pdf')
         plt.close()
 
 

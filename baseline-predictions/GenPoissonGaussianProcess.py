@@ -8,6 +8,7 @@ Contains fit, score, and forecast methods.
 import pymc3 as pm
 import numpy as np
 import pandas as pd
+import scipy
 from datetime import date
 from datetime import timedelta
 from GenPoisson import GenPoisson
@@ -73,7 +74,8 @@ class GenPoissonGaussianProcess:
             y_past = GenPoisson('y_past', theta=tt.exp(self.f[:T]), lam=self.lam, observed=y_tr, testval=1)
             y_past_logp = pm.Deterministic('y_past_logp', y_past.logpt)
 
-            self.trace = pm.sample(5000, tune=1000, target_accept=.98, chains=2, random_seed=42, cores=1, init='adapt_diag')
+            self.trace = pm.sample(5000, tune=1000, target_accept=.98, chains=2, random_seed=42, cores=1,
+                                   init='adapt_diag', max_treedepth=15)
 
             summary = pm.summary(self.trace)['mean'].to_dict()
             print('Posterior Means:')
@@ -82,12 +84,17 @@ class GenPoissonGaussianProcess:
             print()
 
             print('Training Scores:')
-            print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=0)))) / T)
-            print(np.log(np.mean(np.exp(self.trace.get_values('y_past_logp', chains=1)))) / T)
+            logp_samples = self.trace.get_values('y_past_logp', chains=0)
+            scores = np.zeros(10)
+            for i in range(10):
+                scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / T
+            print(f'Chain 1: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
+            logp_samples = self.trace.get_values('y_past_logp', chains=1)
+            scores = np.zeros(10)
+            for i in range(10):
+                scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / T
+            print(f'Chain 2: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
             print()
-
-            pm.traceplot(self.trace)
-            plt.savefig('traceplot_mgh.png')
 
     '''
     score
@@ -99,15 +106,23 @@ class GenPoissonGaussianProcess:
 
         with self.model:
             y_future = GenPoisson('y_future', theta=tt.exp(self.f[-self.F:]), lam=self.lam, observed=y_va)
-            lik = pm.Deterministic('lik', y_future.logpt)
-            logp_list = pm.sample_posterior_predictive(self.trace, vars=[lik], keep_size=True)
+            y_logp = pm.Deterministic('y_logp', y_future.logpt)
+            logp_list = pm.sample_posterior_predictive(self.trace, vars=[y_logp], keep_size=True)
 
         print('Heldout Scores:')
-        print(np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F)
-        print(np.log(np.mean(np.exp(logp_list['lik'][1]))) / self.F)
+        logp_samples = logp_list['y_logp'][0]
+        scores = np.zeros(10)
+        for i in range(10):
+            scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / self.F
+        mean_score = np.mean(scores)
+        print(f'Chain 1: {mean_score} ± {scipy.stats.sem(scores)}')
+        logp_samples = logp_list['y_logp'][1]
+        scores = np.zeros(10)
+        for i in range(10):
+            scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / self.F
+        print(f'Chain 2: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
         print()
-        score = np.log(np.mean(np.exp(logp_list['lik'][0]))) / self.F
-        return score
+        return mean_score
 
     '''
     forecast
@@ -118,7 +133,7 @@ class GenPoissonGaussianProcess:
     def forecast(self, output_csv_file_pattern=None):
         with self.model:
             y_pred = GenPoisson('y_pred', theta=tt.exp(self.f[-self.F:]), lam=self.lam, shape=self.F, testval=1)
-            forecasts = pm.sample_posterior_predictive(self.trace, vars=[y_pred], keep_size=True, random_seed=43)
+            forecasts = pm.sample_posterior_predictive(self.trace, vars=[y_pred], keep_size=True, random_seed=42)
         samples = forecasts['y_pred'][0]
 
         if output_csv_file_pattern != None:
