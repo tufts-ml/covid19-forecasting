@@ -1,12 +1,14 @@
+'''
+poisson_vs_genpoisson.py
+------------------------
+'''
+
 import pymc3 as pm
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import theano.tensor as tt
 import os
 import scipy
-from datetime import date
-from datetime import timedelta
 
 from GenPoisson import GenPoisson
 from GenPoissonAutoregression import GenPoissonAutoregression
@@ -26,7 +28,6 @@ for filename in input_files:
     
     df = pd.read_csv(f'../mass_dot_gov_datasets/{filename}')
     counts = df[col_name].astype(float)
-    dates = df['date'].values
 
     y_te = counts[-F:]
     y_va = counts[-2*F:-F]

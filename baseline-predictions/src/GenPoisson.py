@@ -8,7 +8,6 @@ import pymc3 as pm
 from pymc3.distributions.dist_math import bound, logpow, factln
 from pymc3.distributions.distribution import draw_values, generate_samples
 import theano.tensor as tt
-from theano.compile.ops import as_op
 import numpy as np
 
 class GenPoisson(pm.Discrete):

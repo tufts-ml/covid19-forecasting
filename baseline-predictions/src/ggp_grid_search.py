@@ -3,23 +3,16 @@ ggp_grid_search.py
 ------------------
 Perform grid search over a set of hyperparameters for a Generalized Gaussian
 Process (GGP) fit to the given count data.
-Score model on last 20% of examples (i.e., most recent counts).
+Divide sequence of counts into training, validation, and test windows.
+During grid search, evaluate on validation set.
 Write best model parameters to JSON file with the given filename.
-Plot best heldout log likelihood for each timescale prior on the given axis.
-
-Model: Gaussian Process with Generalized Poisson likelihood
-         --- Parameters ---                   --- Priors ---
-c: value of Constant mean fn for GP     TruncNorm(c_mu, 2, lower=0)
-a: amplitude of SqExp cov fn for GP     TruncNorm(0,    2, lower=0)
-l: time-scale of SqExp cov fn for GP    TruncNorm(l_mu, 2, lower=0)
+Plot best heldout log likelihood for timescale prior on `perf_ax`.
+Use best parameters to train on training and validation together and
+evaluate on test set. Make forecasts on test window and plot on `forecast_ax`.
 '''
 
-import pymc3 as pm
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 import json
-import itertools
 from datetime import date
 from datetime import timedelta
 

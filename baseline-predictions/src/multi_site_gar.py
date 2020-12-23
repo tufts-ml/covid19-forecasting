@@ -1,6 +1,6 @@
 '''
-SHARED TAU, INDEPENDENT LAMBDA
-------------------------------
+multi_site_gar.py
+-----------------
 '''
 
 import pymc3 as pm

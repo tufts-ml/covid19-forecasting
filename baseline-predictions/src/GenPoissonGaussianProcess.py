@@ -8,12 +8,10 @@ Contains fit, score, and forecast methods.
 import pymc3 as pm
 import numpy as np
 import pandas as pd
+import theano.tensor as tt
 import scipy
-from datetime import date
-from datetime import timedelta
 from GenPoisson import GenPoisson
 import theano
-import theano.tensor as tt
 theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
 
 class GenPoissonGaussianProcess:

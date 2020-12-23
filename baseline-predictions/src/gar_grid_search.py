@@ -3,24 +3,15 @@ gar_grid_search.py
 ------------------
 Perform grid search over a set of hyperparameters for a Generalized Autoregressive
 Process (GAR) fit to the given count data.
-Score model on last 20% of examples (i.e., most recent counts).
+Divide sequence of counts into training, validation, and test windows.
+During grid search, evaluate on validation set.
 Write best model parameters to JSON file with the given filename.
-Plot best heldout log likelihood for each timescale prior on the given axis.
-
-Model: Autoregressive Process with Generalized Poisson likelihood
-              --- Parameters ---                    --- Priors ---
-                 window size                            fixed
-                 bias weight                     Normal(0, bias_sigma)
-weight on most recent timestep (beta_recent)     Normal(1, beta_sigma)
-weights on all other previous timesteps (beta)   Normal(0, beta_sigma)
+Plot best heldout log likelihood for each window size W on `perf_ax`.
+Use best parameters to train on training and validation together and
+evaluate on test set. Make forecasts on test window and plot on `forecast_ax`.
 '''
 
-import argparse
-import arg_types
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import pymc3 as pm
 import json
 from datetime import date
 from datetime import timedelta

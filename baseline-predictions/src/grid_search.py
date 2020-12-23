@@ -1,14 +1,13 @@
 '''
 grid_search.py
 --------------
-Runs grid search for GAR and/or GGP.
+Runs grid search for single-site GAR and/or GGP.
 User can specify -a to run grid search for GAR only, or -g for GGP only.
 Defaults to using both models and producing side-by-side plots of performance.
 Plots heldout log likelihood vs window size for GAR, and heldout log likelihood
 vs time-scale prior for GGP.
 '''
 
-import logging
 import argparse
 import arg_types
 import numpy as np

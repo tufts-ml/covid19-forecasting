@@ -8,10 +8,7 @@ Contains fit, score, and forecast methods.
 import pymc3 as pm
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import theano.tensor as tt
-from datetime import date
-from datetime import timedelta
 import scipy
 from GenPoisson import GenPoisson
 

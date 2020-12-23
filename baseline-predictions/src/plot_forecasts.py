@@ -9,6 +9,7 @@ Args
 forecasts : (n_samples, n_days_of_forecasts)
 start : start date of forecasts (datetime.date)
 ax : axis for plot
+past : array of observed counts prior to forecast window
 observed : array of observed counts (either recent counts before future predictions or
                                     heldout observed counts to compare against predictions)
 future=True : plotting future forecasts (plot observed before forecasts).
@@ -17,7 +18,6 @@ future=False : plotting heldout forecasts (plot observed on top of forecasts).
 
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import date
 from datetime import timedelta
 
 def plot_forecasts(forecasts, start, ax, past, observed, future=True):
