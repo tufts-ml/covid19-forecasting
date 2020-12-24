@@ -43,7 +43,7 @@ class GenPoissonAutoregression:
     '''
     fit
     ---
-    Fits a PyMC3 model for linear regression with Negative Binomial likelihood
+    Fits a PyMC3 model for linear regression with Generalized Poisson likelihood
     to the given data.
     Samples all model parameters from the posterior.
     '''
@@ -120,8 +120,7 @@ class GenPoissonAutoregression:
     '''
     forecast
     --------
-    Takes n_samples from the joint predictive distribution for n_predictions days.
-    Writes forecasted values to CSV files with the given filename pattern.
+    Samples from the joint predictive distribution. Writes each set of forecasts to a CSV file.
     '''
     def forecast(self, output_csv_file_pattern=None):
         with self.model:
