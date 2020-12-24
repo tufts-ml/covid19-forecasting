@@ -75,8 +75,8 @@ Divides sequence of counts into training, validation, and test windows. Runs a g
 
 **Output**
 
-- Plot of best score for each window size (GAR)
-- Plot of best score for each timescale prior mean (GGP)
+- Plot of heldout log likelihood for each window size (GAR)
+- Plot of heldout log likelihood for each timescale prior mean (GGP)
 - JSON file for each model with best model parameters found
 - Plot of summary statistics of forecasts against true observed counts
 
