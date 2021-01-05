@@ -159,7 +159,7 @@ theta:
     theta['health'] = list of length S, each containing array of shape (2,) (treating health probas as 2-dim dirichlet)
     theta['durations'] = list of length S with arrays of shape (H, D) [(D,) in simple example]
 '''
-SUMMARY_STATISTICS_NAMES = ["n_discharges", "n_occupied_beds", "n_OnVentInICU"] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
+SUMMARY_STATISTICS_NAMES = ["n_discharges", "n_occupied_beds"] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
 
 HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering', 'Declining': 0, 'Recovering': 1}
 
@@ -263,7 +263,7 @@ class ABCSampler(object):
                 if col_name == "n_InICU":
                     T_x.append(results_df["n_OffVentInICU"] + results_df["n_OnVentInICU"])
                 elif col_name == "n_occupied_beds":
-                    T_x.append(results_df["n_InGeneralWard"] + results_df["n_OffVentInICU"])
+                    T_x.append(results_df["n_InGeneralWard"] + results_df["n_OffVentInICU"] + results_df["n_OnVentInICU"])
                 elif col_name == "n_discharges":
                     T_x.append(results_df["n_discharged_InGeneralWard"] + results_df["n_discharged_OffVentInICU"] + results_df["n_discharged_OnVentInICU"])
                 else:
@@ -679,18 +679,18 @@ def save_stats_to_csv(stats, filename):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hospital', default='University_Hospitals_Birmingham_NHS_Foundation_Trust_FirstHalf')
-    parser.add_argument('--config_template', default='NHS_data/params_simple') # template for config_file
-    parser.add_argument('--input_template', default='NHS_data/')
-    parser.add_argument('--output_template', default='NHS_results/abc')
+    parser.add_argument('--hospital', default='university_hospitals_of_north_midlands_nhs_trust_Training')
+    parser.add_argument('--config_template', default='NHS_data/new_data/formatted_data/params_simple') # template for config_file
+    parser.add_argument('--input_template', default='NHS_data/new_data/formatted_data/')
+    parser.add_argument('--output_template', default='NHS_results/abc_noVent')
     parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
     parser.add_argument('--algorithm', default='abc')
-    parser.add_argument('--num_iterations', default=700, type=int) # number of sampling iterations 
+    parser.add_argument('--num_iterations', default=2000, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic parameter vector
     parser.add_argument('--num_simulations', default=5, type=int)
-    parser.add_argument('--start_epsilon', default=0.80, type=float)
+    parser.add_argument('--start_epsilon', default=1.0, type=float)
     parser.add_argument('--lowest_epsilon', default=15.0, type=float) # unused in abc
-    parser.add_argument('--annealing_constant', default=0.9996)
+    parser.add_argument('--annealing_constant', default=0.9999)
     parser.add_argument('--scale', default=100, type=int) # scale parameter for the dirichlet proposal distribution
 
     parser.add_argument('--params_init', default='None')
@@ -753,7 +753,7 @@ if __name__ == '__main__':
     accepted_thetas, accepted_distances, num_accepted, all_distances, accepted_alphas, all_alphas = sampler.draw_samples(algorithm, num_iterations, scale)
 
     num_to_save = int(len(accepted_thetas) * 0.5) # save only the second half of the parameters
-    last_thetas = accepted_thetas[-num_to_save:]
+    last_thetas = [accepted_thetas[0]] + accepted_thetas[-num_to_save:] # also save the first theta
     sampler.save_thetas_to_json(last_thetas, thetas_output)
 
     print(len(sampler.epsilon_trace))
