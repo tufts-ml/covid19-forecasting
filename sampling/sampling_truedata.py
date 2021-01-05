@@ -159,7 +159,8 @@ theta:
     theta['health'] = list of length S, each containing array of shape (2,) (treating health probas as 2-dim dirichlet)
     theta['durations'] = list of length S with arrays of shape (H, D) [(D,) in simple example]
 '''
-SUMMARY_STATISTICS_NAMES = ["n_InGeneralWard", "n_OffVentInICU", "n_OnVentInICU", "n_TERMINAL"] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
+SUMMARY_STATISTICS_NAMES = ["n_discharges", "n_occupied_beds", "n_OnVentInICU"] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
+
 HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering', 'Declining': 0, 'Recovering': 1}
 
 class ABCSampler(object):
@@ -174,114 +175,31 @@ class ABCSampler(object):
         self.num_timesteps = num_timesteps
         self.num_simulations = num_simulations
 
+        self.state_name_id_map = {}
+        for s, state in enumerate(config_dict['states']):
+            self.state_name_id_map[state] = s
+            self.state_name_id_map[s] = state
+
     def initialize_theta(self, algorithm, abc_prior_dict, params_init=None):
         self.params_init = params_init
 
         if algorithm == 'abc' or algorithm == 'abc_exp':
             self.abc_prior = self.initialize_abc_prior(abc_prior_dict)
-            # self.theta_init = self.select_theta_init_from_prior(self.abc_prior)
         else:
             self.abc_prior = None
         
-        if params_init is None: # select random theta initialization
-            # self.theta_init = self.select_random_theta_init()
+        if params_init is None:
             self.theta_init = self.select_theta_init_from_prior(self.abc_prior)
         else:
             self.theta_init = self.select_theta_init_from_name(params_init)
 
-    def select_random_theta_init(self):
-        states = self.config_dict['states']
-        theta = {'num timesteps': self.num_timesteps, 'health': [], 'transitions': None, 'durations': {'Declining': [], 'Recovering': []}}
-
-        for s in range(len(states) - 1): # skipping Presenting state
-            theta['health'].append(np.random.dirichlet([1, 1]))
-
-            for health_state in ["Declining", "Recovering"]:
-                num_choices = len(list(self.config_dict['pmf_duration_%s_%s' % (health_state, states[s + 1])].keys()))
-                theta['durations'][health_state].append(np.random.dirichlet(np.ones(num_choices)))
-
-        return theta
-
-    def select_theta_init_from_name(self, params_init):
-        # various initializations
-        true = np.array([0.5, 0.25, 0.125, 0.0625, 0.0625])
-        fake = np.array([0.15, 0.15, 0.20, 0.20, 0.30])
-        almost_true = np.array([0.5, 0.25, 0.0625, 0.125, 0.0625])
-        good = np.array([0.4, 0.3, 0.2, 0.05, 0.05])
-        uniform = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-        twoD_fake = np.array([0.4, 0.6])
-        twoD_true = np.array([0.9, 0.1])
-        twoD_almost_true = np.array([0.8, 0.2])
-        twoD_good = np.array([0.75, 0.25])
-        twoD_uniform = np.array([0.5, 0.5])
-
-        if params_init == 'true':
-            health = [np.copy(twoD_true), np.copy(twoD_true), np.copy(twoD_true)]
-            declining = [np.copy(true), np.copy(true), np.copy(true)]
-            recovering = [np.copy(true), np.copy(true), np.copy(true)]
-        elif params_init == 'fake':
-            health = [np.copy(twoD_fake), np.copy(twoD_fake), np.copy(twoD_fake)]
-            declining = [np.copy(fake), np.copy(fake), np.copy(fake)]
-            recovering = [np.copy(fake), np.copy(fake), np.copy(fake)]
-        elif params_init == 'almost_true':
-            health = [np.copy(twoD_almost_true), np.copy(twoD_almost_true), np.copy(twoD_almost_true)]
-            declining = [np.copy(almost_true), np.copy(almost_true), np.copy(almost_true)]
-            recovering = [np.copy(almost_true), np.copy(almost_true), np.copy(almost_true)]
-        elif params_init == 'good':
-            health = [np.copy(twoD_good), np.copy(twoD_good), np.copy(twoD_good)]
-            declining = [np.copy(good), np.copy(good), np.copy(good)]
-            recovering = [np.copy(good), np.copy(good), np.copy(good)]
-        elif params_init == 'health_is_fake':
-            health = [np.copy(twoD_fake), np.copy(twoD_fake), np.copy(twoD_fake)]
-            declining = [np.copy(true), np.copy(true), np.copy(true)]
-            recovering = [np.copy(true), np.copy(true), np.copy(true)]
-        elif params_init == 'uniform':
-            health = [np.copy(twoD_uniform), np.copy(twoD_uniform), np.copy(twoD_uniform)]
-            declining = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]
-            recovering = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]  
-        elif params_init == 'general_ward_is_fake':
-            health = [np.copy(twoD_fake), np.copy(twoD_true), np.copy(twoD_true)]
-            declining = [np.copy(fake), np.copy(true), np.copy(true)]
-            recovering = [np.copy(fake), np.copy(true), np.copy(true)]
-        elif params_init == 'off_vent_in_icu_is_fake':
-            health = [np.copy(twoD_true), np.copy(twoD_fake), np.copy(twoD_true)]
-            declining = [np.copy(true), np.copy(fake), np.copy(true)]
-            recovering = [np.copy(true), np.copy(fake), np.copy(true)]
-        elif params_init == 'on_vent_in_icu_is_fake':
-            health = [np.copy(twoD_true), np.copy(twoD_true), np.copy(twoD_fake)]
-            declining = [np.copy(true), np.copy(true), np.copy(fake)]
-            recovering = [np.copy(true), np.copy(true), np.copy(fake)]
-        elif params_init == 'general_ward_health_is_fake':
-            health = [np.copy(twoD_fake), np.copy(twoD_true), np.copy(twoD_true)]
-            declining = [np.copy(true), np.copy(true), np.copy(true)]
-            recovering = [np.copy(true), np.copy(true), np.copy(true)]
-        elif params_init == 'general_ward_is_good':
-            health = [np.copy(twoD_good), np.copy(twoD_true), np.copy(twoD_true)]
-            declining = [np.copy(good), np.copy(true), np.copy(true)]
-            recovering = [np.copy(good), np.copy(true), np.copy(true)]
-        elif params_init == 'off_vent_in_icu_is_good':
-            health = [np.copy(twoD_true), np.copy(twoD_good), np.copy(twoD_true)]
-            declining = [np.copy(true), np.copy(good), np.copy(true)]
-            recovering = [np.copy(true), np.copy(good), np.copy(true)]
-        elif params_init == 'on_vent_in_icu_is_good':
-            health = [np.copy(twoD_true), np.copy(twoD_true), np.copy(twoD_good)]
-            declining = [np.copy(true), np.copy(true), np.copy(good)]
-            recovering = [np.copy(true), np.copy(true), np.copy(good)]
-        else:
-            health = [np.copy(twoD_uniform), np.copy(twoD_uniform), np.copy(twoD_uniform)]
-            declining = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]
-            recovering = [np.copy(uniform), np.copy(uniform), np.copy(uniform)]
-
-        theta_init = {'num timesteps': self.num_timesteps, 'health': health, 'transitions': None, 'durations': {'Declining': declining, 'Recovering': recovering}}
-
-        return theta_init
 
     def initialize_abc_prior(self, abc_prior_dict):
         states = self.config_dict['states']
         
         health = [np.array(abc_prior_dict['prior_Health_given_%s' % (state)]) for state in states]
-        declining = [np.array(list(abc_prior_dict['prior_duration_Declining_%s' % (state)].values())) for state in states[1:]] # skipping Presenting state
-        recovering = [np.array(list(abc_prior_dict['prior_duration_Recovering_%s' % (state)].values())) for state in states[1:]] # skipping Presenting state
+        declining = [np.array(list(abc_prior_dict['prior_duration_Declining_%s' % (state)].values())) for state in states]
+        recovering = [np.array(list(abc_prior_dict['prior_duration_Recovering_%s' % (state)].values())) for state in states]
 
         abc_prior = {'health': health, 'transitions': None, 'durations': {'Declining': declining, 'Recovering': recovering}}
         
@@ -303,13 +221,17 @@ class ABCSampler(object):
             # updating health state probabilities
             self.config_dict['proba_Recovering_given_%s' % states[s]] = theta['health'][s][1]
 
-            if s > 0: # skipping presenting state for durations
+            if self.state_name_id_map[s] != 'Presenting': # skipping presenting state for durations
                 # updating durations probabilities
                 for health_state in ["Declining", "Recovering"]:
                     choices = list(self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])].keys())
-                    for d in range(theta['durations'][health_state][s-1].shape[0]):
+                    for d in range(theta['durations'][health_state][s].shape[0]):
                         # update each individual choice with the value in theta
-                        self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])][choices[d]] = theta['durations'][health_state][s-1][d]
+                        self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])][choices[d]] = theta['durations'][health_state][s][d]
+            else:
+                # setting presenting duration probability. This is just a placeholder that simplifies code
+                for health_state in ["Declining", "Recovering"]:
+                    self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])]['1'] = 1.0
 
     # @profile
     def simulate_dataset(self, theta):
@@ -339,7 +261,11 @@ class ABCSampler(object):
             T_x = []
             for col_name in SUMMARY_STATISTICS_NAMES:
                 if col_name == "n_InICU":
-                    T_x.append(results_df["n_OffVentInICU"] + results_df["n_OnVentInICU"]) # extra!
+                    T_x.append(results_df["n_OffVentInICU"] + results_df["n_OnVentInICU"])
+                elif col_name == "n_occupied_beds":
+                    T_x.append(results_df["n_InGeneralWard"] + results_df["n_OffVentInICU"])
+                elif col_name == "n_discharges":
+                    T_x.append(results_df["n_discharged_InGeneralWard"] + results_df["n_discharged_OffVentInICU"] + results_df["n_discharged_OnVentInICU"])
                 else:
                     T_x.append(results_df[col_name])
             T_x = np.asarray(T_x).flatten()
@@ -555,12 +481,12 @@ class ABCSampler(object):
                         log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['health'][s], theta_prime['health'][s], scale)
                         log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['health'][s], theta['health'][s], scale)
                         
-                        if s > 0: # skip presenting state for durations
+                        if self.state_name_id_map[s] != 'Presenting': # skipping presenting state for durations
                             # durations
-                            log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Declining'][s-1], theta_prime['durations']['Declining'][s-1], scale)
-                            log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Declining'][s-1], theta['durations']['Declining'][s-1], scale)
-                            log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Recovering'][s-1], theta_prime['durations']['Recovering'][s-1], scale)
-                            log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Recovering'][s-1], theta['durations']['Recovering'][s-1], scale)
+                            log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Declining'][s], theta_prime['durations']['Declining'][s], scale)
+                            log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Declining'][s], theta['durations']['Declining'][s], scale)
+                            log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Recovering'][s], theta_prime['durations']['Recovering'][s], scale)
+                            log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Recovering'][s], theta['durations']['Recovering'][s], scale)
 
                     # eq. 1.3.2
                     alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
@@ -585,12 +511,12 @@ class ABCSampler(object):
 
                 self.update_epsilon()
 
-                if s > 0: # skip presenting state for durations
+                if self.state_name_id_map[s] != 'Presenting': # skipping presenting state for durations
                     for health_state in ["Declining", "Recovering"]:
                         # draw from proposal distribution
                         theta_durations_prime = deepcopy(theta['durations'][health_state])
-                        p_prime_D = self.draw_proposal_distribution_categorical(theta_durations_prime[s-1], scale)
-                        theta_durations_prime[s-1] = p_prime_D
+                        p_prime_D = self.draw_proposal_distribution_categorical(theta_durations_prime[s], scale)
+                        theta_durations_prime[s] = p_prime_D
 
                         # create a theta_prime and simulate dataset
                         theta_prime = deepcopy(theta)
@@ -613,12 +539,12 @@ class ABCSampler(object):
                                 log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['health'][s], theta_prime['health'][s], scale)
                                 log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['health'][s], theta['health'][s], scale)
                                 
-                                if s > 0: # skip presenting state for durations
+                                if self.state_name_id_map[s] != 'Presenting': # skipping presenting state for durations
                                     # durations
-                                    log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Declining'][s-1], theta_prime['durations']['Declining'][s-1], scale)
-                                    log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Declining'][s-1], theta['durations']['Declining'][s-1], scale)
-                                    log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Recovering'][s-1], theta_prime['durations']['Recovering'][s-1], scale)
-                                    log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Recovering'][s-1], theta['durations']['Recovering'][s-1], scale)
+                                    log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Declining'][s], theta_prime['durations']['Declining'][s], scale)
+                                    log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Declining'][s], theta['durations']['Declining'][s], scale)
+                                    log_prop_prime += self.calc_log_proba_proposal_distribution_categorical(theta['durations']['Recovering'][s], theta_prime['durations']['Recovering'][s], scale)
+                                    log_prop_prev  += self.calc_log_proba_proposal_distribution_categorical(theta_prime['durations']['Recovering'][s], theta['durations']['Recovering'][s], scale)
                             
                             # eq. 1.3.2
                             alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
@@ -705,9 +631,9 @@ class ABCSampler(object):
 
     def calc_log_proba_dirichlet_prior(self, theta):
         log_proba = 0.0
-        log_proba += np.sum([scipy.stats.dirichlet.logpdf(theta['health'][i] + 1e-12, self.abc_prior['health'][i]) for i in range(len(theta['health']))])
-        log_proba += np.sum([scipy.stats.dirichlet.logpdf(theta['durations']['Declining'][i] + 1e-12, self.abc_prior['durations']['Declining'][i]) for i in range(len(theta['durations']['Declining']))])
-        log_proba += np.sum([scipy.stats.dirichlet.logpdf(theta['durations']['Recovering'][i] + 1e-12, self.abc_prior['durations']['Recovering'][i]) for i in range(len(theta['durations']['Recovering']))])
+        log_proba += np.sum([scipy.stats.dirichlet.logpdf(theta['health'][s] + 1e-12, self.abc_prior['health'][s]) for s in range(len(theta['health']))])
+        log_proba += np.sum([scipy.stats.dirichlet.logpdf(theta['durations']['Declining'][s] + 1e-12, self.abc_prior['durations']['Declining'][s]) for s in range(len(theta['durations']['Declining'])) if self.state_name_id_map[s] != 'Presenting'])
+        log_proba += np.sum([scipy.stats.dirichlet.logpdf(theta['durations']['Recovering'][s] + 1e-12, self.abc_prior['durations']['Recovering'][s]) for s in range(len(theta['durations']['Recovering'])) if self.state_name_id_map[s] != 'Presenting'])
         # TODO
         # if some entry of p_prime_D is zero AND some other entry is one, there will be an error
         return log_proba
@@ -723,7 +649,6 @@ class ABCSampler(object):
     def draw_proposal_distribution_categorical(self, p_D, scale):
         return np.random.dirichlet((p_D * scale) + 1)
 
-
     def save_thetas_to_json(self, thetas, filename):
         states = self.config_dict['states']
 
@@ -734,14 +659,13 @@ class ABCSampler(object):
                 # updating health state probabilities
                 params_dict['proba_Recovering_given_%s' % states[s]] = theta['health'][s][1]
 
-                if s > 0: # skip Presenting state for durations
-                    # updating durations probabilities
-                    for health_state in ["Declining", "Recovering"]:
-                        choices = list(self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])].keys())
-                        params_dict['pmf_duration_%s_%s' % (health_state, states[s])] = {}
-                        for d in range(theta['durations'][health_state][s - 1].shape[0]):
-                            # update each individual choice with the value in theta
-                            params_dict['pmf_duration_%s_%s' % (health_state, states[s])][choices[d]] = theta['durations'][health_state][s - 1][d]
+                # updating durations probabilities
+                for health_state in ["Declining", "Recovering"]:
+                    choices = list(self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])].keys())
+                    params_dict['pmf_duration_%s_%s' % (health_state, states[s])] = {}
+                    for d in range(theta['durations'][health_state][s].shape[0]):
+                        # update each individual choice with the value in theta
+                        params_dict['pmf_duration_%s_%s' % (health_state, states[s])][choices[d]] = theta['durations'][health_state][s][d]
                             
             json_to_save['last_thetas'].append(deepcopy(params_dict))
 
@@ -755,22 +679,23 @@ def save_stats_to_csv(stats, filename):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_template', default='example_simple/params_simple') # template for config_file
-    parser.add_argument('--output_template', default='abc_results/abc')
+    parser.add_argument('--hospital', default='University_Hospitals_Birmingham_NHS_Foundation_Trust_FirstHalf')
+    parser.add_argument('--config_template', default='NHS_data/params_simple') # template for config_file
+    parser.add_argument('--input_template', default='NHS_data/')
+    parser.add_argument('--output_template', default='NHS_results/abc')
     parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
     parser.add_argument('--algorithm', default='abc')
-    parser.add_argument('--num_timesteps', default=300, type=int) # number of timesteps to simulate
     parser.add_argument('--num_iterations', default=700, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic parameter vector
     parser.add_argument('--num_simulations', default=5, type=int)
     parser.add_argument('--start_epsilon', default=0.80, type=float)
-    parser.add_argument('--lowest_epsilon', default=15.0, type=float)
+    parser.add_argument('--lowest_epsilon', default=15.0, type=float) # unused in abc
     parser.add_argument('--annealing_constant', default=0.9996)
     parser.add_argument('--scale', default=100, type=int) # scale parameter for the dirichlet proposal distribution
 
     parser.add_argument('--params_init', default='None')
-    parser.add_argument('--abc_prior_type', default='good')
-    parser.add_argument('--abc_prior_config', default=None)
+    parser.add_argument('--abc_prior_type', default='20MaxEach_uniform')
+    parser.add_argument('--abc_prior_config_template', default='NHS_data/abc_prior_config')
 
     args, unknown_args = parser.parse_known_args()
 
@@ -778,9 +703,6 @@ if __name__ == '__main__':
     unk_vals = unknown_args[1::2]
     unk_dict = dict(zip(unk_keys, unk_vals))
 
-    config_template = args.config_template
-    output_template = args.output_template
-    num_timesteps = int(args.num_timesteps)
     seed = int(args.random_seed)
     num_iterations = int(args.num_iterations)
     num_simulations = int(args.num_simulations)
@@ -789,35 +711,40 @@ if __name__ == '__main__':
     annealing_constant = float(args.annealing_constant)
     scale = int(args.scale)
     algorithm = args.algorithm
+
     if args.params_init == 'None':
         params_init = None
     else:
         params_init = args.params_init
     if algorithm == 'abc':
-        with open(args.abc_prior_config, 'r') as f:
+        with open(args.abc_prior_config_template + '_%s.json' % args.abc_prior_type, 'r') as f:
             abc_prior = json.load(f)
-        thetas_output = output_template + '_last_thetas_%s.json' % (args.abc_prior_type)
-        stats_output = output_template + '_stats_%s.csv' % (args.abc_prior_type)
+        thetas_output = args.output_template + '_%s_last_thetas_%s.json' % (args.hospital, args.abc_prior_type)
+        stats_output = args.output_template + '_%s_stats_%s.csv' % (args.hospital, args.abc_prior_type)
     else:
         abc_prior = None
-        thetas_output = output_template + '_last_thetas_%s.json' % (params_init)
-        stats_output = output_template + '_stats_%s.csv' % (params_init)
+        thetas_output = args.output_template + '_last_thetas_%s.json' % (params_init)
+        stats_output = args.output_template + '_stats_%s.csv' % (params_init)
+
+    config_file = args.config_template + '_%s.json' % args.hospital
+    inputfile = args.input_template + '%s.csv' % args.hospital
 
     ## Load JSON
-    with open(config_template + '-%ddays.json' % num_timesteps, 'r') as f:
+    with open(config_file, 'r') as f:
         config_dict = json.load(f)
+    num_timesteps = config_dict['num_timesteps']
 
-    true_df = pd.read_csv("example_output/results-%ddays.csv" % num_timesteps) # _full_simple for 100 timesteps (why??)
+    true_df = pd.read_csv(inputfile)
+    print(true_df)
+
 
     # condensing the true results in a summary vector
     T_y = []
     for col_name in SUMMARY_STATISTICS_NAMES:
-        if col_name == "n_InICU":
-            T_y.append(true_df["n_OffVentInICU"] + true_df["n_OnVentInICU"]) # extra!
-        else:
-            T_y.append(true_df[col_name])
+        T_y.append(true_df[col_name])
     T_y = np.asarray(T_y).flatten()
 
+    # initalize sampler
     sampler = ABCSampler(seed, start_epsilon, lowest_epsilon, annealing_constant, T_y, config_dict, num_timesteps, num_simulations)
 
     sampler.initialize_theta(algorithm, abc_prior, params_init)
@@ -825,7 +752,7 @@ if __name__ == '__main__':
 
     accepted_thetas, accepted_distances, num_accepted, all_distances, accepted_alphas, all_alphas = sampler.draw_samples(algorithm, num_iterations, scale)
 
-    num_to_save = int(len(accepted_thetas) * 0.5)
+    num_to_save = int(len(accepted_thetas) * 0.5) # save only the second half of the parameters
     last_thetas = accepted_thetas[-num_to_save:]
     sampler.save_thetas_to_json(last_thetas, thetas_output)
 

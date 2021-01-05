@@ -8,9 +8,10 @@ import numpy as np
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', default='./')
-    parser.add_argument('--output_dir', default='./')
-    parser.add_argument('--input_csv_file_pattern', default='results-*.csv')
+    parser.add_argument('--input_dir', default='NHS_output')
+    parser.add_argument('--output_dir', default='NHS_output')
+    parser.add_argument('--output_template', default='summary_university_hospitals_of_north_midlands_nhs_trust_SpringTrainingOnSpringTesting_20MaxEach_uniform_')
+    parser.add_argument('--input_csv_file_pattern', default='results_university_hospitals_of_north_midlands_nhs_trust_SpringTrainingOnSpringTesting_20MaxEach_uniform_*.csv')
     parser.add_argument('--comma_sep_percentiles',
         type=str,
         default='1,2.5,5,10,25,50,75,90,95,97.5,99')
@@ -50,12 +51,12 @@ if __name__ == '__main__':
         summary_TK = np.percentile(counts_TKS, perc, axis=2)
         df = pd.DataFrame(summary_TK, columns=expected_columns)
         df.to_csv(
-            os.path.join(args.output_dir, "summary-percentile=%06.2f.csv" % perc),
+            os.path.join(args.output_dir, "%spercentile=%06.2f.csv" % (args.output_template, perc)),
             index=False, float_format='%.2f')
 
     for func_name, func in [('mean', np.mean), ('stddev', np.std)]:
         summary_TK = func(counts_TKS, axis=2)
         df = pd.DataFrame(summary_TK, columns=expected_columns)
         df.to_csv(
-            os.path.join(args.output_dir, "summary-%s.csv" % func_name),
+            os.path.join(args.output_dir, "%s%s.csv" % (args.output_template, func_name)),
             index=False, float_format='%.2f')

@@ -88,7 +88,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
             raise ValueError("Bad PMF specification: %s" % pmfstr_or_csvfile)
 
     print("----------------------------------------")
-    print("Simulating for %d timesteps with seed %d" % (T, args.random_seed))
+    print("Simulating for %d timesteps with seed %d" % (T, random_seed))
     print("----------------------------------------")
     ## Simulation what happens to initial population
     for t in range(-Tpast, 1, 1):
@@ -150,13 +150,20 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         columns=['timestep'] + col_names + ['n_TERMINAL'] + admit_col_names + discharge_col_names,
         index=False, float_format="%.0f")
 
+def update_config_given_sample(config_dict, samples_file, i):
+    num_thetas = len(samples_file['last_thetas'])
+    theta = samples_file['last_thetas'][num_thetas - 1 - i]
+    for key in theta:
+        config_dict[key] = theta[key]
+    return config_dict
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_file', default=None)
-    parser.add_argument('--output_file', default='example_output/results_test_50-50.csv')
-    parser.add_argument('--random_seed', default=102, type=int)
-    parser.add_argument('--num_seeds', default=1, type=int)
+    parser.add_argument('--config_dict', default='NHS_data/new_data/formatted_data/params_simple_university_hospitals_of_north_midlands_nhs_trust_SpringTesting.json')
+    parser.add_argument('--samples_file', default='NHS_results/abc_university_hospitals_of_north_midlands_nhs_trust_SpringTraining_last_thetas_20MaxEach_uniform.json')
+    parser.add_argument('--num_samples', default=100)
+    parser.add_argument('--output_file', default='NHS_output/results_university_hospitals_of_north_midlands_nhs_trust_SpringTrainingOnSpringTesting_20MaxEach_uniform_random_seed=101_sample=None.csv')
+    parser.add_argument('--random_seed', default=101, type=int)
 
     args, unknown_args = parser.parse_known_args()
 
@@ -164,20 +171,19 @@ if __name__ == '__main__':
     unk_vals = unknown_args[1::2]
     unk_dict = dict(zip(unk_keys, unk_vals))
 
-    config_file = args.config_file
+    config_dict = args.config_dict
+    samples_file = args.samples_file
     output_file = args.output_file
+    num_samples = int(args.num_samples)
 
     ## Load JSON
-    with open(config_file, 'r') as f:
+    with open(config_dict, 'r') as f:
         config_dict = json.load(f)
 
-    for key in config_dict:
-        print(key, config_dict[key])
+    with open(samples_file, 'r') as f:
+        samples_file = json.load(f)
 
     ## Summarize the probabilistic model
-    print("----------------------------------------")
-    print("Loaded SemiMarkovModel from config_file:")
-    print("----------------------------------------")
     states = config_dict['states']
     state_name_to_id = dict()
     next_state_map = dict()
@@ -190,14 +196,14 @@ if __name__ == '__main__':
         p_recover = config_dict["proba_Recovering_given_%s" % state]
         p_decline = 1.0 - p_recover
 
-        print("State #%d %s" % (ss, state))
-        print("    prob. %.3f recover" % (p_recover))
-        print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
+        # print("State #%d %s" % (ss, state))
+        # print("    prob. %.3f recover" % (p_recover))
+        # print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
     state_name_to_id['TERMINAL'] = len(states)
 
     output_file_base = output_file
-    for seed in range(args.random_seed, args.random_seed + args.num_seeds):
-        output_file = output_file_base.replace("random_seed=%s" % args.random_seed, "random_seed=%s" % str(seed))
+    for i in range(num_samples):
+        seed = int(args.random_seed) + i
+        output_file = output_file_base.replace("random_seed=%s_sample=None" % (args.random_seed), "random_seed=%s_sample=%d" % (str(seed), i))
+        config_dict = update_config_given_sample(config_dict, samples_file, i)
         run_simulation(seed, output_file, config_dict, states, state_name_to_id, next_state_map)
-
-
