@@ -15,8 +15,10 @@ Examples
 >>> T = np.sum(p.durations) + 1
 >>> empty_count_TK = np.zeros((T, K), dtype=np.int32)
 
+>>> t_st = 0 # start time, 
+
 ## Check terminal counts is accurate
->>> term_T1 = p.update_terminal_count_matrix(empty_count_TK.copy()[:,0], 0)
+>>> term_T1 = p.update_terminal_count_matrix(empty_count_TK.copy()[:,0], t_st)
 >>> np.sum(term_T1)
 0
 
@@ -43,25 +45,31 @@ array([[1, 0, 0, 0, 0],
        [0, 0, 0, 0, 1],
        [0, 0, 0, 0, 0]], dtype=int32)
 
-## Check admit counts track entry to each stage
+>>> trans_time_ids = np.hstack([[0], np.cumsum(p.durations)])
+
+## Check admit counts has only one entry
 >>> admit_TK = p.update_admit_count_matrix(empty_count_TK.copy(), 0)
 >>> np.sum(admit_TK)
-5
->>> admit_TK[[0] + np.cumsum(p.durations).tolist()]
+1
+>>> admit_TK[trans_time_ids]
 array([[1, 0, 0, 0, 0],
-       [0, 1, 0, 0, 0],
-       [0, 0, 1, 0, 0],
-       [0, 0, 0, 1, 0],
-       [0, 0, 0, 0, 1],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0]], dtype=int32)
 
-## Check discharge has only one entry
+## Check discharge counts has only one entry
 >>> discharge_TK = p.update_discharge_count_matrix(empty_count_TK.copy(), 0)
 >>> np.sum(discharge_TK)
 1
->>> discharge_TK[np.sum(p.durations), :]
-array([0, 0, 0, 0, 1], dtype=int32)
-"""
+>>> discharge_TK[trans_time_ids, :]
+array([[0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 1]], dtype=int32)"""
 
 
 HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
@@ -169,19 +177,16 @@ class PatientTrajectory(object):
         return count_T1
 
     def update_admit_count_matrix(self, count_TK, t_start):
-        ''' Update count matrix tracking "newly admitted" population into each state at each time
+        ''' Update count matrix tracking "newly admitted" at each state, time
 
         Returns
         -------
         count_TK : 2D array with shape (T, K)
             One row for each timestep
             One column for each state
+            Exactly one 1 entry for each patient in simulation.
         '''
-        t = t_start
-        L = len(self.durations)
-        for ii in range(L):
-            count_TK[t, self.state_ids[ii]] += 1
-            t = t + self.durations[ii]
+        count_TK[t_start, self.state_ids[0]] += 1
         return count_TK
 
     def update_discharge_count_matrix(self, count_TK, t_start):
@@ -192,6 +197,7 @@ class PatientTrajectory(object):
         count_TK : 2D array with shape (T, K)
             One row for each timestep
             One column for each state
+            At most one 1 entry for each patient in simulation,
         '''
         if not self.is_terminal_0:
             count_TK[t_start + np.sum(self.durations), self.state_ids[-1]] += 1

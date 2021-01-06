@@ -4,7 +4,7 @@
 "init_num_InGeneralWard": 10,
 "init_num_OffVentInICU": 10,
 "init_num_OnVentInICU": 10,
-"num_timesteps": 120,
+"num_timesteps": 21,
 "pmf_num_per_timestep_Presenting": "scipy.stats.poisson(10)",
 "proba_Recovering_given_Presenting": 0.1,
 "proba_Recovering_given_InGeneralWard": 0.1,

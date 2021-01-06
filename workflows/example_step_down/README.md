@@ -1,4 +1,4 @@
-Simple "Hello world" example to get started with Snakemake
+Simple demonstration of the step-down functionality with just 1 patient
 
 Usage
 -----
