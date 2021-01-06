@@ -113,28 +113,54 @@ class PatientTrajectory(object):
         ## Simulate trajectory
         state = start_state
         health_state_id = 0
-        while health_state_id < 1 and state != 'TERMINAL':
-            health_state_id = prng.rand() < config_dict['proba_Recovering_given_%s' % state]
-            choices_and_probas_dict = config_dict['pmf_duration_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
-            choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
-            probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-            assert np.allclose(1.0, np.sum(probas))
-            duration = prng.choice(choices, p=probas)
-            if len(self.state_ids) == 0 and t <= 0:
-                try:
-                    choices_and_probas_dict = config_dict['pmf_initial_duration_spent_%s' % (state)]
-                    choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
-                    probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-                    assert np.allclose(1.0, np.sum(probas))
-                    duration_spent = prng.choice(choices, p=probas)
-                    duration = np.maximum(duration - duration_spent, 1)
-                except KeyError:
-                    pass
-            self.state_ids.append(state_name_to_id[state])
-            self.health_state_ids.append(health_state_id)
-            self.durations.append(duration)
-            state = next_state_map[state]
-            self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
+        while state != 'TERMINAL':
+
+            if health_state_id < 1:
+                health_state_id = prng.rand() < config_dict['proba_Recovering_given_%s' % state]
+                choices_and_probas_dict = config_dict['pmf_duration_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
+                choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
+                probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
+                assert np.allclose(1.0, np.sum(probas))
+                duration = prng.choice(choices, p=probas)
+                if len(self.state_ids) == 0 and t <= 0:
+                    try:
+                        choices_and_probas_dict = config_dict['pmf_initial_duration_spent_%s' % (state)]
+                        choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
+                        probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
+                        assert np.allclose(1.0, np.sum(probas))
+                        duration_spent = prng.choice(choices, p=probas)
+                        duration = np.maximum(duration - duration_spent, 1)
+                    except KeyError:
+                        pass
+                self.state_ids.append(state_name_to_id[state])
+                self.health_state_ids.append(health_state_id)
+                self.durations.append(duration)
+                state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
+                self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
+
+
+            else: ## add step-down-progression
+                # health_state_id = 1
+                choices_and_probas_dict = config_dict['pmf_duration_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
+                choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
+                probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
+                assert np.allclose(1.0, np.sum(probas))
+                duration = prng.choice(choices, p=probas)
+                if len(self.state_ids) == 0 and t <= 0:
+                    try:
+                        choices_and_probas_dict = config_dict['pmf_initial_duration_spent_%s' % (state)]
+                        choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
+                        probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
+                        assert np.allclose(1.0, np.sum(probas))
+                        duration_spent = prng.choice(choices, p=probas)
+                        duration = np.maximum(duration - duration_spent, 1)
+                    except KeyError:
+                        pass
+                self.state_ids.append(state_name_to_id[state])
+                self.health_state_ids.append(health_state_id)
+                self.durations.append(duration)
+                state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
+                # self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
 
 
     def update_count_matrix(self, count_TK, t_start):

@@ -184,15 +184,22 @@ if __name__ == '__main__':
     for ss, state in enumerate(states):
         state_name_to_id[state] = ss
         if ss < len(states) - 1:
-            next_state_map[state] = states[ss+1]
+            if ss == 0: ## next_state_map for recovery... HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
+                next_state_map[state+'Recovering'] = 'RELEASE'
+            else:
+                next_state_map[state+'Recovering'] = states[ss-1]
+            
+                # next_state_map for declining
+            next_state_map[state+'Declining'] = states[ss+1] 
+
         else:
-            next_state_map[state] = 'TERMINAL'
+            next_state_map[state+'Declining'] = 'TERMINAL'
         p_recover = config_dict["proba_Recovering_given_%s" % state]
         p_decline = 1.0 - p_recover
 
         print("State #%d %s" % (ss, state))
         print("    prob. %.3f recover" % (p_recover))
-        print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
+        print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state+'Declining']))
     state_name_to_id['TERMINAL'] = len(states)
 
     output_file_base = output_file
