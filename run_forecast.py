@@ -183,17 +183,18 @@ if __name__ == '__main__':
     next_state_map = dict()
     for ss, state in enumerate(states):
         state_name_to_id[state] = ss
-        if ss < len(states) - 1:
-            if ss == 0: ## next_state_map for recovery... HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
-                next_state_map[state+'Recovering'] = 'RELEASE'
-            else:
-                next_state_map[state+'Recovering'] = states[ss-1]
-            
-                # next_state_map for declining
+        # if ss < len(states):
+        if ss == 0: ## next_state_map for recovery... HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
+            next_state_map[state+'Recovering'] = 'RELEASE'
+            next_state_map[state+'Declining'] = states[ss+1]
+        elif ss == len(states)-1:
+            next_state_map[state+'Recovering'] = states[ss-1]
+            next_state_map[state+'Declining'] = 'TERMINAL'
+        else:
+            next_state_map[state+'Recovering'] = states[ss-1]
             next_state_map[state+'Declining'] = states[ss+1] 
 
-        else:
-            next_state_map[state+'Declining'] = 'TERMINAL'
+        
         p_recover = config_dict["proba_Recovering_given_%s" % state]
         p_decline = 1.0 - p_recover
 
@@ -201,6 +202,7 @@ if __name__ == '__main__':
         print("    prob. %.3f recover" % (p_recover))
         print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state+'Declining']))
     state_name_to_id['TERMINAL'] = len(states)
+
 
     output_file_base = output_file
     for seed in range(args.random_seed, args.random_seed + args.num_seeds):

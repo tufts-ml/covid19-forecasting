@@ -113,7 +113,7 @@ class PatientTrajectory(object):
         ## Simulate trajectory
         state = start_state
         health_state_id = 0
-        while state != 'TERMINAL':
+        while (state != 'TERMINAL' and state != 'RELEASE'):
 
             if health_state_id < 1:
                 health_state_id = prng.rand() < config_dict['proba_Recovering_given_%s' % state]
