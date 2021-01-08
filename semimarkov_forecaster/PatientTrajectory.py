@@ -145,6 +145,11 @@ class PatientTrajectory(object):
             self.health_state_ids.append(health_state_id)
             self.durations.append(duration)
             state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
+            try:
+                if health_state_id < 1 and prng.rand()<config_dict['proba_Die_given_%s' % (state)]: # premature/abrupt death
+                    state = 'TERMINAL' 
+            except KeyError:  # proba_Die_given_STATE not specified in params.json, so premature death from this STATE does not exist
+                pass
             self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
 
     def update_count_matrix(self, count_TK, t_start):
