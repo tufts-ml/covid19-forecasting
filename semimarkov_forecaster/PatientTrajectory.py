@@ -144,15 +144,14 @@ class PatientTrajectory(object):
             self.state_ids.append(state_name_to_id[state])
             self.health_state_ids.append(health_state_id)
             self.durations.append(duration)
+            previous_state = state
+            state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
             
-            if health_state_id < 1 : # premature/abrupt death consideration
-                try:
-                    if prng.rand()<config_dict['proba_Die_given_%s' % (state)]:
-                        state = 'TERMINAL' 
-                except KeyError:  # proba_Die_given_STATE not specified in params.json, so premature death from this STATE does not exist
-                    state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
-            else:
-                state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
+            try:
+                if prng.rand()<config_dict['proba_Die_given_%s' % (previous_state)] and health_state_id < 1 :
+                    state = 'TERMINAL' 
+            except KeyError:  # proba_Die_given_STATE not specified in params.json, so premature death from this STATE does not exist
+                pass
             self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
 
 
