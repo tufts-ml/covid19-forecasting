@@ -22,7 +22,17 @@ os.environ['REPO_ROOT_DIR'] = os.path.abspath(REPO_ROOT_DIR)
 # --min_random_seed 1001
 # --max_random_seed 1100
 # --random_seed 0
+
 configfile: "config.json"
+for key, val in config.items():
+    if isinstance(val, str):
+        newval = os.path.expandvars(val)
+        config[key] = newval
+
+print("Output will go to folder:")
+print(config['output_dir'])
+
+
 
 # Target rule to run multiple simulations saved to different CSV files
 #
@@ -30,24 +40,40 @@ configfile: "config.json"
 rule all:
     input:
         [os.path.join(
-                os.path.expandvars(config['output_dir']),          
+                config['output_dir'],          
                 "results-random_seed={random_seed}.csv".format(random_seed=seed)
                 )
             for seed in range(config['min_random_seed'], config['max_random_seed'])],
         [os.path.join(
-                os.path.expandvars(config['output_dir']),          
+                config['output_dir'],          
                 "summary-percentile={percentile:06.2f}.csv".format(percentile=float(perc))
                 )
             for perc in config['comma_sep_percentiles'].split(',')]
+
+# Create directory where output will be stored
+rule create_output_dir:
+    output:
+        signal_file=touch(os.path.join(config['output_dir'], '.snakemake_create_output_dir_complete'))
+
+    params:
+        output_dir=config['output_dir']
+ 
+    conda:
+        os.path.join(REPO_ROOT_DIR, "semimarkov_forecaster.yml")
+
+    shell:
+        '''
+        python -c 'import pathlib; p = pathlib.Path("{params.output_dir}"); p.mkdir(parents=True, exist_ok=True)'
+        '''
 
 # Target rule to run one specific simulation (with seed provided by manual command line input)
 #
 # Uses the 'template' defined below
 rule run_example_simulation:
     input:
-        #"results-random_seed={random_seed}.csv".format(random_seed=config['random_seed'])
-        os.path.join(
-            os.path.expandvars(config['output_dir']),
+        completed_create_output_dir=rules.create_output_dir.output.signal_file,
+        output_csv_file=os.path.join(
+            config['output_dir'],
             "results-random_seed={random_seed}.csv".format(random_seed=config['random_seed']),
             )
 
@@ -59,7 +85,7 @@ rule template:
 
     output:
         output_csv=os.path.join(
-            os.path.expandvars("{output_dir}"),
+            config['output_dir'],
             "results-random_seed={random_seed}.csv")
 
     conda:
@@ -67,7 +93,6 @@ rule template:
 
     shell:
         """\
-        dirname {output.output_csv} | xargs mkdir -p && \
         python {input.forecast_script} \
             --config_file "{input.config_json}" \
             --random_seed "{wildcards.random_seed}" \
@@ -79,13 +104,13 @@ rule template:
 
 rule summarize:
     input:
-        input_dir=os.path.expandvars("{output_dir}"),
+        completed_create_output_dir=rules.create_output_dir.output.signal_file,   
         summarize_script=os.path.join(REPO_ROOT_DIR, 'summarize_forecasts.py'),
         source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py'))
 
     output:
         [os.path.join(
-                os.path.expandvars("{output_dir}"),
+                config['output_dir'],
                 "summary-percentile={percentile:06.2f}.csv".format(percentile=float(perc))
                 )
             for perc in config['comma_sep_percentiles'].split(',')]
@@ -95,8 +120,10 @@ rule summarize:
 
     shell:
         """\
-        python {input.summarize_script} \
-            --comma_sep_percentiles "%s" \
-            --input_dir "{input.input_dir}" \
-            --output_dir "{input.input_dir}" \
-        """ % (config['comma_sep_percentiles'])
+        python {{input.summarize_script}} \
+            --comma_sep_percentiles "{comma_sep_percentiles}" \
+            --input_dir "{output_dir}" \
+            --output_dir "{output_dir}" \
+        """.format(
+            comma_sep_percentiles=config['comma_sep_percentiles'],
+            output_dir=config['output_dir'])

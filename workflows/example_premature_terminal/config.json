@@ -1,5 +1,5 @@
 {
-    "output_dir": "$REPO_ROOT_DIR/example_output/",
+    "output_dir": "$REPO_ROOT_DIR/tmp_example_output/",
     "min_random_seed": 1001,
     "max_random_seed": 1004,
     "random_seed": 1001,
