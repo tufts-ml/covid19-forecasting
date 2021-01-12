@@ -5,7 +5,7 @@
 "init_num_OffVentInICU": 10,
 "init_num_OnVentInICU": 10,
 "num_timesteps": 100,
-"pmf_num_per_timestep_Presenting": "example_simple/num_presenting_simple-100days.csv",
+"pmf_num_per_timestep_Presenting": "scipy.stats.poisson(10)",
 "proba_Recovering_given_Presenting": 0.1,
 "proba_Recovering_given_InGeneralWard": 0.1,
 "proba_Recovering_given_OffVentInICU": 0.1,

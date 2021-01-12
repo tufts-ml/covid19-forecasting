@@ -1,0 +1,17 @@
+{
+"prior_Health_given_InGeneralWard": [75, 25],
+"prior_Health_given_OffVentInICU": [75, 25],
+"prior_Health_given_OnVentInICU": [75, 25],
+"prior_duration_Declining_InGeneralWard": {
+    "1": 40, "2": 30, "3": 20, "4": 10, "5": 5},
+"prior_duration_Recovering_InGeneralWard": {
+    "1": 40, "2": 30, "3": 20, "4": 10, "5": 5},
+"prior_duration_Declining_OffVentInICU": {
+    "1": 40, "2": 30, "3": 20, "4": 10, "5": 5},
+"prior_duration_Recovering_OffVentInICU": {
+    "1": 40, "2": 30, "3": 20, "4": 10, "5": 5},
+"prior_duration_Declining_OnVentInICU": {
+    "1": 40, "2": 30, "3": 20, "4": 10, "5": 5},
+"prior_duration_Recovering_OnVentInICU": {
+    "1": 40, "2": 30, "3": 20, "4": 10, "5": 5}
+}

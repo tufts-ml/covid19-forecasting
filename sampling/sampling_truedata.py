@@ -159,7 +159,7 @@ theta:
     theta['health'] = list of length S, each containing array of shape (2,) (treating health probas as 2-dim dirichlet)
     theta['durations'] = list of length S with arrays of shape (H, D) [(D,) in simple example]
 '''
-SUMMARY_STATISTICS_NAMES = ["n_discharges", "n_occupied_beds"] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
+SUMMARY_STATISTICS_NAMES = ["n_discharges", "n_occupied_beds", "n_OnVentInICU"] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
 
 HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering', 'Declining': 0, 'Recovering': 1}
 
@@ -490,6 +490,13 @@ class ABCSampler(object):
 
                     # eq. 1.3.2
                     alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
+                    print("Health")
+                    print(log_prior_prime)
+                    print(log_prop_prime)
+                    print(log_prior_prev)
+                    print(log_prop_prev)
+                    print(alpha)
+                    print()
                     print("Alpha: %.3f" % np.exp(alpha))
                     all_alphas.append(np.exp(alpha))
 
@@ -548,6 +555,13 @@ class ABCSampler(object):
                             
                             # eq. 1.3.2
                             alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
+                            print("Durations")
+                            print(log_prior_prime)
+                            print(log_prop_prime)
+                            print(log_prior_prev)
+                            print(log_prop_prev)
+                            print(alpha)
+                            print()
                             print("Alpha: %.3f" % np.exp(alpha))
                             all_alphas.append(np.exp(alpha))
 
@@ -685,7 +699,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_template', default='NHS_results/abc_noVent')
     parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
     parser.add_argument('--algorithm', default='abc')
-    parser.add_argument('--num_iterations', default=2000, type=int) # number of sampling iterations 
+    parser.add_argument('--num_iterations', default=2500, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic parameter vector
     parser.add_argument('--num_simulations', default=5, type=int)
     parser.add_argument('--start_epsilon', default=1.0, type=float)
@@ -694,7 +708,7 @@ if __name__ == '__main__':
     parser.add_argument('--scale', default=100, type=int) # scale parameter for the dirichlet proposal distribution
 
     parser.add_argument('--params_init', default='None')
-    parser.add_argument('--abc_prior_type', default='20MaxEach_uniform')
+    parser.add_argument('--abc_prior_type', default='20MaxEach_fourthstaircase')
     parser.add_argument('--abc_prior_config_template', default='NHS_data/abc_prior_config')
 
     args, unknown_args = parser.parse_known_args()

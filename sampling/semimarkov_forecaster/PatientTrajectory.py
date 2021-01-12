@@ -109,6 +109,7 @@ class PatientTrajectory(object):
         else:
             self.simulate_trajectory(start_state, config_dict, prng, next_state_map, state_name_to_id, t)
 
+    # @profile
     def simulate_trajectory(self, start_state, config_dict, prng, next_state_map, state_name_to_id, t):
         ## Simulate trajectory
         state = start_state
@@ -118,14 +119,14 @@ class PatientTrajectory(object):
             choices_and_probas_dict = config_dict['pmf_duration_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
             choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
             probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-            assert np.allclose(1.0, np.sum(probas))
+            # assert np.allclose(1.0, np.sum(probas))
             duration = prng.choice(choices, p=probas)
             if len(self.state_ids) == 0 and t <= 0:
                 try:
                     choices_and_probas_dict = config_dict['pmf_initial_duration_spent_%s' % (state)]
                     choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
                     probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-                    assert np.allclose(1.0, np.sum(probas))
+                    # assert np.allclose(1.0, np.sum(probas))
                     duration_spent = prng.choice(choices, p=probas)
                     duration = np.maximum(duration - duration_spent, 1)
                 except KeyError:

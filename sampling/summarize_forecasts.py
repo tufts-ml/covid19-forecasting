@@ -8,10 +8,10 @@ import numpy as np
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', default='NHS_output')
-    parser.add_argument('--output_dir', default='NHS_output')
-    parser.add_argument('--output_template', default='summary_university_hospitals_of_north_midlands_nhs_trust_SpringTrainingOnSpringTesting_20MaxEach_uniform_')
-    parser.add_argument('--input_csv_file_pattern', default='results_university_hospitals_of_north_midlands_nhs_trust_SpringTrainingOnSpringTesting_20MaxEach_uniform_*.csv')
+    parser.add_argument('--input_dir', default='example_output') #'NHS_output')
+    parser.add_argument('--output_dir', default='example_output') #'NHS_output')
+    parser.add_argument('--output_template', default='summary_health_experiment_bad_durations_2_end_100-10_') #'summary_12000Iters_university_hospitals_birmingham_nhs_foundation_trust_TrainingOnTraining_20MaxEach_uniform_')
+    parser.add_argument('--input_csv_file_pattern', default='results_health_experiment_bad_durations_2_end_100-10_*.csv') #'results_12000Iters_university_hospitals_birmingham_nhs_foundation_trust_TrainingOnTraining_20MaxEach_uniform_*.csv')
     parser.add_argument('--comma_sep_percentiles',
         type=str,
         default='1,2.5,5,10,25,50,75,90,95,97.5,99')

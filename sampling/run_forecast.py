@@ -154,9 +154,9 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_file', default=None)
-    parser.add_argument('--output_file', default='example_output/results_test_50-50.csv')
+    parser.add_argument('--output_file', default='example_output/results_health_experiment_bad_durations_2_100-10_random_seed=102.csv')
     parser.add_argument('--random_seed', default=102, type=int)
-    parser.add_argument('--num_seeds', default=1, type=int)
+    parser.add_argument('--num_seeds', default=100, type=int)
 
     args, unknown_args = parser.parse_known_args()
 

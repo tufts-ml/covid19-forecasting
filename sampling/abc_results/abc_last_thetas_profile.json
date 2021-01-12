@@ -1,0 +1,192 @@
+{
+ "last_thetas": [
+  {
+   "proba_Recovering_given_InGeneralWard": 0.5,
+   "pmf_duration_Declining_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OffVentInICU": 0.5,
+   "pmf_duration_Declining_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OnVentInICU": 0.49909653987295893,
+   "pmf_duration_Declining_OnVentInICU": {
+    "1": 0.38042957609803973,
+    "2": 0.17539031915399425,
+    "3": 0.17890101801251504,
+    "4": 0.12212073978252698,
+    "5": 0.143158346952924
+   },
+   "pmf_duration_Recovering_OnVentInICU": {
+    "1": 0.2189234971183684,
+    "2": 0.1990211892884742,
+    "3": 0.24109130605947135,
+    "4": 0.18174415299236985,
+    "5": 0.15921985454131618
+   }
+  },
+  {
+   "proba_Recovering_given_InGeneralWard": 0.5,
+   "pmf_duration_Declining_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OffVentInICU": 0.5,
+   "pmf_duration_Declining_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OnVentInICU": 0.49909653987295893,
+   "pmf_duration_Declining_OnVentInICU": {
+    "1": 0.38042957609803973,
+    "2": 0.17539031915399425,
+    "3": 0.17890101801251504,
+    "4": 0.12212073978252698,
+    "5": 0.143158346952924
+   },
+   "pmf_duration_Recovering_OnVentInICU": {
+    "1": 0.21985910412771176,
+    "2": 0.19829016556892928,
+    "3": 0.23484830539582974,
+    "4": 0.180126481803084,
+    "5": 0.16687594310444523
+   }
+  },
+  {
+   "proba_Recovering_given_InGeneralWard": 0.5,
+   "pmf_duration_Declining_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OffVentInICU": 0.5,
+   "pmf_duration_Declining_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OnVentInICU": 0.49909653987295893,
+   "pmf_duration_Declining_OnVentInICU": {
+    "1": 0.36600708815933236,
+    "2": 0.1851811014704362,
+    "3": 0.22705006305762285,
+    "4": 0.1306688837941839,
+    "5": 0.09109286351842455
+   },
+   "pmf_duration_Recovering_OnVentInICU": {
+    "1": 0.21985910412771176,
+    "2": 0.19829016556892928,
+    "3": 0.23484830539582974,
+    "4": 0.180126481803084,
+    "5": 0.16687594310444523
+   }
+  },
+  {
+   "proba_Recovering_given_InGeneralWard": 0.5,
+   "pmf_duration_Declining_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_InGeneralWard": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OffVentInICU": 0.5,
+   "pmf_duration_Declining_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "pmf_duration_Recovering_OffVentInICU": {
+    "1": 0.2,
+    "2": 0.2,
+    "3": 0.2,
+    "4": 0.2,
+    "5": 0.2
+   },
+   "proba_Recovering_given_OnVentInICU": 0.49909653987295893,
+   "pmf_duration_Declining_OnVentInICU": {
+    "1": 0.3502497959263685,
+    "2": 0.2010730206831819,
+    "3": 0.25578225800301063,
+    "4": 0.12882560731868756,
+    "5": 0.06406931806875153
+   },
+   "pmf_duration_Recovering_OnVentInICU": {
+    "1": 0.21985910412771176,
+    "2": 0.19829016556892928,
+    "3": 0.23484830539582974,
+    "4": 0.180126481803084,
+    "5": 0.16687594310444523
+   }
+  }
+ ]
+}

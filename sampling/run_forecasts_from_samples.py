@@ -159,10 +159,10 @@ def update_config_given_sample(config_dict, samples_file, i):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_dict', default='NHS_data/new_data/formatted_data/params_simple_university_hospitals_of_north_midlands_nhs_trust_SpringTesting.json')
-    parser.add_argument('--samples_file', default='NHS_results/abc_university_hospitals_of_north_midlands_nhs_trust_SpringTraining_last_thetas_20MaxEach_uniform.json')
+    parser.add_argument('--config_dict', default='example_simple/params_simple-100days.json') #'NHS_data/new_data/formatted_data/params_simple_university_hospitals_birmingham_nhs_foundation_trust_Training.json')
+    parser.add_argument('--samples_file', default='abc_results/abc_health_experiment_bad_durations_2_last_thetas_uniform.json') #'NHS_results/abc_12000Iters_university_hospitals_birmingham_nhs_foundation_trust_Training_last_thetas_20MaxEach_uniform.json')
     parser.add_argument('--num_samples', default=100)
-    parser.add_argument('--output_file', default='NHS_output/results_university_hospitals_of_north_midlands_nhs_trust_SpringTrainingOnSpringTesting_20MaxEach_uniform_random_seed=101_sample=None.csv')
+    parser.add_argument('--output_file', default='example_output/results_health_experiment_bad_durations_2_end_100-10_random_seed=101_sample=None.csv') #'NHS_output/results_12000Iters_university_hospitals_birmingham_nhs_foundation_trust_TrainingOnTraining_20MaxEach_uniform_random_seed=101_sample=None.csv')
     parser.add_argument('--random_seed', default=101, type=int)
 
     args, unknown_args = parser.parse_known_args()
