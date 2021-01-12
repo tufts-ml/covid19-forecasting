@@ -10,7 +10,7 @@ Examples
 >>> p.state_ids = [0, 1, 2, 3, 4]
 >>> p.durations = [5, 4, 3, 2, 2]
 >>> p.health_state_ids = [0, 0, 0, 0, 1]
->>> p.is_terminal_0 = 0
+>>> p.is_terminal_0 = False
 
 >>> T = np.sum(p.durations) + 1
 >>> empty_count_TK = np.zeros((T, K), dtype=np.int32)
@@ -87,7 +87,7 @@ class PatientTrajectory(object):
         List of integer indicator (indicating current ordinal state)
     health_state_ids : list_of_int
         List of which binary health state (declining, recovering)
-    is_terminal_0 : int
+    is_terminal_0 : bool
         Indicates if final state is terminal, declining
     '''
 
@@ -144,16 +144,26 @@ class PatientTrajectory(object):
             self.state_ids.append(state_name_to_id[state])
             self.health_state_ids.append(health_state_id)
             self.durations.append(duration)
-            previous_state = state
-            state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
             
-            try:
-                if prng.rand()<config_dict['proba_Die_given_%s' % (previous_state)] and health_state_id < 1 :
-                    state = 'TERMINAL' 
-            except KeyError:  # proba_Die_given_STATE not specified in params.json, so premature death from this STATE does not exist
-                pass
-            self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
+            # Progress to the next state
+            next_state = next_state_map[state+HEALTH_STATE_ID_TO_NAME[health_state_id]]
 
+            # Allow option for premature terminal state
+            if health_state_id < 1:
+                try:
+                    if prng.rand() < config_dict['proba_Die_after_Declining_%s' % (state)]:
+                        next_state = 'TERMINAL' 
+                except KeyError:  # proba_Die not specified, so premature death from this STATE does not exist
+                    pass
+            
+            # Advance to next state
+            state = next_state
+
+            # End while loop block. Continue if not terminal or recovered.
+
+
+        self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
+            
 
     def update_count_matrix(self, count_TK, t_start):
         ''' Update count matrix tracking population of each state at each time
