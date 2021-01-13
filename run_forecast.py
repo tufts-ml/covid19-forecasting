@@ -25,6 +25,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     admit_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     discharge_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     terminal_count_T1 = np.zeros((Tmax, 1), dtype=np.float64)
+    summary_dict_list = list()
 
     ## Read functions to sample the incoming admissions to each state
     sample_func_per_state = dict()
@@ -90,7 +91,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     print("----------------------------------------")
     print("Simulating for %d timesteps with seed %d" % (T, args.random_seed))
     print("----------------------------------------")
-    ## Simulation what happens to initial population
+    ## Simulate what happens to initial population
     for t in range(-Tpast, 1, 1):
         for state in states:
             N_new_dict = config_dict['init_num_%s' % state]
@@ -104,8 +105,9 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
                 terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
+                summary_dict_list.append(p.get_length_of_stay_summary_dict())
 
-    ## Simulation what happens as new patients added at each step
+    ## Simulate what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
             if state not in sample_func_per_state:
@@ -118,6 +120,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
                 terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
+                summary_dict_list.append(p.get_length_of_stay_summary_dict())
 
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
@@ -135,7 +138,6 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     col_names = ['n_%s' % s for s in states]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
     results_df["timestep"] = np.arange(-Tpast, -Tpast + tf)
-
     results_df["n_TERMINAL"] = terminal_count_T1[:,0]
 
     admit_col_names = ['n_admitted_%s' % s for s in states]
@@ -149,6 +151,61 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     results_df.to_csv(output_file,
         columns=['timestep'] + col_names + ['n_TERMINAL'] + admit_col_names + discharge_col_names,
         index=False, float_format="%.0f")
+
+    los_summary_df = pd.DataFrame(summary_dict_list)
+    los_columns = (
+        ['is_Terminal', 'is_InICU', 'is_OnVent', 'duration_All']
+        + ['duration_%s' % s for s in config_dict['states']]
+        + ['duration_%s+Declining' % s for s in config_dict['states']]
+        + ['duration_%s+Recovering' % s for s in config_dict['states']]
+        )
+    los_summary_df.to_csv(output_file.replace('results', 'results_los'), columns=los_columns,
+        index=False, float_format="%.0f")
+
+
+    # Obtain percentile summaries of durations across population
+    for query in ["",
+            "is_Terminal == 1", "is_Terminal == 0",
+            "is_InICU == 1", "is_InICU == 0",
+            "is_OnVent == 1", "is_OnVent == 0",
+            ]:
+
+        collapsed_dict_list = list()
+        if len(query) > 0:
+            q_df = los_summary_df.query(query).copy()
+        else:
+            q_df = los_summary_df
+        filled_vals = q_df[los_columns].values.copy().astype(np.float32)
+        filled_vals[np.isnan(filled_vals)] = 0
+
+        def my_count(x, *args, **kwargs):
+            return np.sum(np.isfinite(x), *args, **kwargs)
+
+        for metric_name, func in [
+                ('count', my_count),
+                ('mean', np.mean)]:
+            collapsed_dict = dict(zip(
+                los_columns,
+                func(filled_vals, axis=0)))
+            collapsed_dict['summary_name'] = metric_name
+            collapsed_dict_list.append(collapsed_dict)
+        for perc in [0, 1, 5, 10, 25, 50, 75, 90, 95, 99, 100]:
+            collapsed_dict = dict(zip(
+                los_columns,
+                np.percentile(filled_vals, perc, axis=0)))
+            collapsed_dict['summary_name'] = 'percentile_%06.3f' % perc
+            collapsed_dict_list.append(collapsed_dict)
+        collapsed_df = pd.DataFrame(collapsed_dict_list)
+
+        if len(query) > 0:
+            sane_query_suffix = "_" + query.replace(" == ", '').replace("_", "")
+        else:
+            sane_query_suffix = ""
+
+        collapsed_df.to_csv(output_file.replace('results', 'percentile_los%s' % sane_query_suffix),
+            columns=['summary_name'] + los_columns,
+            index=False, float_format='%.2f')
+
 
 
 if __name__ == '__main__':

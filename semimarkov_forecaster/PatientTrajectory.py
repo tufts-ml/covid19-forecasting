@@ -69,12 +69,30 @@ array([[0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0],
-       [0, 0, 0, 0, 1]], dtype=int32)"""
+       [0, 0, 0, 0, 1]], dtype=int32)
 
-
-HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
+>>> summary_dict = p.get_length_of_stay_summary_dict()
+>>> summary_dict['duration_State00']
+5
+>>> summary_dict['duration_State00+Recovering']
+0
+>>> summary_dict['duration_State00+Declining']
+5
+>>> summary_dict['duration_State01']
+4
+>>> summary_dict['duration_State02']
+3
+>>> summary_dict['duration_State03']
+2
+>>> summary_dict['duration_State04']
+2
+"""
 
 import numpy as np
+import pandas as pd
+from collections import defaultdict
+
+HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
 
 class PatientTrajectory(object):
     ''' Represents a simulated patient trajectory using semi-markov model
@@ -109,6 +127,7 @@ class PatientTrajectory(object):
         self.durations = list()
         self.state_ids = list()
         self.health_state_ids = list()
+        self.state_name_to_id = state_name_to_id
         self.is_terminal = 0
 
         if start_state is None:
@@ -129,7 +148,18 @@ class PatientTrajectory(object):
             choices_and_probas_dict = config_dict['pmf_duration_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
             choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
             probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-            assert np.allclose(1.0, np.sum(probas))
+            try:
+                assert(np.allclose(1.0, np.sum(probas)))
+            except AssertionError as e:
+                L = len(probas)
+                diagnostic_df = pd.DataFrame(
+                            np.hstack([probas, np.cumsum(probas)]).reshape((2,L)).T,
+                            columns=['probas', 'cumsum'])
+                raise ValueError("Probabilities do not sum to one for state %s,%s\n%s" % (
+                    state,
+                    HEALTH_STATE_ID_TO_NAME[health_state_id],
+                    str(diagnostic_df)))
+
             duration = prng.choice(choices, p=probas)
             if len(self.state_ids) == 0 and t <= 0:
                 try:
@@ -220,3 +250,40 @@ class PatientTrajectory(object):
         if not self.is_terminal_0:
             count_TK[t_start + np.sum(self.durations), self.state_ids[-1]] += 1
         return count_TK
+
+    def get_length_of_stay_summary_dict(self):
+        ''' Compute summary statistics about this patient's entire stay
+
+        Returns
+        -------
+        summary_dict : dict 
+            Dictionary with string keys and count values
+        '''
+        if self.state_name_to_id is None:
+            state_id_to_name = dict([
+                (a, 'State%02d' % a) for a in range(1+np.max(self.state_ids))])
+        else:
+            state_id_to_name = dict(
+                zip(self.state_name_to_id.values(),
+                    self.state_name_to_id.keys()))
+
+        L = len(self.durations)
+        summary_dict = defaultdict(int)
+        summary_dict['is_Terminal'] = int(self.is_terminal_0)
+        summary_dict['is_InICU'] = 0
+        summary_dict['is_OnVent'] = 0
+        summary_dict['duration_All'] = np.sum(self.durations)
+        for ll in range(L):
+            health_state = HEALTH_STATE_ID_TO_NAME[self.health_state_ids[ll]]
+            state_name = state_id_to_name[self.state_ids[ll]]
+            duration = self.durations[ll]
+            summary_dict['duration_' + state_name] += duration
+            summary_dict['duration_' + state_name + "+" + health_state] += duration
+
+            if state_name.count("ICU"):
+                summary_dict['is_InICU'] = 1
+            if state_name.count("OnVent"):
+                summary_dict['is_OnVent'] = 1
+
+        summary_dict['duration_All'] = np.sum(self.durations)
+        return summary_dict
