@@ -23,10 +23,18 @@ os.environ['REPO_ROOT_DIR'] = os.path.abspath(REPO_ROOT_DIR)
 # --max_random_seed 1100
 # --random_seed 0
 configfile: "config.json"
+for key, val in config.items():
+    if isinstance(val, str):
+        newval = os.path.expandvars(val)
+        config[key] = newval
 
-# Target rule to run multiple simulations saved to different CSV files
+print("Output will go to folder:")
+print(config['output_dir'])
+
+
+# Rule: Run multiple simulations saved to different CSV files
 #
-# Uses the 'template' defined below
+# Uses the 'template_simulation' rule defined below
 rule all:
     input:
         [os.path.join(
@@ -40,26 +48,47 @@ rule all:
                 )
             for perc in config['comma_sep_percentiles'].split(',')]
 
-# Target rule to run one specific simulation (with seed provided by manual command line input)
+
+# Rule: Create output directory if it doesn't exist
 #
-# Uses the 'template' defined below
-rule run_example_simulation:
+#
+rule create_output_dir:
+    output:
+        signal_file=touch(os.path.join(config['output_dir'], '.snakemake_create_output_dir_complete'))
+
+    params:
+        output_dir=config['output_dir']
+ 
+    conda:
+        os.path.join(REPO_ROOT_DIR, "semimarkov_forecaster.yml")
+
+    shell:
+        '''
+        python -c 'import pathlib; p = pathlib.Path("{params.output_dir}"); p.mkdir(parents=True, exist_ok=True)'
+        '''
+
+
+# Rule: Run one specific simulation (with seed provided by manual command line input)
+#
+# Uses the 'template_simulation' rule defined below
+rule run_simulation:
     input:
         #"results-random_seed={random_seed}.csv".format(random_seed=config['random_seed'])
         os.path.join(
-            os.path.expandvars(config['output_dir']),
+            config['output_dir'],
             "results-random_seed={random_seed}.csv".format(random_seed=config['random_seed']),
             )
 
-rule template:
+rule template_simulation:
     input:
+        completed_create_output_dir=rules.create_output_dir.output.signal_file,
         config_json="params.json",
         forecast_script=glob.glob(os.path.join(REPO_ROOT_DIR, 'run_forecast.py')),
         source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py'))
 
     output:
         output_csv=os.path.join(
-            os.path.expandvars("{output_dir}"),
+            config['output_dir'],
             "results-random_seed={random_seed}.csv")
 
     conda:
@@ -74,18 +103,23 @@ rule template:
             --output_file "{output.output_csv}" \
         """
 
-# Target rule to run summary (relies on the individual simulations being done)
+# Rule: Create summary CSV files
 #
-
+# Prerequisites: Must have already done the 'run_simulation' for each rand seed
 rule summarize:
     input:
-        input_dir=os.path.expandvars("{output_dir}"),
+        completed_create_output_dir=rules.create_output_dir.output.signal_file,   
         summarize_script=os.path.join(REPO_ROOT_DIR, 'summarize_forecasts.py'),
-        source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py'))
+        source_files=glob.glob(os.path.join(REPO_ROOT_DIR, 'semimarkov_forecaster/*.py')),
+        input_csv_files=[
+            os.path.join(
+                os.path.expandvars(config['output_dir']),          
+                "results-random_seed={random_seed}.csv".format(random_seed=seed)
+                ) for seed in range(config['min_random_seed'], config['max_random_seed'])]
 
     output:
         [os.path.join(
-                os.path.expandvars("{output_dir}"),
+                config['output_dir'],
                 "summary-percentile={percentile:06.2f}.csv".format(percentile=float(perc))
                 )
             for perc in config['comma_sep_percentiles'].split(',')]
@@ -95,8 +129,10 @@ rule summarize:
 
     shell:
         """\
-        python {input.summarize_script} \
-            --comma_sep_percentiles "%s" \
-            --input_dir "{input.input_dir}" \
-            --output_dir "{input.input_dir}" \
-        """ % (config['comma_sep_percentiles'])
+        python {{input.summarize_script}} \
+            --comma_sep_percentiles "{comma_sep_percentiles}" \
+            --input_dir "{output_dir}" \
+            --output_dir "{output_dir}" \
+        """.format(
+            comma_sep_percentiles=config['comma_sep_percentiles'],
+            output_dir=config['output_dir'])

@@ -88,9 +88,11 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         else:
             raise ValueError("Bad PMF specification: %s" % pmfstr_or_csvfile)
 
-    print("----------------------------------------")
-    print("Simulating for %d timesteps with seed %d" % (T, args.random_seed))
-    print("----------------------------------------")
+    print("--------------------------------------------")
+    print("Simulating for %3d timesteps with seed %5d" % (T, args.random_seed))
+    print("Initial population size: %5d" % (np.sum([
+        config_dict['init_num_%s' % s] for s in config_dict['states']])))
+    print("--------------------------------------------")
     ## Simulate what happens to initial population
     for t in range(-Tpast, 1, 1):
         for state in states:
