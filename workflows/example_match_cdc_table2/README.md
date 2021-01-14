@@ -10,11 +10,11 @@ Parameters
 
 To see the concrete parameters used, see here:
 
-<params.json>
+https://github.com/tufts-ml/covid19-forecasting/blob/master/workflows/example_match_cdc_table2/params.json
 
 To understand the reasoning behind these parameters, see here:
 
-
+https://docs.google.com/presentation/d/1seAYpADSLvuYK6RXZKFLsPeRebhteveze46AK1OrIcw/edit?usp=sharing
 
 Usage
 -----
