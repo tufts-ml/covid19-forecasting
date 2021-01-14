@@ -65,7 +65,7 @@ We want to match the following facts from Table 2 (assuming age 50-64):
 Check if the values in the mean row match the desired values above.
 
 ```
-$ cut -d, -f1-4 ../../example_output/match_cdc_table2/percentile_los-random_seed\=1001.csv | column -s, -t | head -n3
+$ cut -d, -f1-4 ../../example_output/match_cdc_table2/los_results_summary-random_seed\=1001.csv | column -s, -t | head -n3
 summary_name        is_Terminal  is_InICU  is_OnVent
 count               30000.00     30000.00  30000.00
 mean                0.10         0.36      0.22
@@ -85,7 +85,7 @@ Among all patients who did NOT go to ICU,
 Check if the values match the desired values above.
 
 ```
-$ cut -d, -f1-5 ../../example_output/match_cdc_table2/percentile_los_isInICU0-random_seed\=1001.csv | column -s, -t | grep "summary\|_25\|_50\|_75"
+$ cut -d, -f1-5 ../../example_output/match_cdc_table2/los_results_summary_isInICU0-random_seed\=1001.csv | column -s, -t | grep "summary\|_25\|_50\|_75"
 summary_name        is_Terminal  is_InICU  is_OnVent  duration_All
 percentile_25.000   0.00         0.00      0.00       2.00
 percentile_50.000   0.00         0.00      0.00       4.00
@@ -108,7 +108,7 @@ Check if the values match the desired values above.
 We get very close:  10 / 14 / 21
 
 ```
-$ cut -d, -f1-5 ../../example_output/match_cdc_table2/percentile_los_isInICU1-random_seed\=1001.csv | column -s, -t | grep "summary\|_25\|_50\|_75"
+$ cut -d, -f1-5 ../../example_output/match_cdc_table2/los_results_summary_isInICU1-random_seed\=1001.csv | column -s, -t | grep "summary\|_25\|_50\|_75"
 summary_name        is_Terminal  is_InICU  is_OnVent  duration_All
 percentile_25.000   0.00         1.00      0.00       10.00
 percentile_50.000   0.00         1.00      1.00       14.00
@@ -132,7 +132,7 @@ Check if the values match the desired values above.
 We get very close:  3 / 6 / 12
 
 ```
-$ cut -d, -f1-8 ../../example_output/match_cdc_table2/percentile_los_isOnVent1-random_seed\=1001.csv | column -s, -t | grep "summary\|_25\|_50\|_75"
+$ cut -d, -f1-8 ../../example_output/match_cdc_table2/los_results_summary_isOnVent1-random_seed\=1001.csv | column -s, -t | grep "summary\|_25\|_50\|_75"
 summary_name        is_Terminal  is_InICU  is_OnVent  duration_All  duration_InGeneralWard  duration_OffVentInICU  duration_OnVentInICU
 percentile_25.000   0.00         1.00      1.00       12.00         4.00                    3.00                   3.00
 percentile_50.000   0.00         1.00      1.00       18.00         6.00                    4.00                   6.00
