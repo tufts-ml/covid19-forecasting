@@ -161,7 +161,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         + ['duration_%s+Declining' % s for s in config_dict['states']]
         + ['duration_%s+Recovering' % s for s in config_dict['states']]
         )
-    los_summary_df.to_csv(output_file.replace('results', 'results_los'), columns=los_columns,
+    los_summary_df.to_csv(output_file.replace('results', 'los_results_per_patient'), columns=los_columns,
         index=False, float_format="%.0f")
 
 
@@ -204,7 +204,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         else:
             sane_query_suffix = ""
 
-        collapsed_df.to_csv(output_file.replace('results', 'percentile_los%s' % sane_query_suffix),
+        collapsed_df.to_csv(output_file.replace('results', 'los_results_summary%s' % sane_query_suffix),
             columns=['summary_name'] + los_columns,
             index=False, float_format='%.2f')
 
