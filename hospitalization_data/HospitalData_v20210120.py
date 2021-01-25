@@ -10,6 +10,7 @@ import os
 import turicreate as tc
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 
 
 class HospitalData(object):
@@ -94,14 +95,12 @@ class HospitalData(object):
         
 
     def get_filtered_data(self):
-        print(self.data['date'].unique())
-        print(int(self._start_date))
         # returns Sframe within specified [self.start_date, self.end_date] and self.us_state 
         self.data['selected_row'] = self.data.apply(lambda x: 1 if (x['state']==self.us_state and (x['date']>=int(self._start_date) and x['date']<=int(self._end_date)) ) else 0) #1 means row selected, 0 means row not selected for filtered data
         return self.data.filter_by([1],'selected_row').sort(['date'],ascending=True)
     
 
-    def get_GeneralWard_counts(self):
+    def get_InGeneralWard_counts(self):
         # returns Sframe column of general ward counts within [self.start_date, self.end_date] of the self.us_state specified
 
         # float('nan') is used to replace any blank entries from web data
@@ -119,11 +118,12 @@ class HospitalData(object):
         # "init_num_InGeneralWard": 10,
         # "init_num_OffVentInICU": 10,
         # "init_num_OnVentInICU": 10,
-        if hospital_state == 'Presenting':
-            return 0 
+        if hospital_state in ['Presenting','OffVentInICU','OnVentInICU']:
+            return int(0) 
         else:
-            state_counts = eval('self.get_' +str(hospital_state)+ 'counts()')
-        return state_counts[0]
+            state_counts = eval('self.get_' +str(hospital_state)+ '_counts()')
+            # print(state_counts, 'for ', hospital_state)
+        return int(state_counts[0]) # must be int type to make json happy
 
     def get_num_timesteps_in_days(self):
         # "num_timesteps": 21,
@@ -132,27 +132,35 @@ class HospitalData(object):
         d2 = datetime.strptime(self._end_date, dateFormat)
         return abs((d2 - d1).days)
 
-    def get_pmf_num_per_timestep_Presenting_filename(self,errorFactor=1):
+    def get_pmf_num_per_timestep_InGeneralWard(self,errorFactor=1):
         # returns a filename.csv of pmf_num_per_timestep_Presenting
          
         # admission seems to be much more than inpatient beds, so maybe theres a factor of 7-10 counted in admissions, but not counted for in ICU and inpatient bed
         
         previous_day_admission_adult_covid_confirmed = self.filtered_data.apply(lambda x: float('nan') if x['previous_day_admission_adult_covid_confirmed']==None else x['previous_day_admission_adult_covid_confirmed']/errorFactor ).to_numpy()
-        presenting_per_day = np.append(previous_day_admission_adult_covid_confirmed[1:],np.array(np.NaN)) # to keep length consistent
-        np.savetxt("pmf_num_per_timestep_Presenting.csv", presenting_per_day, delimiter=",")
-        return 'pmf_num_per_timestep_Presenting.csv'
+        # presenting_per_day = np.append(previous_day_admission_adult_covid_confirmed[1:],np.array(np.NaN)) # to keep length consistent
+        presenting_per_day = np.append(previous_day_admission_adult_covid_confirmed[1:],np.array(0)) # to keep length consistent
+        
+
+        pmf_SFrame = tc.SFrame({'timestep':list(range(len(presenting_per_day))),'num_InGeneralWard':presenting_per_day})
+        # need to add turicreate sFrame to save CSV in proper timestep, num_[state] column-named formats
+        # np.savetxt("pmf_num_per_timestep_InGeneralWard.csv", presenting_per_day, delimiter=",")
+        
+        csv_filename = str(Path(__file__).resolve().parents[0])+ '/'+self.us_state +'_'+'pmf_num_per_timestep_InGeneralWard.csv' 
+        pmf_SFrame.save(csv_filename, format='csv')
+        return csv_filename
 
 
     # called within ParamsGenerator class
     def extract_param_value(self,param_name):
         # function that maps param_name to param_value based on the supplemental_obj being HospitalData or CovidEstim Obj
-        states = ["Presenting", "InGeneralWard", "OffVentInICU", "OnVentInICU"]
+        states = ["InGeneralWard", "OffVentInICU", "OnVentInICU"]
         
         if 'num_timesteps' == param_name:
             return self.get_num_timesteps_in_days()
 
-        if 'pmf_num_per_timestep_Presenting' == param_name:
-            return self.get_pmf_num_per_timestep_Presenting_filename(errorFactor=7)
+        if 'pmf_num_per_timestep_InGeneralWard' == param_name:
+            return self.get_pmf_num_per_timestep_InGeneralWard(errorFactor=1)
 
         for hospital_state in states: 
             if 'init_num_'+hospital_state == param_name:
