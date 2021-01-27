@@ -1,0 +1,20 @@
+{
+"states": ["InGeneralWard", "OffVentInICU", "OnVentInICU"],
+"prior_Health_given_InGeneralWard": [43, 77],
+"prior_Health_given_OffVentInICU": [74, 46],
+"prior_Health_given_OnVentInICU": [52, 68],
+"prior_Die_after_Declining_InGeneralWard": [119, 1],
+"prior_Die_after_Declining_OffVentInICU": [117, 3],
+"prior_duration_Declining_InGeneralWard": {
+    "lam": {"mean": 6.0, "stddev": 2.0, "lower": 1.0, "upper": 12.0}, "tau": {"mean": 1.0, "stddev": 1.0}},
+"prior_duration_Recovering_InGeneralWard": {
+    "lam": {"mean": 6.0, "stddev": 2.0, "lower": 1.0, "upper": 12.0}, "tau": {"mean": 1.0, "stddev": 1.0}},
+"prior_duration_Declining_OffVentInICU": {
+    "lam": {"mean": 6.0, "stddev": 2.0, "lower": 1.0, "upper": 12.0}, "tau": {"mean": 1.0, "stddev": 1.0}},
+"prior_duration_Recovering_OffVentInICU": {
+    "lam": {"mean": 6.0, "stddev": 2.0, "lower": 1.0, "upper": 12.0}, "tau": {"mean": 1.0, "stddev": 1.0}},
+"prior_duration_Declining_OnVentInICU": {
+    "lam": {"mean": 6.0, "stddev": 2.0, "lower": 1.0, "upper": 22.0}, "tau": {"mean": 1.0, "stddev": 1.0}},
+"prior_duration_Recovering_OnVentInICU": {
+    "lam": {"mean": 6.0, "stddev": 2.0, "lower": 1.0, "upper": 22.0}, "tau": {"mean": 1.0, "stddev": 1.0}}
+}
