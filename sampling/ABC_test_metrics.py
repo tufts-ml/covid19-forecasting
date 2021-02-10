@@ -9,7 +9,7 @@ import numpy as np
 # This function maps the statistics outputted by the hospital model
 #   to the statistics of the true data
 # 
-# This function is meant to be customized as needed. It is currently tailored to NHS data
+# This function is meant to be customized as needed. It currently includes conversions for NHS data.
 def compute_true_summary_statistics(csv_df, expected_columns):
     new_dict = {}
 

@@ -1,3 +1,12 @@
+'''
+    This file is used when we have collected warm-started forecasts on the test set by extending the simulation on the training set
+    (only possible when the test set directly follows the training set).
+
+    Then, the forecasts on the test set are included in the concat_file, which is a csv file containing the data frames of all test
+    forecasts. Each individual data frame is identifiable via the value in for column 'index'.
+'''
+
+
 import numpy as np
 import pandas as pd
 import argparse
