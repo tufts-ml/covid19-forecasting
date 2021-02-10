@@ -10,6 +10,7 @@ from simulate_traj__cython import simulate_traj__cython
 def simulate_traj__python(
         start_stage,
         pRecover_K,
+        pDieAfterDeclining_K,
         duration_cdf_HKT,
         stage_ids_L,
         health_ids_L,
@@ -20,11 +21,18 @@ def simulate_traj__python(
 
     Returns
     -------
-    mm : int
+    n_rand_used : int
         Number of random values used
+    n_steps : int
+        Number of distinct stage / health-state combinations
+    is_terminal : int
+        Indicates if terminal health state reached.
     stage_ids_L : 1D array, shape (L,)
+        Integer identifier for each distinct stage traversed
     health_ids_L : 1D array, shape (L,)
+        Integer identifier for each distinct health state traversed
     durations_L : 1D array, shape (L,)
+        Integer identifier for duration spent in each stage, health combo
     '''
     MAX_STAGE = pRecover_K.size
     Dmax = duration_cdf_HKT.shape[2]
@@ -33,6 +41,7 @@ def simulate_traj__python(
     health = 0
     mm = 0
     ll = 0
+    is_terminal = 0
     while (0 <= stage) and (stage < MAX_STAGE):
         if health == 0:
             health = int(rand_vals_M[mm] < pRecover_K[stage])
@@ -49,12 +58,20 @@ def simulate_traj__python(
         ll += 1
 
         if health > 0:
-            stage -= 1
+            next_stage = stage - 1
         else:
-            stage += 1
-        if stage >= MAX_STAGE:
-            health = -1
+            next_stage = stage + 1
+        if next_stage >= MAX_STAGE:
+            is_terminal = 1
             break
+
+        if health == 0:
+            mm += 1
+            if rand_vals_M[mm] < pDieAfterDeclining_K[stage]:
+                is_terminal = 1
+                break
+        stage = next_stage
+
             
     return (mm, ll, int(health < 0), stage_ids_L, health_ids_L, durations_L)
 
@@ -97,12 +114,21 @@ if __name__ == '__main__':
     sim_kwargs['pRecover_K'] = np.asarray([
         float(config_dict['proba_Recovering_given_%s' % stage])
         for stage in stage_names])
+    sim_kwargs['pDieAfterDeclining_K'] = np.asarray([
+        float(config_dict.get('proba_Die_after_Declining_%s' % stage, 0.0))
+        for stage in stage_names])
+
+    np.set_printoptions(precision=2, suppress=True, linewidth=200)
+    for k, v in sim_kwargs.items():
+        if isinstance(v, np.ndarray):
+            print(k)
+            print('-' * len(k))
+            print(v)
+            print()
 
     L = K * 2
     M = L * 2 + 1
-
     prng = np.random.RandomState(args.seed)
-
     start_time_sec = time.time()
     for trial in range(args.n_trials):
         # Draw all possible random values needed in advance

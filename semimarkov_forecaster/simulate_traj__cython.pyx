@@ -8,6 +8,7 @@ import itertools
 def simulate_traj__cython(
         int start_stage,
         double[:] pRecover_K,
+        double[:] pDieAfterDeclining_K,
         double[:,:,:] duration_cdf_HKT,
         int[:] stage_ids_L,
         int[:] health_ids_L,
@@ -22,6 +23,7 @@ def simulate_traj__cython(
     cdef int MAX_STAGE = pRecover_K.shape[0]
     cdef int Dmax = duration_cdf_HKT.shape[2]
     cdef int stage = start_stage
+    cdef int next_stage = 0
     cdef int health = 0
 
     cdef int mm = 0
@@ -44,11 +46,20 @@ def simulate_traj__cython(
         ll += 1
 
         if health > 0:
-            stage -= 1
+            next_stage -= 1
         else:
-            stage += 1
-        if stage >= MAX_STAGE:
+            next_stage += 1
+        if next_stage >= MAX_STAGE:
             is_terminal = 1
             break
+
+        if health == 0:
+            mm += 1
+            if rand_vals_M[mm] < pDieAfterDeclining_K[stage]:
+                is_terminal = 1
+                break
+
+        # Advance to next step of simulation
+        stage = next_stage
 
     return (mm, ll, is_terminal)
