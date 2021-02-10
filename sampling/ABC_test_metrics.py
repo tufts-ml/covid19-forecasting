@@ -6,6 +6,10 @@ import tqdm
 import glob
 import numpy as np
 
+# This function maps the statistics outputted by the hospital model
+#   to the statistics of the true data
+# 
+# This function is meant to be customized as needed. It is currently tailored to NHS data
 def compute_true_summary_statistics(csv_df, expected_columns):
     new_dict = {}
 
@@ -15,7 +19,7 @@ def compute_true_summary_statistics(csv_df, expected_columns):
         elif column == 'n_discharges':
             new_dict[column] = csv_df['n_discharged_InGeneralWard'] + csv_df['n_discharged_OffVentInICU'] + csv_df['n_discharged_OnVentInICU']
         elif column == 'n_occupied_beds':
-            new_dict[column] = csv_df['n_InGeneralWard'] + csv_df['n_OffVentInICU'] + csv_df['n_OnVentInICU'] # uncomment last one for AllBeds
+            new_dict[column] = csv_df['n_InGeneralWard'] + csv_df['n_OffVentInICU'] + csv_df['n_OnVentInICU']
         else:
             new_dict[column] = csv_df[column]
 
@@ -24,21 +28,26 @@ def compute_true_summary_statistics(csv_df, expected_columns):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', default='NHS_output')
-    parser.add_argument('--output_dir', default='NHS_results')
-    parser.add_argument('--output_template', default='North_Middlesex_University_Hospital_NHS_Trust_FirstHalfOnSecondHalf_20MaxEach_uniform')
-    parser.add_argument('--true_stats', default='NHS_data/North_Middlesex_University_Hospital_NHS_Trust_SecondHalf.csv')
-    parser.add_argument('--input_simulations_pattern', default='results_North_Middlesex_University_Hospital_NHS_Trust_FirstHalfOnSecondHalf_20MaxEach_uniform_*.csv')
-    parser.add_argument('--input_summaries_template', default='summary_North_Middlesex_University_Hospital_NHS_Trust_FirstHalfOnSecondHalf_20MaxEach_uniform_')
+    parser.add_argument('--output_dir', default='NHS_results/metrics')
+    parser.add_argument('--output_template', default='new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_TrainingOnTraining_for_cdc_tableSpikedDurs')
+    parser.add_argument('--true_stats', default='NHS_data/new_data/formatted_data/south_tees_hospitals_nhs_foundation_trust_Training.csv')
+    parser.add_argument('--input_simulations_pattern', default='results_new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_TrainingOnTraining_for_cdc_tableSpikedDurs_*.csv')
+    parser.add_argument('--input_summaries_template', default='summary_new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_TrainingOnTraining_for_cdc_tableSpikedDurs_')
     parser.add_argument('--coverages',
         type=str,
         default='2.5_97.5,10_90,25_75')
+    parser.add_argument('--comma_sep_expected_columns',
+                        default='n_discharges,n_occupied_beds,n_OnVentInICU')
     args = parser.parse_args()
 
     sims_csv_files = sorted(glob.glob(os.path.join(args.input_dir, args.input_simulations_pattern)))
 
-    expected_columns = ['n_discharges', 'n_occupied_beds']
-    all_arrays = []
+    if args.comma_sep_expected_columns == 'None':
+        expected_columns = None
+    else:
+        expected_columns = args.comma_sep_expected_columns.split(',')
 
+    all_arrays = []
     print("------------------------------------------------------")
     print("Computing likelihood of true data under empirical pmf")
     print("------------------------------------------------------")   
@@ -68,8 +77,11 @@ if __name__ == '__main__':
 
     true_df = pd.read_csv(args.true_stats, index_col='timestep')
 
-    true_df = true_df.drop('dates', axis=1)
-    true_df = true_df.drop('n_admits', axis=1)
+    # drop columns from true_df that are not among the expected columns
+    original_columns = true_df.columns
+    for col in original_columns:
+        if col not in expected_columns:
+            true_df = true_df.drop(col, axis=1)
 
     true_counts = true_df.values
     pmf_counts = np.sum(np.equal(counts_TKS, np.dstack([true_counts for i in range(num_samples)])), axis=2)
@@ -81,12 +93,23 @@ if __name__ == '__main__':
         index=False, float_format='%.2f')
 
     print("------------------------------------------------------")
+    print("Computing MAE for mean")
+    print("------------------------------------------------------")
+
+    mean_counts = compute_true_summary_statistics(pd.read_csv(os.path.join(args.input_dir, "%smean.csv" % (args.input_summaries_template)), index_col='timestep'), expected_columns).values
+    mae_scores = np.mean(np.abs(mean_counts - true_counts), axis=0).reshape((1, len(expected_columns)))
+    
+    df = pd.DataFrame(mae_scores, columns=expected_columns)
+    df.to_csv(
+        os.path.join(args.output_dir, "mae_scores_%s.csv" % (args.output_template)),
+        index=False, float_format='%.2f')
+
+    print("------------------------------------------------------")
     print("Computing coverage for given ranges")
     print("------------------------------------------------------")
 
     T = true_counts.shape[0]
     # expected_columns = list(true_df.columns) # WARNING: must be in the order of the csv files!
-    expected_columns = ['n_discharges', 'n_occupied_beds']
     coverages = args.coverages.split(',')
     results_dict = {'coverages': coverages}
     for coverage in coverages:

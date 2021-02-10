@@ -25,6 +25,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     admit_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     discharge_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     terminal_count_T1 = np.zeros((Tmax, 1), dtype=np.float64)
+    summary_dict_list = list()
 
     ## Read functions to sample the incoming admissions to each state
     sample_func_per_state = dict()
@@ -87,10 +88,12 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         else:
             raise ValueError("Bad PMF specification: %s" % pmfstr_or_csvfile)
 
-    print("----------------------------------------")
-    print("Simulating for %d timesteps with seed %d" % (T, random_seed))
-    print("----------------------------------------")
-    ## Simulation what happens to initial population
+    print("--------------------------------------------")
+    print("Simulating for %3d timesteps with seed %5d" % (T, random_seed))
+    print("Initial population size: %5d" % (np.sum([
+        config_dict['init_num_%s' % s] for s in config_dict['states']])))
+    print("--------------------------------------------")
+    ## Simulate what happens to initial population
     for t in range(-Tpast, 1, 1):
         for state in states:
             N_new_dict = config_dict['init_num_%s' % state]
@@ -104,8 +107,9 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
                 terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
+                summary_dict_list.append(p.get_length_of_stay_summary_dict())
 
-    ## Simulation what happens as new patients added at each step
+    ## Simulate what happens as new patients added at each step
     for t in tqdm.tqdm(range(1, T+1)):
         for state in states:
             if state not in sample_func_per_state:
@@ -118,6 +122,7 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
                 admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
                 discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
                 terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
+                summary_dict_list.append(p.get_length_of_stay_summary_dict())
 
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
@@ -135,7 +140,6 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
     col_names = ['n_%s' % s for s in states]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
     results_df["timestep"] = np.arange(-Tpast, -Tpast + tf)
-
     results_df["n_TERMINAL"] = terminal_count_T1[:,0]
 
     admit_col_names = ['n_admitted_%s' % s for s in states]
@@ -150,19 +154,79 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
         columns=['timestep'] + col_names + ['n_TERMINAL'] + admit_col_names + discharge_col_names,
         index=False, float_format="%.0f")
 
+    # los_summary_df = pd.DataFrame(summary_dict_list)
+    # los_columns = (
+    #     ['is_Terminal', 'is_InICU', 'is_OnVent', 'duration_All']
+    #     + ['duration_%s' % s for s in config_dict['states']]
+    #     + ['duration_%s+Declining' % s for s in config_dict['states']]
+    #     + ['duration_%s+Recovering' % s for s in config_dict['states']]
+    #     )
+    # los_summary_df.to_csv(output_file.replace('results', 'los_results_per_patient'), columns=los_columns,
+    #     index=False, float_format="%.0f")
+
+
+    # # Obtain percentile summaries of durations across population
+    # for query in ["",
+    #         "is_Terminal == 1", "is_Terminal == 0",
+    #         "is_InICU == 1", "is_InICU == 0",
+    #         "is_OnVent == 1", "is_OnVent == 0",
+    #         ]:
+
+    #     collapsed_dict_list = list()
+    #     if len(query) > 0:
+    #         q_df = los_summary_df.query(query).copy()
+    #     else:
+    #         q_df = los_summary_df
+    #     filled_vals = q_df[los_columns].values.copy().astype(np.float32)
+    #     filled_vals[np.isnan(filled_vals)] = 0
+
+    #     def my_count(x, *args, **kwargs):
+    #         return np.sum(np.isfinite(x), *args, **kwargs)
+
+    #     for metric_name, func in [
+    #             ('count', my_count),
+    #             ('mean', np.mean)]:
+    #         collapsed_dict = dict(zip(
+    #             los_columns,
+    #             func(filled_vals, axis=0)))
+    #         collapsed_dict['summary_name'] = metric_name
+    #         collapsed_dict_list.append(collapsed_dict)
+    #     for perc in [0, 1, 5, 10, 25, 50, 75, 90, 95, 99, 100]:
+    #         collapsed_dict = dict(zip(
+    #             los_columns,
+    #             np.percentile(filled_vals, perc, axis=0)))
+    #         collapsed_dict['summary_name'] = 'percentile_%06.3f' % perc
+    #         collapsed_dict_list.append(collapsed_dict)
+    #     collapsed_df = pd.DataFrame(collapsed_dict_list)
+
+    #     if len(query) > 0:
+    #         sane_query_suffix = "_" + query.replace(" == ", '').replace("_", "")
+    #     else:
+    #         sane_query_suffix = ""
+
+    #     collapsed_df.to_csv(output_file.replace('results', 'los_results_summary%s' % sane_query_suffix),
+    #         columns=['summary_name'] + los_columns,
+    #         index=False, float_format='%.2f')
+
 def update_config_given_sample(config_dict, samples_file, i):
     num_thetas = len(samples_file['last_thetas'])
     theta = samples_file['last_thetas'][num_thetas - 1 - i]
     for key in theta:
-        config_dict[key] = theta[key]
+        if 'duration' in key:
+            config_dict[key] = {}
+            for choice in theta[key]:
+                if choice not in ['lam', 'tau']:
+                    config_dict[key][choice] = theta[key][choice]
+        else:
+            config_dict[key] = theta[key]
     return config_dict
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_dict', default='example_simple/params_simple-100days.json') #'NHS_data/new_data/formatted_data/params_simple_university_hospitals_birmingham_nhs_foundation_trust_Training.json')
-    parser.add_argument('--samples_file', default='abc_results/abc_health_experiment_bad_durations_2_last_thetas_uniform.json') #'NHS_results/abc_12000Iters_university_hospitals_birmingham_nhs_foundation_trust_Training_last_thetas_20MaxEach_uniform.json')
+    parser.add_argument('--config_dict', default='NHS_data/new_data/formatted_data/configs/config_south_tees_hospitals_nhs_foundation_trust_Training.json')
+    parser.add_argument('--samples_file', default='NHS_results/abc_new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_Training_last_thetas_for_cdc_tableSpikedDurs.json') # 'NHS_results/samples_from_prior_SpikedDurs.json')
     parser.add_argument('--num_samples', default=100)
-    parser.add_argument('--output_file', default='example_output/results_health_experiment_bad_durations_2_end_100-10_random_seed=101_sample=None.csv') #'NHS_output/results_12000Iters_university_hospitals_birmingham_nhs_foundation_trust_TrainingOnTraining_20MaxEach_uniform_random_seed=101_sample=None.csv')
+    parser.add_argument('--output_file', default='NHS_output/results_new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_TrainingOnTraining_for_cdc_tableSpikedDurs_random_seed=101_sample=None.csv') #'NHS_output/results_new_durations_simulated_annealing_0_manchester_university_nhs_foundation_trust_TrainingOnTraining_for_cdc_table_random_seed=101_sample=None.csv')
     parser.add_argument('--random_seed', default=101, type=int)
 
     args, unknown_args = parser.parse_known_args()
@@ -189,16 +253,24 @@ if __name__ == '__main__':
     next_state_map = dict()
     for ss, state in enumerate(states):
         state_name_to_id[state] = ss
-        if ss < len(states) - 1:
-            next_state_map[state] = states[ss+1]
+        # if ss < len(states):
+        if ss == 0: ## next_state_map for recovery... HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
+            next_state_map[state+'Recovering'] = 'RELEASE'
+            next_state_map[state+'Declining'] = states[ss+1]
+        elif ss == len(states)-1:
+            next_state_map[state+'Recovering'] = states[ss-1]
+            next_state_map[state+'Declining'] = 'TERMINAL'
         else:
-            next_state_map[state] = 'TERMINAL'
+            next_state_map[state+'Recovering'] = states[ss-1]
+            next_state_map[state+'Declining'] = states[ss+1] 
+
+        
         p_recover = config_dict["proba_Recovering_given_%s" % state]
         p_decline = 1.0 - p_recover
 
-        # print("State #%d %s" % (ss, state))
-        # print("    prob. %.3f recover" % (p_recover))
-        # print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state]))
+        print("State #%d %s" % (ss, state))
+        print("    prob. %.3f recover" % (p_recover))
+        print("    prob. %.3f advance to state %s" % (p_decline, next_state_map[state+'Declining']))
     state_name_to_id['TERMINAL'] = len(states)
 
     output_file_base = output_file
