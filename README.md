@@ -97,6 +97,24 @@ Use the project's included YAML file to specify all packages needed: [semimarkov
 conda env create -f semimarkov_forecaster.yml
 ```
 
+#### 4. Setup the Cython extensions (optional)
+
+```
+$ cd covid19-forecasting/
+$ python setup.py # builds the Cython extensions!
+
+# python semimarkov_forecaster/simulate_traj__python.py \
+    --params_json_file workflows/example_simple/params.json \
+    --func_name python \
+    --n_trials 10000
+```
+
+* Expected output *
+
+```
+Finished 10000 trials after     0.062 sec
+```
+
 
 # Modeling
 
