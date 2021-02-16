@@ -64,10 +64,11 @@ def simulate_traj__python(
             break
 
         if health == 0:
-            mm += 1
             if rand_vals_M[mm] < pDieAfterDeclining_K[stage]:
                 is_terminal = 1
+                mm += 1
                 break
+            mm += 1
         stage = next_stage
 
             
