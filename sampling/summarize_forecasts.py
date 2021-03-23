@@ -8,10 +8,10 @@ import numpy as np
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', default='NHS_output')
-    parser.add_argument('--output_dir', default='NHS_output')
-    parser.add_argument('--output_template', default='summary_WarmStartOnTesting_2_south_tees_hospitals_nhs_foundation_trust_TrainingOnTesting_for_cdc_table_')
-    parser.add_argument('--input_csv_file_pattern', default='results_WarmStartOnTesting_2_south_tees_hospitals_nhs_foundation_trust_TrainingOnTesting_for_cdc_table_*.csv')
+    parser.add_argument('--input_dir', default='toy_data_experiment/final_output')
+    parser.add_argument('--output_dir', default='toy_data_experiment/final_output')
+    parser.add_argument('--output_template', default='summary_admissions_experiment_v3_TrainingAndTesting_OnCDCTableReasonable_')
+    parser.add_argument('--input_csv_file_pattern', default='results_admissions_experiment_v3_TrainingAndTesting_OnCDCTableReasonable_random_seed*.csv')
     parser.add_argument('--comma_sep_percentiles',
         type=str,
         default='1,2.5,5,10,25,50,75,90,95,97.5,99')
@@ -63,6 +63,7 @@ if __name__ == '__main__':
         print("----------------------------------------")
         for ll in tqdm.tqdm(range(L)):
             csv_df = pd.read_csv(csv_files[ll])
+            csv_df = csv_df[csv_df['timestep'] >= 0]
 
             if 'summary_name' in csv_df.columns:
                 summary_name_values = np.array(csv_df.loc[:, 'summary_name'])

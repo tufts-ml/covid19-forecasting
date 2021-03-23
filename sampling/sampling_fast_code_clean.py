@@ -10,13 +10,10 @@ import json
 import warnings
 from copy import deepcopy
 import pickle
-from semimarkov_forecaster import PatientTrajectory
-import multiprocessing
+import itertools
+from semimarkov_forecaster import *
 
-# This is copy-pasted from 'run_forecast.py', with the only difference that, instead of saving
-# results to a csv file, the function returns the pandas DataFrame
-def run_simulation(random_seed, config_dict, states, state_name_to_id, next_state_map):
-    print("random_seed=%s <<<" % random_seed)
+def run_simulation(random_seed, config_dict, states, func_name, approximate=None):
     prng = np.random.RandomState(random_seed)
     
     T = config_dict['num_timesteps']
@@ -29,125 +26,104 @@ def run_simulation(random_seed, config_dict, states, state_name_to_id, next_stat
     ## Preallocate admit, discharge, and occupancy
     Tmax = 10 * T + Tpast
     occupancy_count_TK = np.zeros((Tmax, K), dtype=np.float64)
-    admit_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     discharge_count_TK = np.zeros((Tmax, K), dtype=np.float64)
     terminal_count_T1 = np.zeros((Tmax, 1), dtype=np.float64)
-    summary_dict_list = list()
+
+    health_ids = [0, 1]
+
+    HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
+
+    H = len(health_ids)
+
+    duration_cdf_HKT = np.zeros((H, K, Tmax))
+    for health, stage in itertools.product(health_ids, np.arange(K)):
+        choices_and_probas_dict = config_dict[
+            'pmf_duration_%s_%s' % (
+                HEALTH_STATE_ID_TO_NAME[health], states[stage])]
+        choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
+        probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
+        for c, p in zip(choices, probas):
+            assert c >= 1
+            duration_cdf_HKT[health, stage, c - 1] = p
+        duration_cdf_HKT[health, stage, :] = np.cumsum(duration_cdf_HKT[health, stage, :])
+
+    sim_kwargs = {}
+    sim_kwargs['duration_cdf_HKT'] = duration_cdf_HKT
+    sim_kwargs['pRecover_K'] = np.asarray([
+        float(config_dict['proba_Recovering_given_%s' % stage])
+        for stage in states])
+    sim_kwargs['pDieAfterDeclining_K'] = np.asarray([
+        float(config_dict.get('proba_Die_after_Declining_%s' % stage, 0.0))
+        for stage in states])
 
     ## Read functions to sample the incoming admissions to each state
-    sample_func_per_state = dict()
-    for state in states:
+    admissions_per_state_Tplus1K = np.zeros((T+1, K), dtype=np.int32)
+    for ss, state in enumerate(states):
         try:
-            pmfstr_or_csvfile = config_dict['pmf_num_per_timestep_%s' % state]
+            csvfile = config_dict['pmf_num_per_timestep_%s' % state]
         except KeyError:
             try:
-                pmfstr_or_csvfile = config_dict['pmf_num_per_timestep_{state}']
+                csvfile = config_dict['pmf_num_per_timestep_{state}']
             except KeyError:
                 continue
         
-        # First, try to replace wildcards
-        if isinstance(pmfstr_or_csvfile, str):
-            for key, val in list(args.__dict__.items()) + list(unk_dict.items()):
-                wildcard_key = "{%s}" % key
-                if pmfstr_or_csvfile.count(wildcard_key):
-                    pmfstr_or_csvfile = pmfstr_or_csvfile.replace(wildcard_key, str(val))
-                    print("WILDCARD: %s" % pmfstr_or_csvfile)
-        
-        if isinstance(pmfstr_or_csvfile, dict):
-            pmfdict = pmfstr_or_csvfile
-            choices = np.fromiter(pmfdict.keys(), dtype=np.int32)
-            probas = np.fromiter(pmfdict.values(), dtype=np.float64)           
-            def sample_incoming_count(t, prng):
-                return prng.choice(choices, p=probas)
-            sample_func_per_state[state] = sample_incoming_count
-        elif pmfstr_or_csvfile.startswith('scipy.stats'):
-            # Avoid evals on too long of strings for safety reasons
-            assert len(pmfstr_or_csvfile) < 40
-            pmf = eval(pmfstr_or_csvfile)
-            def sample_incoming_count(t, prng):
-                return pmf.rvs(random_state=prng)
-            sample_func_per_state[state] = sample_incoming_count
-            # TODO other parsing for other ways of specifying a pmf over pos ints?
+        csv_df = pd.read_csv(csvfile)
+        state_key = 'num_%s' % state
+        if state_key not in csv_df.columns:
+            continue
+        admissions_per_state_Tplus1K[:, ss] = np.array(csv_df[state_key][:T+1])
 
-        elif os.path.exists(pmfstr_or_csvfile):
-            # Read incoming counts from provided file
-            csv_df = pd.read_csv(pmfstr_or_csvfile)
-            state_key = 'num_%s' % state
-            if state_key not in csv_df.columns:
-                continue
-            # TODO Verify here that all necessary rows are accounted for
-            # @profile
-            def sample_incoming_count(t, prng):
-                row_ids = np.flatnonzero(csv_df['timestep'] == t)
-                if len(row_ids) == 0:
-                    if t < 10:
-                        raise ValueError("Error in file %s: No matching timestep for t=%d" % (
-                            pmfstr_or_csvfile, t))
-                    else:
-                        warnings.warn("No matching timesteps t>%d found in file %s. Assuming 0" % (
-                            csv_df['timestep'].max(), pmfstr_or_csvfile)) 
-                        return 0
-                if len(row_ids) > 1:
-                    raise ValueError("Error in file %s: Must have exactly one matching timestep for t=%d" % (
-                        pmfstr_or_csvfile, t))
-                return np.array(csv_df['num_%s' % state].values[row_ids[0]], dtype=int) # guard against float input. 
-            sample_func_per_state[state] = sample_incoming_count
-        # Parsing failed!
+    init_num_per_state_Tpastplus1K = np.zeros((Tpast+1, K), dtype=np.int32)
+    for ss, state in enumerate(states):
+        N_new_dict = config_dict['init_num_%s' % state]
+        if isinstance(N_new_dict, dict):
+            indices = np.array(list(N_new_dict.keys()), dtype=np.int32)
+            init_num_per_state_Tpastplus1K[indices, ss] = np.array(list(N_new_dict.values()), dtype=np.int32)
         else:
-            raise ValueError("Bad PMF specification: %s" % pmfstr_or_csvfile)
+            init_num_per_state_Tpastplus1K[0, ss] = np.int32(N_new_dict)
 
-    ## Simulate what happens to initial population
-    for t in range(-Tpast, 1, 1):
-        for state in states:
-            N_new_dict = config_dict['init_num_%s' % state]
-            if isinstance(N_new_dict, dict):
-                N_new = N_new_dict["%s" % t]
-            else:
-                N_new = int(N_new_dict)
-            for n in range(N_new):
-                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id, t)
-                occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, Tpast + t)
-                admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
-                discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
-                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
-                # summary_dict_list.append(p.get_length_of_stay_summary_dict()) # don't need this
+    L = K * 2
+    M = (np.sum(admissions_per_state_Tplus1K) + np.sum(init_num_per_state_Tpastplus1K)) * L * 2 + 1
+    prng = np.random.RandomState(random_seed)
+    rand_vals_M = prng.rand(M)
 
-    ## Simulate what happens as new patients added at each step
-    for t in range(1, T+1): # tqdm.tqdm(range(1, T+1)):
-        for state in states:
-            if state not in sample_func_per_state:
-                continue
-            sample_incoming_count = sample_func_per_state[state]
-            N_t = sample_incoming_count(t, prng)
-            for n in range(N_t):
-                p = PatientTrajectory(state, config_dict, prng, next_state_map, state_name_to_id, t)
-                occupancy_count_TK = p.update_count_matrix(occupancy_count_TK, Tpast + t)
-                admit_count_TK = p.update_admit_count_matrix(admit_count_TK, Tpast + t)
-                discharge_count_TK = p.update_discharge_count_matrix(discharge_count_TK, Tpast + t)
-                terminal_count_T1 = p.update_terminal_count_matrix(terminal_count_T1, Tpast + t)
-                # summary_dict_list.append(p.get_length_of_stay_summary_dict()) # don't need this
+    sim_kwargs['durations_L'] = np.zeros(L, dtype=np.int32)
+    sim_kwargs['stage_ids_L'] = -99 * np.ones(L, dtype=np.int32)
+    sim_kwargs['health_ids_L'] = -99 * np.ones(L, dtype=np.int32)
+    sim_kwargs['occupancy_count_TK'] = occupancy_count_TK
+    sim_kwargs['discharge_count_TK'] = discharge_count_TK
+    sim_kwargs['terminal_count_T1'] = terminal_count_T1
 
+    if approximate is not None:
+        init_num_per_state_Tpastplus1K = np.rint(init_num_per_state_Tpastplus1K.astype(np.float64) / float(approximate)).astype(np.int32)
+        admissions_per_state_Tplus1K = np.rint(admissions_per_state_Tplus1K.astype(np.float64) / float(approximate)).astype(np.int32)
+
+    sim_kwargs['init_num_per_state_Tpastplus1K'] = init_num_per_state_Tpastplus1K
+    sim_kwargs['admissions_per_state_Tplus1K'] = admissions_per_state_Tplus1K
+    states_by_id = np.array([0, 1, 2], dtype=np.int32)
+    
+    if func_name.count('cython'):
+        occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__cython(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
+    else:
+        occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__python(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
 
     # Save only the first T + 1 tsteps (with index 0, 1, 2, ... T)
     t0 = 0
     tf = T + Tpast + 1
-    occupancy_count_TK = occupancy_count_TK[t0:tf]
-    admit_count_TK = admit_count_TK[t0:tf]
-    discharge_count_TK = discharge_count_TK[t0:tf]
-    terminal_count_T1 = terminal_count_T1[t0:tf]
+    occupancy_count_TK = np.asarray(occupancy_count_TK)[t0:tf]
+    discharge_count_TK = np.asarray(discharge_count_TK)[t0:tf]
+    terminal_count_T1 = np.asarray(terminal_count_T1)[t0:tf]
+
+    if approximate is not None:
+        occupancy_count_TK = np.rint(occupancy_count_TK * float(approximate)).astype(np.int32)
+        discharge_count_TK = np.rint(discharge_count_TK * float(approximate)).astype(np.int32)
+        terminal_count_T1 = np.rint(terminal_count_T1 * float(approximate)).astype(np.int32)
 
     ## Write results to spreadsheet
-    # print("----------------------------------------")
-    # print("Writing results to %s" % (output_file))
-    # print("----------------------------------------")
     col_names = ['n_%s' % s for s in states]
     results_df = pd.DataFrame(occupancy_count_TK, columns=col_names)
     results_df["timestep"] = np.arange(-Tpast, -Tpast + tf)
     results_df["n_TERMINAL"] = terminal_count_T1[:,0]
-
-    admit_col_names = ['n_admitted_%s' % s for s in states]
-    for k, col_name in enumerate(admit_col_names):
-        results_df[col_name] = admit_count_TK[:, k]
 
     discharge_col_names = ['n_discharged_%s' % s for s in states]
     for k, col_name in enumerate(discharge_col_names):
@@ -155,21 +131,24 @@ def run_simulation(random_seed, config_dict, states, state_name_to_id, next_stat
 
     return results_df
 
-SUMMARY_STATISTICS_NAMES = ["n_discharges", "n_occupied_beds", "n_OnVentInICU"] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
+
+SUMMARY_STATISTICS_NAMES = ['n_InGeneralWard', 'n_OffVentInICU', 'n_OnVentInICU', 'n_TERMINAL'] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
 
 HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering', 'Declining': 0, 'Recovering': 1}
 
 class ABCSampler(object):
 
-    def __init__(self, seed, start_epsilon, annealing_constant, T_y, train_test_split, config_dict, num_timesteps, num_simulations):
+    def __init__(self, seed, start_epsilon, annealing_constant, T_y, train_test_split, config_dict, func_name, num_timesteps, num_simulations, approximate=None):
         self.T_y = T_y # vector of true summary statistics
         self.epsilon = start_epsilon
         self.annealing_constant = annealing_constant
         self.seed = seed
         self.config_dict = config_dict
+        self.func_name = func_name
         self.num_timesteps = num_timesteps
         self.num_simulations = num_simulations
         self.train_test_split = train_test_split # integer timestep for now, then will be a date
+        self.approximate = approximate
 
         self.state_name_id_map = {}
         for s, state in enumerate(config_dict['states']):
@@ -306,49 +285,36 @@ class ABCSampler(object):
         # first update config dict given the parameters in theta
         self.update_config_dict_given_theta(theta)
 
-        # # getting params ready for run_simulation (copied from run_forecast)
-        states = self.config_dict['states']
-        state_name_to_id = dict()
-        next_state_map = dict()
-        for ss, state in enumerate(states):
-            state_name_to_id[state] = ss
-            # if ss < len(states):
-            if ss == 0: ## next_state_map for recovery... HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
-                next_state_map[state+'Recovering'] = 'RELEASE'
-                next_state_map[state+'Declining'] = states[ss+1]
-            elif ss == len(states)-1:
-                next_state_map[state+'Recovering'] = states[ss-1]
-                next_state_map[state+'Declining'] = 'TERMINAL'
-            else:
-                next_state_map[state+'Recovering'] = states[ss-1]
-                next_state_map[state+'Declining'] = states[ss+1]
+        # print(self.config_dict['proba_Die_after_Declining_InGeneralWard']) # have to be 0.0 when not using DieAfterDeclining
+        # print(self.config_dict['proba_Die_after_Declining_OffVentInICU']) # have to be 0.0 when not using DieAfterDeclining
 
-        state_name_to_id['TERMINAL'] = len(states)
+        states = self.config_dict['states']
 
         T = None
         for i in range(self.num_simulations):
             # running the simulation. notice that the random seed is not used. if used, every simulation with the same
             # parameters would be the same
             
-            results_df = run_simulation(None, self.config_dict, states, state_name_to_id, next_state_map)
+            results_df = run_simulation(None, self.config_dict, states, self.func_name, approximate=self.approximate)
 
-            train_df = results_df[results_df['timestep'] <= self.train_test_split]
-            test_df = results_df[results_df['timestep'] > self.train_test_split]
+            train_df = results_df[results_df['timestep'] >= 0][results_df['timestep'] <= self.train_test_split]
 
             # condensing the results in a summary vector
             T_x = []
             weights = []
-            for col_name in SUMMARY_STATISTICS_NAMES:
+            for col_name in self.config_dict['summary_statistics_names']:
                 if col_name == "n_InICU":
                     T_x.append(train_df["n_OffVentInICU"] + train_df["n_OnVentInICU"])
                 elif col_name == "n_occupied_beds":
                     T_x.append(train_df["n_InGeneralWard"] + train_df["n_OffVentInICU"] + train_df["n_OnVentInICU"])
                 elif col_name == "n_discharges":
                     T_x.append(train_df["n_discharged_InGeneralWard"] + train_df["n_discharged_OffVentInICU"] + train_df["n_discharged_OnVentInICU"])
+                elif col_name == "n_TERMINAL_5daysSmoothed":
+                    T_x.append(train_df["n_TERMINAL"])
                 else:
                     T_x.append(train_df[col_name])
 
-                weights.append(np.linspace(0.5, 1.5, train_df["n_InGeneralWard"].shape[0]))
+                weights.append(np.linspace(0.5, 1.5, train_df["n_InGeneralWard"].shape[0])*float(self.config_dict['summary_statistics_weights'][col_name]))
 
             T_x = np.asarray(T_x).flatten()
             weights = np.asarray(weights).flatten()
@@ -362,8 +328,9 @@ class ABCSampler(object):
         # averaging summary statistics from multiple runs
         T_x = T / float(self.num_simulations)
 
-        return T_x, weights, test_df # return just the last simulation on testing
+        return T_x, weights, results_df # return just the last simulation
 
+    # @profile
     def abc_mcmc(self, theta_init, num_iterations, dir_scale_tuple, lam_stddev_tuple, tau_stddev_tuple):
         accepted_thetas = []
         accepted_distances = []
@@ -376,6 +343,9 @@ class ABCSampler(object):
         self.best_distance = self.epsilon
         self.epsilon_trace = []
         self.num_iterations = num_iterations
+
+        original_num_timesteps = self.config_dict['num_timesteps']
+        self.config_dict['num_timesteps'] = self.train_test_split
 
         log_prior_prev = self.calc_log_proba_prior(theta)
 
@@ -391,6 +361,15 @@ class ABCSampler(object):
             print("Iteration #%d" % (n + 1))
             # import time
             # start = time.time()
+
+            if n == int(num_iterations * (3/4) * (1/4)) or n == int(num_iterations * (3/4) * (2/4)) or n == int(num_iterations * (3/4) * (3/4)): # distance-threshold decay
+                self.epsilon += 0.04 # distance-threshold decay
+
+            # if n == int(num_iterations * (3/4)):
+            #     self.config_dict['num_timesteps'] = original_num_timesteps
+
+            if n == int(num_iterations * (3/4)): # distance-threshold decay
+                self.epsilon += 0.15 # distance-threshold decay
 
             dir_scale = dir_scale_list[n]
             lam_stddev = lam_stddev_list[n]
@@ -431,7 +410,7 @@ class ABCSampler(object):
 
                     # eq. 1.3.2
                     alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
-                    print("Alpha: %.3f" % np.exp(alpha))
+                    # print("Alpha: %.3f" % np.exp(alpha))
                     all_alphas.append(np.exp(alpha))
 
                     if np.random.random() < np.exp(alpha):
@@ -455,7 +434,7 @@ class ABCSampler(object):
                 if self.state_name_id_map[state_index] != "OnVentInICU": # ProbaDieAfterDecliningOnVentInICU is always 1.0
                     # draw from proposal distribution
                     theta_health_prime = deepcopy(theta['die_after_declining'])
-                    p_prime_D = self.draw_proposal_distribution_categorical(theta_health_prime[state_index], dir_scale)
+                    p_prime_D = self.draw_proposal_distribution_categorical(theta_health_prime[state_index], dir_scale*2) # make this proposal a bit narrower
                     theta_health_prime[state_index] = p_prime_D
 
                     # create a theta_prime and simulate dataset
@@ -487,7 +466,7 @@ class ABCSampler(object):
 
                         # eq. 1.3.2
                         alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
-                        print("Alpha: %.3f" % np.exp(alpha))
+                        # print("Alpha: %.3f" % np.exp(alpha))
                         all_alphas.append(np.exp(alpha))
 
                         if np.random.random() < np.exp(alpha):
@@ -546,7 +525,7 @@ class ABCSampler(object):
 
                         # eq. 1.3.2
                         alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
-                        print("Alpha: %.3f" % np.exp(alpha))
+                        # print("Alpha: %.3f" % np.exp(alpha))
                         all_alphas.append(np.exp(alpha))
 
                         if np.random.random() < np.exp(alpha):
@@ -603,7 +582,7 @@ class ABCSampler(object):
 
                         # eq. 1.3.2
                         alpha = (log_prior_prime + log_prop_prime) - (log_prior_prev + log_prop_prev)
-                        print("Alpha: %.3f" % np.exp(alpha))
+                        # print("Alpha: %.3f" % np.exp(alpha))
                         all_alphas.append(np.exp(alpha))
 
                         if np.random.random() < np.exp(alpha):
@@ -639,10 +618,9 @@ class ABCSampler(object):
             exit(1)
 
     def update_epsilon(self, n):
-        if n < self.num_iterations * (3/4): # distance-threshold decay
+
+        if n < int(self.num_iterations * (3/4)): # distance-threshold decay
             self.epsilon = max(self.epsilon * self.annealing_constant, self.best_distance) # distance-threshold decay
-        elif n == self.num_iterations * (3/4): # distance-threshold decay
-            self.epsilon += 0.01 # distance-threshold decay
         
         # self.epsilon = self.epsilon * self.annealing_constant # simulated annealing
         
@@ -755,24 +733,26 @@ def save_stats_to_csv(stats, filename):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hospital', default='south_tees_hospitals_nhs_foundation_trust_TrainingAndTesting')
-    parser.add_argument('--config_template', default='NHS_data/new_data/formatted_data/configs/config') # template for config_file
-    parser.add_argument('--input_template', default='NHS_data/new_data/formatted_data/')
-    parser.add_argument('--output_template', default='NHS_results/TEST')
+    parser.add_argument('--hospital', default='admissions_experiment_twentytupledAdmissions_v3')
+    parser.add_argument('--config_template', default='toy_data_experiment/config') # template for config_file
+    parser.add_argument('--input_template', default='toy_data_experiment/true_stats_')
+    parser.add_argument('--output_template', default='toy_data_experiment/final_results/TEST')
     parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
     parser.add_argument('--algorithm', default='abc')
-    parser.add_argument('--num_iterations', default=1, type=int) # number of sampling iterations 
+    parser.add_argument('--func_name', default='cython')
+    parser.add_argument('--num_iterations', default=10, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic parameter vector
     parser.add_argument('--num_simulations', default=1, type=int)
-    parser.add_argument('--start_epsilon', default=1.0, type=float)
-    parser.add_argument('--annealing_constant', default=0.99999)
-    parser.add_argument('--train_test_split', default=60) # currently an integer timestep, ultimately will be a string date
+    parser.add_argument('--start_epsilon', default=0.5, type=float)
+    parser.add_argument('--annealing_constant', default=0.999992)
+    parser.add_argument('--train_test_split', default=61) # currently an integer timestep, ultimately will be a string date
     parser.add_argument('--dir_scale', default='100-100') # scale parameter for the dirichlet proposal distribution (min-max, linearly interpolated)
     parser.add_argument('--lam_stddev', default='0.5-0.5') # stddev parameter for lambda (truncated normal) (min-max, linearly interpolated)
     parser.add_argument('--tau_stddev', default='0.1-0.1') # stddev parameter for tau (normal) (min-max, linearly interpolated)
 
     parser.add_argument('--params_init', default='None')
-    parser.add_argument('--abc_prior_type', default='for_cdc_tableSpikedDurs')
+    parser.add_argument('--abc_prior_type', default='OnCDCTableReasonable')
+    parser.add_argument('--approximate', default='4')
     parser.add_argument('--abc_prior_config_template', default='toy_data_experiment/abc_prior_config')
 
     args, unknown_args = parser.parse_known_args()
@@ -791,6 +771,12 @@ if __name__ == '__main__':
     lam_stddev = list(map(float, args.lam_stddev.split('-')))
     tau_stddev = list(map(float, args.tau_stddev.split('-')))
     algorithm = args.algorithm
+    func_name = args.func_name
+
+    if args.approximate == 'None':
+        approximate = None
+    else:
+        approximate = int(args.approximate)
 
     if args.params_init == 'None':
         params_init = None
@@ -821,19 +807,23 @@ if __name__ == '__main__':
 
     # condensing the true results in a summary vector
     T_y = []
-    for col_name in SUMMARY_STATISTICS_NAMES:
+    for col_name in config_dict['summary_statistics_names']:
         T_y.append(true_df[col_name])
     T_y = np.asarray(T_y).flatten()
 
     # initalize sampler
-    sampler = ABCSampler(seed, start_epsilon, annealing_constant, T_y, train_test_split, config_dict, num_timesteps, num_simulations)
+    sampler = ABCSampler(seed, start_epsilon, annealing_constant, T_y, train_test_split, config_dict, func_name, num_timesteps, num_simulations, approximate=approximate)
 
     sampler.initialize_theta(algorithm, abc_prior, params_init)
     print(sampler.theta_init)
 
+    import time
+    start = time.time()
     accepted_thetas, accepted_distances, num_accepted, all_distances, accepted_alphas, all_alphas, accepted_test_forecasts = sampler.draw_samples(algorithm, num_iterations, dir_scale, lam_stddev, tau_stddev)
+    end = time.time()
+    print('Elapsed time with %s on %d iterations: %9.3f sec' % (func_name, num_iterations, end - start))
 
-    num_to_save = int(len(accepted_thetas) * 0.5) # save only the second half of the parameters
+    num_to_save = 2000
     last_thetas = [deepcopy(accepted_thetas[0])] + accepted_thetas[-num_to_save:] # also save the first theta
     sampler.save_thetas_to_json(last_thetas, thetas_output)
 
@@ -842,7 +832,7 @@ if __name__ == '__main__':
     save_stats_to_csv(stats, stats_output)
 
     # save forecasts on test set for last 1000 samples
-    test_forecasts_to_save = accepted_test_forecasts[-1000:]
+    test_forecasts_to_save = accepted_test_forecasts[-num_to_save:]
     for i, df in enumerate(test_forecasts_to_save):
         df['index'] = i
 

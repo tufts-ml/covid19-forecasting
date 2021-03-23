@@ -7,6 +7,7 @@ import os
 import sys
 import time
 from tqdm import tqdm
+import scipy
 from semimarkov_forecaster import run_forecast__python, run_forecast__cython
 
 def run_simulation(random_seed, output_file, config_dict, states, func_name, approximate=None):
@@ -90,6 +91,40 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
     sim_kwargs['discharge_count_TK'] = discharge_count_TK
     sim_kwargs['terminal_count_T1'] = terminal_count_T1
 
+    ##################### Prior Stuff ###########################
+
+    a = 1.0
+    b = 22.0
+    lam_mean = 8.0
+    lam_stddev = 3.0
+    alpha = (a - lam_mean) / lam_stddev
+    beta = (b - lam_mean) / lam_stddev
+    tau_mean = 0.5
+    tau_stddev = 0.5
+
+    lam = scipy.stats.truncnorm.rvs(alpha, beta, loc=lam_mean, scale=lam_stddev, random_state=random_seed)
+    tau = scipy.stats.norm.rvs(loc=tau_mean, scale=tau_stddev, random_state=random_seed)
+
+    probas = scipy.special.softmax(scipy.stats.poisson.logpmf(np.arange(len(choices)), lam) / np.power(10, tau)).astype(np.float64)
+    prior_duration_cdf_HKT = np.zeros((H, K, Tmax))
+    for health, stage in itertools.product(health_ids, np.arange(K)):
+        choices = np.arange(1, 23, dtype=np.int32)
+        for c, p in zip(choices, probas):
+            assert c >= 1
+            prior_duration_cdf_HKT[health, stage, c - 1] = p
+        prior_duration_cdf_HKT[health, stage, :] = np.cumsum(prior_duration_cdf_HKT[health, stage, :])
+
+    RECOVER = [[34, 66], [20.4, 13.6], [17.952, 2.448]]
+    DIE = [[198, 2], [196, 4]]
+    prior_pRecover_K = np.array([scipy.stats.dirichlet.rvs(alpha)[0][1] for alpha in RECOVER]).astype(np.float64)
+    prior_pDieAfterDeclining_K = np.append(np.array([scipy.stats.dirichlet.rvs(alpha)[0][1] for alpha in DIE]), np.array([1.0])).astype(np.float64)
+
+    # sim_kwargs['prior_pRecover_K'] = prior_pRecover_K
+    # sim_kwargs['prior_pDieAfterDeclining_K'] = prior_pDieAfterDeclining_K
+    # sim_kwargs['prior_duration_cdf_HKT'] = prior_duration_cdf_HKT
+
+    #############################################################
+
     if approximate is not None:
         init_num_per_state_Tpastplus1K = np.rint(init_num_per_state_Tpastplus1K.astype(np.float64) / float(approximate)).astype(np.int32)
         admissions_per_state_Tplus1K = np.rint(admissions_per_state_Tplus1K.astype(np.float64) / float(approximate)).astype(np.int32)
@@ -131,19 +166,36 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
         columns=['timestep'] + col_names + ['n_TERMINAL'] + discharge_col_names,
         index=False, float_format="%.0f")
 
+def update_config_given_sample(config_dict, samples_file, i):
+    num_thetas = len(samples_file['last_thetas'])
+    theta = samples_file['last_thetas'][num_thetas - 1 - i]
+    for key in theta:
+        if 'duration' in key:
+            config_dict[key] = {}
+            for choice in theta[key]:
+                if choice not in ['lam', 'tau']:
+                    config_dict[key][choice] = theta[key][choice]
+        else:
+            config_dict[key] = theta[key]
+    return config_dict
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--func_name', default='cython', type=str)
-    parser.add_argument('--params_json_file', default='toy_data_experiment/config_admissions_experiment_twentytupledAdmissions_v3.json')
-    parser.add_argument('--output_file', default='toy_data_experiment/true_stats_admissions_experiment_twentytupledAdmissions_v3.csv')
+    parser.add_argument('--params_json_file', default='toy_data_experiment/config_admissions_experiment_v3.json')
+    parser.add_argument('--samples_file', default='toy_data_experiment/final_results/admissions_experiment_v3_OnCDCTableReasonable_samples.json')
+    parser.add_argument('--output_file', default='toy_data_experiment/final_output/results_admissions_experiment_v3_TrainingAndTesting_OnCDCTableReasonable_random_seed=1001.csv')
     parser.add_argument('--random_seed', default=1001, type=int)
-    parser.add_argument('--num_seeds', default=1, type=int)
+    parser.add_argument('--num_seeds', default=2000, type=int)
     args = parser.parse_args()
 
     output_file_base = args.output_file
 
     with open(args.params_json_file, 'r') as f:
         config_dict = json.load(f)
+
+    with open(args.samples_file, 'r') as f:
+        samples_file = json.load(f)
 
     if 'all' in config_dict:
         for combo in config_dict['all']:
@@ -158,12 +210,14 @@ if __name__ == '__main__':
                 i += 1
     else:
         states = config_dict['states']
-        for seed in tqdm(range(args.random_seed, args.random_seed + args.num_seeds)):
+        for i in tqdm(range(args.num_seeds)):
+            seed = int(args.random_seed) + i
             output_file = output_file_base.replace("random_seed=%s" % args.random_seed, "random_seed=%s" % str(seed))
             
             # start_time_sec = time.time()
 
-            run_simulation(seed, output_file, config_dict, states, args.func_name)
+            config_dict = update_config_given_sample(config_dict, samples_file, i)
+            run_simulation(seed, output_file, config_dict, states, args.func_name, approximate=None)
             
             # elapsed_time_sec = time.time() - start_time_sec
             # print("Finished after %9.3f seconds." % (elapsed_time_sec))

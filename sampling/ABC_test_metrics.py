@@ -20,6 +20,8 @@ def compute_true_summary_statistics(csv_df, expected_columns):
             new_dict[column] = csv_df['n_discharged_InGeneralWard'] + csv_df['n_discharged_OffVentInICU'] + csv_df['n_discharged_OnVentInICU']
         elif column == 'n_occupied_beds':
             new_dict[column] = csv_df['n_InGeneralWard'] + csv_df['n_OffVentInICU'] + csv_df['n_OnVentInICU']
+        elif column == 'n_InICU':
+            new_dict[column] = csv_df['n_OffVentInICU'] + csv_df['n_OnVentInICU']
         else:
             new_dict[column] = csv_df[column]
 
@@ -27,17 +29,18 @@ def compute_true_summary_statistics(csv_df, expected_columns):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', default='NHS_output')
-    parser.add_argument('--output_dir', default='NHS_results/metrics')
-    parser.add_argument('--output_template', default='new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_TrainingOnTraining_for_cdc_tableSpikedDurs')
-    parser.add_argument('--true_stats', default='NHS_data/new_data/formatted_data/south_tees_hospitals_nhs_foundation_trust_Training.csv')
-    parser.add_argument('--input_simulations_pattern', default='results_new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_TrainingOnTraining_for_cdc_tableSpikedDurs_*.csv')
-    parser.add_argument('--input_summaries_template', default='summary_new_durations_simulated_annealing_9_south_tees_hospitals_nhs_foundation_trust_TrainingOnTraining_for_cdc_tableSpikedDurs_')
+    parser.add_argument('--input_dir', default='USA/MA_output')
+    parser.add_argument('--output_dir', default='USA/metrics')
+    parser.add_argument('--output_template', default='summary_MA_NovToFeb_61days_priorOnTesting_TrainingAndTesting_OnCDCTableReasonable')
+    parser.add_argument('--true_stats', default='USA/MA_data/MA_NovToFeb_61days.csv')
+    parser.add_argument('--input_simulations_pattern', default='')
+    parser.add_argument('--input_summaries_template', default='summary_MA_NovToFeb_61days_priorOnTesting_TrainingAndTesting_OnCDCTableReasonable_')
     parser.add_argument('--coverages',
         type=str,
         default='2.5_97.5,10_90,25_75')
     parser.add_argument('--comma_sep_expected_columns',
-                        default='n_discharges,n_occupied_beds,n_OnVentInICU')
+                        default='n_InGeneralWard,n_OffVentInICU,n_OnVentInICU,n_InICU,n_TERMINAL,n_TERMINAL_5daysSmoothed')
+    parser.add_argument('--train_test_split', default=61, type=int)
     args = parser.parse_args()
 
     sims_csv_files = sorted(glob.glob(os.path.join(args.input_dir, args.input_simulations_pattern)))
@@ -48,34 +51,36 @@ if __name__ == '__main__':
         expected_columns = args.comma_sep_expected_columns.split(',')
 
     all_arrays = []
-    print("------------------------------------------------------")
-    print("Computing likelihood of true data under empirical pmf")
-    print("------------------------------------------------------")   
+    # print("------------------------------------------------------")
+    # print("Computing likelihood of true data under empirical pmf")
+    # print("------------------------------------------------------")   
 
     L = len(sims_csv_files)
     num_samples = len(sims_csv_files)
-    print("----------------------------------------")
-    print("Reading in data from %d simulations" % (L))
-    print("----------------------------------------")
-    for ll in tqdm.tqdm(range(L)):
-        csv_df = pd.read_csv(sims_csv_files[ll], index_col='timestep')
-        if expected_columns is None:
-            expected_columns = csv_df.columns
-        else:
-            csv_df = compute_true_summary_statistics(csv_df, expected_columns)
-            L = len(expected_columns)
-            is_same_length = (L == len(csv_df.columns))
-            if not is_same_length:
-                raise ValueError("Bad columns: Length mismatch")
-            for cc in range(L):
-                if expected_columns[cc] != csv_df.columns[cc]:
-                    raise ValueError("Bad columns: Element mismatch")
+    # print("----------------------------------------")
+    # print("Reading in data from %d simulations" % (L))
+    # print("----------------------------------------")
+    # for ll in tqdm.tqdm(range(L)):
+    #     csv_df = pd.read_csv(sims_csv_files[ll], index_col='timestep')
+    #     csv_df = csv_df[csv_df['timestep'] > self.train_test_split]
+    #     if expected_columns is None:
+    #         expected_columns = csv_df.columns
+    #     else:
+    #         csv_df = compute_true_summary_statistics(csv_df, expected_columns)
+    #         L = len(expected_columns)
+    #         is_same_length = (L == len(csv_df.columns))
+    #         if not is_same_length:
+    #             raise ValueError("Bad columns: Length mismatch")
+    #         for cc in range(L):
+    #             if expected_columns[cc] != csv_df.columns[cc]:
+    #                 raise ValueError("Bad columns: Element mismatch")
         
-        all_arrays.append(csv_df.values)
+    #     all_arrays.append(csv_df.values)
 
-    counts_TKS = np.dstack(all_arrays)
+    # counts_TKS = np.dstack(all_arrays)
 
-    true_df = pd.read_csv(args.true_stats, index_col='timestep')
+    true_df = pd.read_csv(args.true_stats)
+    true_df = true_df[true_df['timestep'] > args.train_test_split]
 
     # drop columns from true_df that are not among the expected columns
     original_columns = true_df.columns
@@ -84,22 +89,37 @@ if __name__ == '__main__':
             true_df = true_df.drop(col, axis=1)
 
     true_counts = true_df.values
-    pmf_counts = np.sum(np.equal(counts_TKS, np.dstack([true_counts for i in range(num_samples)])), axis=2)
-    pmf_scores = pmf_counts / num_samples
+    # pmf_counts = np.sum(np.equal(counts_TKS, np.dstack([true_counts for i in range(num_samples)])), axis=2)
+    # pmf_scores = pmf_counts / num_samples
 
-    df = pd.DataFrame(pmf_scores, columns=expected_columns)
-    df.to_csv(
-        os.path.join(args.output_dir, "empirical_pmf_scores_%s.csv" % (args.output_template)),
-        index=False, float_format='%.2f')
+    # df = pd.DataFrame(pmf_scores, columns=expected_columns)
+    # df.to_csv(
+    #     os.path.join(args.output_dir, "empirical_pmf_scores_%s.csv" % (args.output_template)),
+    #     index=False, float_format='%.2f')
 
     print("------------------------------------------------------")
     print("Computing MAE for mean")
     print("------------------------------------------------------")
+    mean_df = pd.read_csv(os.path.join(args.input_dir, "%smean.csv" % (args.input_summaries_template)))
+    mean_df = mean_df[mean_df['timestep'] > args.train_test_split]
+    if 'n_TERMINAL_5daysSmoothed' in expected_columns:
+        mean_df['n_TERMINAL_5daysSmoothed'] = np.copy(mean_df['n_TERMINAL'])
+    # if 'n_TERMINAL' in expected_columns:
+    #     mean_df['n_TERMINAL'] = np.copy(mean_df['n_TERMINAL_5daysSmoothed'])
+    mean_df = compute_true_summary_statistics(mean_df, expected_columns)
+    original_columns = mean_df.columns
+    for col in original_columns:
+        if col not in expected_columns:
+            mean_df = mean_df.drop(col, axis=1)
 
-    mean_counts = compute_true_summary_statistics(pd.read_csv(os.path.join(args.input_dir, "%smean.csv" % (args.input_summaries_template)), index_col='timestep'), expected_columns).values
+    mean_counts = mean_df.values
     mae_scores = np.mean(np.abs(mean_counts - true_counts), axis=0).reshape((1, len(expected_columns)))
+    max_scores = np.max(np.abs(mean_counts - true_counts), axis=0).reshape((1, len(expected_columns)))
+    mean_true_counts = np.mean(true_counts, axis=0).reshape((1, len(expected_columns)))
+    scores = np.vstack([mae_scores, max_scores, mean_true_counts])
+    rows = np.array(['Mean Absolute Error', 'Maximum Absolute Error', 'Mean of True Counts']).reshape((3, 1))
     
-    df = pd.DataFrame(mae_scores, columns=expected_columns)
+    df = pd.DataFrame(np.hstack([rows, scores]), columns=['Metric']+expected_columns)
     df.to_csv(
         os.path.join(args.output_dir, "mae_scores_%s.csv" % (args.output_template)),
         index=False, float_format='%.2f')
@@ -111,11 +131,36 @@ if __name__ == '__main__':
     T = true_counts.shape[0]
     # expected_columns = list(true_df.columns) # WARNING: must be in the order of the csv files!
     coverages = args.coverages.split(',')
-    results_dict = {'coverages': coverages}
+    results_dict = {'Coverages (%)': list(map(lambda x: '%d' % (float(x.split('_')[1]) - float(x.split('_')[0])), coverages))}
     for coverage in coverages:
         low, high = list(map(float, coverage.split('_')))
-        low_counts = compute_true_summary_statistics(pd.read_csv(os.path.join(args.input_dir, "%spercentile=%06.2f.csv" % (args.input_summaries_template, low)), index_col='timestep'), expected_columns).values
-        high_counts = compute_true_summary_statistics(pd.read_csv(os.path.join(args.input_dir, "%spercentile=%06.2f.csv" % (args.input_summaries_template, high)), index_col='timestep'), expected_columns).values
+
+        low_df = pd.read_csv(os.path.join(args.input_dir, "%spercentile=%06.2f.csv" % (args.input_summaries_template, low)))
+        low_df = low_df[low_df['timestep'] > args.train_test_split]
+        if 'n_TERMINAL_5daysSmoothed' in expected_columns:
+            low_df['n_TERMINAL_5daysSmoothed'] = np.copy(low_df['n_TERMINAL'])
+        # if 'n_TERMINAL' in expected_columns:
+        #     low_df['n_TERMINAL'] = np.copy(low_df['n_TERMINAL_5daysSmoothed'])
+        low_df = compute_true_summary_statistics(low_df, expected_columns)
+        original_columns = low_df.columns
+        for col in original_columns:
+            if col not in expected_columns:
+                low_df = low_df.drop(col, axis=1)
+
+        high_df = pd.read_csv(os.path.join(args.input_dir, "%spercentile=%06.2f.csv" % (args.input_summaries_template, high)))
+        high_df = high_df[high_df['timestep'] > args.train_test_split]
+        if 'n_TERMINAL_5daysSmoothed' in expected_columns:
+            high_df['n_TERMINAL_5daysSmoothed'] = np.copy(high_df['n_TERMINAL'])
+        # if 'n_TERMINAL' in expected_columns:
+        #     high_df['n_TERMINAL'] = np.copy(high_df['n_TERMINAL_5daysSmoothed'])
+        high_df = compute_true_summary_statistics(high_df, expected_columns)
+        original_columns = high_df.columns
+        for col in original_columns:
+            if col not in expected_columns:
+                high_df = high_df.drop(col, axis=1)
+
+        low_counts = low_df.values
+        high_counts = high_df.values
 
         is_in_low = true_counts > low_counts
         is_in_high = true_counts < high_counts

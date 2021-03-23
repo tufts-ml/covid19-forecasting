@@ -211,9 +211,9 @@ def run_simulation(random_seed, output_file, config_dict, states, state_name_to_
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_file', default='run_forecasts_from_distribution/configs/example_params.json')
-    parser.add_argument('--output_file', default='run_forecasts_from_distribution/configs/results_example_true_data.csv')
-    parser.add_argument('--random_seed', default=101, type=int)
+    parser.add_argument('--config_file', default='MA_data/config_MA_test_dataset.json')
+    parser.add_argument('--output_file', default='results_test_slow.csv')
+    parser.add_argument('--random_seed', default=102, type=int)
     parser.add_argument('--num_seeds', default=1, type=int)
 
     args, unknown_args = parser.parse_known_args()
