@@ -635,7 +635,7 @@ class ABCSampler(object):
         denom = np.max(a, axis=0)
         distance = np.nansum((weights * np.abs(np.diff(a, axis=0))) / denom) / T_x.shape[0]
 
-        print("Distance: %.3f" % distance)
+        # print("Distance: %.3f" % distance)
         return distance
 
     def accept(self, distance):
@@ -733,17 +733,17 @@ def save_stats_to_csv(stats, filename):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hospital', default='admissions_experiment_twentytupledAdmissions_v3')
-    parser.add_argument('--config_template', default='toy_data_experiment/config') # template for config_file
-    parser.add_argument('--input_template', default='toy_data_experiment/true_stats_')
-    parser.add_argument('--output_template', default='toy_data_experiment/final_results/TEST')
+    parser.add_argument('--hospital', default='MA_NovToFeb_61days')
+    parser.add_argument('--config_template', default='USA/MA_data/config') # template for config_file
+    parser.add_argument('--input_template', default='USA/MA_data/')
+    parser.add_argument('--output_template', default='USA/MA_data/')
     parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
     parser.add_argument('--algorithm', default='abc')
     parser.add_argument('--func_name', default='cython')
     parser.add_argument('--num_iterations', default=10, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic parameter vector
     parser.add_argument('--num_simulations', default=1, type=int)
-    parser.add_argument('--start_epsilon', default=0.5, type=float)
+    parser.add_argument('--start_epsilon', default=0.7, type=float)
     parser.add_argument('--annealing_constant', default=0.999992)
     parser.add_argument('--train_test_split', default=61) # currently an integer timestep, ultimately will be a string date
     parser.add_argument('--dir_scale', default='100-100') # scale parameter for the dirichlet proposal distribution (min-max, linearly interpolated)
@@ -752,8 +752,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--params_init', default='None')
     parser.add_argument('--abc_prior_type', default='OnCDCTableReasonable')
-    parser.add_argument('--approximate', default='4')
-    parser.add_argument('--abc_prior_config_template', default='toy_data_experiment/abc_prior_config')
+    parser.add_argument('--approximate', default='5')
+    parser.add_argument('--abc_prior_config_template', default='priors/abc_prior_config')
 
     args, unknown_args = parser.parse_known_args()
 
