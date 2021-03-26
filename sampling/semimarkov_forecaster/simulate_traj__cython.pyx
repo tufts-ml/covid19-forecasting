@@ -73,7 +73,7 @@ def run_forecast__cython(
         double[:,:] discharge_count_TK,
         double[:,:] terminal_count_T1,
         double[:] rand_vals_M,
-        int[:] init_num_per_state_K,
+        int[:,:] init_num_per_state_Tpastplus1K,
         int[:,:] admissions_per_state_Tplus1K,
         double[:] pRecover_K,
         double[:] pDieAfterDeclining_K,
@@ -98,7 +98,7 @@ def run_forecast__cython(
     ## Simulate what happens to initial population
     for t in range(-Tpast, 1, 1):
         for state in states:
-            N_new = init_num_per_state_K[state]
+            N_new = init_num_per_state_Tpastplus1K[t, state]
 
             for n in range(N_new):
                 rand_vals_M = rand_vals_M[mm:]

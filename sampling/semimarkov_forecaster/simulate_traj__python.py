@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import itertools
 import pandas as pd
+from scipy import stats
 
 def simulate_traj__python(
         start_stage,
@@ -15,7 +16,7 @@ def simulate_traj__python(
         health_ids_L,
         durations_L,
         rand_vals_M,
-        ):
+        tweak_durs=False):
     ''' Simulate trajectory of a patient, using pure python numpy code
     Returns
     -------
@@ -50,6 +51,14 @@ def simulate_traj__python(
                 break
         mm += 1
 
+        if tweak_durs and health > 0 and d > 1:
+            p_one = duration_cdf_HKT[health, stage, 0]
+            r = 1/(1-p_one) - 1
+            value = d * (1.0 - 0.25*(1+r))
+            integer = np.floor(value).astype(np.int32)
+            decimals = value - integer
+            d = integer + stats.bernoulli.rvs(decimals)
+
         durations_L[ll] = d
         stage_ids_L[ll] = stage
         health_ids_L[ll] = health
@@ -83,11 +92,14 @@ def run_forecast__python(
         discharge_count_TK,
         terminal_count_T1,
         rand_vals_M,
-        init_num_per_state_K,
+        init_num_per_state_Tpastplus1K,
         admissions_per_state_Tplus1K,
         pRecover_K,
         pDieAfterDeclining_K,
         duration_cdf_HKT,
+        prior_pRecover_K,
+        prior_pDieAfterDeclining_K,
+        prior_duration_cdf_HKT,
         stage_ids_L,
         health_ids_L,
         durations_L):
@@ -96,7 +108,7 @@ def run_forecast__python(
     ## Simulate what happens to initial population
     for t in range(-Tpast, 1, 1):
         for state in states:
-            N_new = init_num_per_state_K[state]
+            N_new = init_num_per_state_Tpastplus1K[t, state]
 
             for n in range(N_new):
                 rand_vals_M = rand_vals_M[mm:]
@@ -121,6 +133,7 @@ def run_forecast__python(
                     t_terminal = t_start + np.sum(durations_L[:curL])
                     terminal_count_T1[t_terminal, 0] += 1
 
+    tweak_durs = False
     ## Simulate what happens as new patients added at each step
     for t in range(1, T+1):
         for state in states:
@@ -132,7 +145,13 @@ def run_forecast__python(
                 stage_ids_L[:] = -99
                 health_ids_L[:] = -99
 
-                mm, curL, is_terminal, _, _, _ = simulate_traj__python(state, pRecover_K, pDieAfterDeclining_K, duration_cdf_HKT, stage_ids_L, health_ids_L, durations_L, rand_vals_M)
+                # if t > 61:
+                #     # tweak_durs = True
+                #     mm, curL, is_terminal, _, _, _ = simulate_traj__python(state, prior_pRecover_K, prior_pDieAfterDeclining_K, prior_duration_cdf_HKT, stage_ids_L, health_ids_L, durations_L, rand_vals_M, tweak_durs)
+                # else:
+                #     mm, curL, is_terminal, _, _, _ = simulate_traj__python(state, pRecover_K, pDieAfterDeclining_K, duration_cdf_HKT, stage_ids_L, health_ids_L, durations_L, rand_vals_M, tweak_durs)
+
+                mm, curL, is_terminal, _, _, _ = simulate_traj__python(state, pRecover_K, pDieAfterDeclining_K, duration_cdf_HKT, stage_ids_L, health_ids_L, durations_L, rand_vals_M, tweak_durs)
 
                 tp = Tpast + t
                 for ii in range(curL):
