@@ -132,8 +132,6 @@ def run_simulation(random_seed, config_dict, states, func_name, approximate=None
     return results_df
 
 
-SUMMARY_STATISTICS_NAMES = ['n_InGeneralWard', 'n_OffVentInICU', 'n_OnVentInICU', 'n_TERMINAL'] #, "n_admitted_InGeneralWard", "n_admitted_OffVentInICU", "n_admitted_OnVentInICU", "n_discharged_InGeneralWard", "n_discharged_OffVentInICU", "n_discharged_OnVentInICU"]
-
 HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering', 'Declining': 0, 'Recovering': 1}
 
 class ABCSampler(object):
@@ -363,13 +361,13 @@ class ABCSampler(object):
             # start = time.time()
 
             if n == int(num_iterations * (3/4) * (1/4)) or n == int(num_iterations * (3/4) * (2/4)) or n == int(num_iterations * (3/4) * (3/4)): # distance-threshold decay
-                self.epsilon += 0.04 # distance-threshold decay
+                self.epsilon += 0.05 # distance-threshold decay
 
             # if n == int(num_iterations * (3/4)):
             #     self.config_dict['num_timesteps'] = original_num_timesteps
 
             if n == int(num_iterations * (3/4)): # distance-threshold decay
-                self.epsilon += 0.15 # distance-threshold decay
+                self.epsilon += 0.015 # distance-threshold decay
 
             dir_scale = dir_scale_list[n]
             lam_stddev = lam_stddev_list[n]
@@ -739,7 +737,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_template', default='USA/MA_data/')
     parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
     parser.add_argument('--algorithm', default='abc')
-    parser.add_argument('--func_name', default='cython')
+    parser.add_argument('--func_name', default='python')
     parser.add_argument('--num_iterations', default=10, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic parameter vector
     parser.add_argument('--num_simulations', default=1, type=int)

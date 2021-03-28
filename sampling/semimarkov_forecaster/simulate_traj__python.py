@@ -97,9 +97,6 @@ def run_forecast__python(
         pRecover_K,
         pDieAfterDeclining_K,
         duration_cdf_HKT,
-        prior_pRecover_K,
-        prior_pDieAfterDeclining_K,
-        prior_duration_cdf_HKT,
         stage_ids_L,
         health_ids_L,
         durations_L):
@@ -147,9 +144,6 @@ def run_forecast__python(
 
                 # if t > 61:
                 #     # tweak_durs = True
-                #     mm, curL, is_terminal, _, _, _ = simulate_traj__python(state, prior_pRecover_K, prior_pDieAfterDeclining_K, prior_duration_cdf_HKT, stage_ids_L, health_ids_L, durations_L, rand_vals_M, tweak_durs)
-                # else:
-                #     mm, curL, is_terminal, _, _, _ = simulate_traj__python(state, pRecover_K, pDieAfterDeclining_K, duration_cdf_HKT, stage_ids_L, health_ids_L, durations_L, rand_vals_M, tweak_durs)
 
                 mm, curL, is_terminal, _, _, _ = simulate_traj__python(state, pRecover_K, pDieAfterDeclining_K, duration_cdf_HKT, stage_ids_L, health_ids_L, durations_L, rand_vals_M, tweak_durs)
 
