@@ -8,10 +8,10 @@ import numpy as np
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', default='toy_data_experiment/final_output')
-    parser.add_argument('--output_dir', default='toy_data_experiment/final_output')
-    parser.add_argument('--output_template', default='summary_admissions_experiment_v3_TrainingAndTesting_OnCDCTableReasonable_')
-    parser.add_argument('--input_csv_file_pattern', default='results_admissions_experiment_v3_TrainingAndTesting_OnCDCTableReasonable_random_seed*.csv')
+    parser.add_argument('--input_dir', default='USA/MA_output')
+    parser.add_argument('--output_dir', default='USA/MA_output')
+    parser.add_argument('--output_template', default='summary_MA_NovToFeb_61days_OnCDCTableReasonable_')
+    parser.add_argument('--input_csv_file_pattern', default='results_MA_NovToFeb_61days_OnCDCTableReasonable_random_seed*.csv')
     parser.add_argument('--comma_sep_percentiles',
         type=str,
         default='1,2.5,5,10,25,50,75,90,95,97.5,99')

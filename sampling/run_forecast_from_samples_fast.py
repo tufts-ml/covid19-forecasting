@@ -181,15 +181,21 @@ def update_config_given_sample(config_dict, samples_file, i):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--func_name', default='cython', type=str)
-    parser.add_argument('--params_json_file', default='toy_data_experiment/config_admissions_experiment_v3.json')
-    parser.add_argument('--samples_file', default='toy_data_experiment/final_results/admissions_experiment_v3_OnCDCTableReasonable_samples.json')
-    parser.add_argument('--output_file', default='toy_data_experiment/final_output/results_admissions_experiment_v3_TrainingAndTesting_OnCDCTableReasonable_random_seed=1001.csv')
+    parser.add_argument('--func_name', default='python', type=str)
+    parser.add_argument('--params_json_file', default='USA/MA_data/config_MA_NovToFeb_61days.json')
+    parser.add_argument('--samples_file', default='USA/MA_results/MA_NovToFeb_61days_OnCDCTableReasonable_samples.json')
+    parser.add_argument('--output_file', default='USA/MA_output/results_MA_NovToFeb_61days_OnCDCTableReasonable_random_seed=1001.csv')
+    parser.add_argument('--approximate', default='7')
     parser.add_argument('--random_seed', default=1001, type=int)
-    parser.add_argument('--num_seeds', default=2000, type=int)
+    parser.add_argument('--num_seeds', default=500, type=int)
     args = parser.parse_args()
 
     output_file_base = args.output_file
+
+    if args.approximate == 'None':
+        approximate = None
+    else:
+        approximate = int(args.approximate)
 
     with open(args.params_json_file, 'r') as f:
         config_dict = json.load(f)
@@ -197,27 +203,15 @@ if __name__ == '__main__':
     with open(args.samples_file, 'r') as f:
         samples_file = json.load(f)
 
-    if 'all' in config_dict:
-        for combo in config_dict['all']:
-            output_file_combo = output_file_base.replace('combo', "combo=%s" % combo)
-            i = 0
-            for config in tqdm(config_dict['all'][combo]):
-                output_file_params = output_file_combo.replace('params', 'params=%s' % str(i))
-                states = config['states']
-                for seed in range(args.random_seed, args.random_seed + args.num_seeds):
-                    output_file = output_file_params.replace("random_seed=%s" % args.random_seed, "random_seed=%s" % str(seed))
-                    run_simulation(seed, output_file, config, states, args.func_name)
-                i += 1
-    else:
-        states = config_dict['states']
-        for i in tqdm(range(args.num_seeds)):
-            seed = int(args.random_seed) + i
-            output_file = output_file_base.replace("random_seed=%s" % args.random_seed, "random_seed=%s" % str(seed))
-            
-            # start_time_sec = time.time()
+    states = config_dict['states']
+    for i in tqdm(range(args.num_seeds)):
+        seed = int(args.random_seed) + i
+        output_file = output_file_base.replace("random_seed=%s" % args.random_seed, "random_seed=%s" % str(seed))
+        
+        # start_time_sec = time.time()
 
-            config_dict = update_config_given_sample(config_dict, samples_file, i)
-            run_simulation(seed, output_file, config_dict, states, args.func_name, approximate=None)
-            
-            # elapsed_time_sec = time.time() - start_time_sec
-            # print("Finished after %9.3f seconds." % (elapsed_time_sec))
+        config_dict = update_config_given_sample(config_dict, samples_file, i)
+        run_simulation(seed, output_file, config_dict, states, args.func_name, approximate=approximate)
+        
+        # elapsed_time_sec = time.time() - start_time_sec
+        # print("Finished after %9.3f seconds." % (elapsed_time_sec))

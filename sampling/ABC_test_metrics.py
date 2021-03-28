@@ -30,33 +30,32 @@ def compute_true_summary_statistics(csv_df, expected_columns):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', default='USA/MA_output')
-    parser.add_argument('--output_dir', default='USA/metrics')
-    parser.add_argument('--output_template', default='summary_MA_NovToFeb_61days_priorOnTesting_TrainingAndTesting_OnCDCTableReasonable')
+    parser.add_argument('--output_dir', default='USA/MA_results')
+    parser.add_argument('--output_template', default='summary_MA_NovToFeb_61days_OnCDCTableReasonable')
     parser.add_argument('--true_stats', default='USA/MA_data/MA_NovToFeb_61days.csv')
-    parser.add_argument('--input_simulations_pattern', default='')
-    parser.add_argument('--input_summaries_template', default='summary_MA_NovToFeb_61days_priorOnTesting_TrainingAndTesting_OnCDCTableReasonable_')
+    parser.add_argument('--input_summaries_template', default='summary_MA_NovToFeb_61days_OnCDCTableReasonable_')
     parser.add_argument('--coverages',
         type=str,
         default='2.5_97.5,10_90,25_75')
     parser.add_argument('--comma_sep_expected_columns',
                         default='n_InGeneralWard,n_OffVentInICU,n_OnVentInICU,n_InICU,n_TERMINAL,n_TERMINAL_5daysSmoothed')
-    parser.add_argument('--train_test_split', default=61, type=int)
+    parser.add_argument('--num_training_timesteps', default=61, type=int)
     args = parser.parse_args()
 
-    sims_csv_files = sorted(glob.glob(os.path.join(args.input_dir, args.input_simulations_pattern)))
+    # sims_csv_files = sorted(glob.glob(os.path.join(args.input_dir, args.input_simulations_pattern)))
 
     if args.comma_sep_expected_columns == 'None':
         expected_columns = None
     else:
         expected_columns = args.comma_sep_expected_columns.split(',')
 
-    all_arrays = []
+    # all_arrays = []
     # print("------------------------------------------------------")
     # print("Computing likelihood of true data under empirical pmf")
     # print("------------------------------------------------------")   
 
-    L = len(sims_csv_files)
-    num_samples = len(sims_csv_files)
+    # L = len(sims_csv_files)
+    # num_samples = len(sims_csv_files)
     # print("----------------------------------------")
     # print("Reading in data from %d simulations" % (L))
     # print("----------------------------------------")
@@ -80,7 +79,7 @@ if __name__ == '__main__':
     # counts_TKS = np.dstack(all_arrays)
 
     true_df = pd.read_csv(args.true_stats)
-    true_df = true_df[true_df['timestep'] > args.train_test_split]
+    true_df = true_df[true_df['timestep'] > args.num_training_timesteps]
 
     # drop columns from true_df that are not among the expected columns
     original_columns = true_df.columns
@@ -101,7 +100,7 @@ if __name__ == '__main__':
     print("Computing MAE for mean")
     print("------------------------------------------------------")
     mean_df = pd.read_csv(os.path.join(args.input_dir, "%smean.csv" % (args.input_summaries_template)))
-    mean_df = mean_df[mean_df['timestep'] > args.train_test_split]
+    mean_df = mean_df[mean_df['timestep'] > args.num_training_timesteps]
     if 'n_TERMINAL_5daysSmoothed' in expected_columns:
         mean_df['n_TERMINAL_5daysSmoothed'] = np.copy(mean_df['n_TERMINAL'])
     # if 'n_TERMINAL' in expected_columns:
@@ -136,7 +135,7 @@ if __name__ == '__main__':
         low, high = list(map(float, coverage.split('_')))
 
         low_df = pd.read_csv(os.path.join(args.input_dir, "%spercentile=%06.2f.csv" % (args.input_summaries_template, low)))
-        low_df = low_df[low_df['timestep'] > args.train_test_split]
+        low_df = low_df[low_df['timestep'] > args.num_training_timesteps]
         if 'n_TERMINAL_5daysSmoothed' in expected_columns:
             low_df['n_TERMINAL_5daysSmoothed'] = np.copy(low_df['n_TERMINAL'])
         # if 'n_TERMINAL' in expected_columns:
@@ -148,7 +147,7 @@ if __name__ == '__main__':
                 low_df = low_df.drop(col, axis=1)
 
         high_df = pd.read_csv(os.path.join(args.input_dir, "%spercentile=%06.2f.csv" % (args.input_summaries_template, high)))
-        high_df = high_df[high_df['timestep'] > args.train_test_split]
+        high_df = high_df[high_df['timestep'] > args.num_training_timesteps]
         if 'n_TERMINAL_5daysSmoothed' in expected_columns:
             high_df['n_TERMINAL_5daysSmoothed'] = np.copy(high_df['n_TERMINAL'])
         # if 'n_TERMINAL' in expected_columns:

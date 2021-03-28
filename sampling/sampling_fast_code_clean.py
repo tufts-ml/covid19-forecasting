@@ -283,9 +283,6 @@ class ABCSampler(object):
         # first update config dict given the parameters in theta
         self.update_config_dict_given_theta(theta)
 
-        # print(self.config_dict['proba_Die_after_Declining_InGeneralWard']) # have to be 0.0 when not using DieAfterDeclining
-        # print(self.config_dict['proba_Die_after_Declining_OffVentInICU']) # have to be 0.0 when not using DieAfterDeclining
-
         states = self.config_dict['states']
 
         T = None
@@ -731,27 +728,39 @@ def save_stats_to_csv(stats, filename):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    
+    # Input files
     parser.add_argument('--hospital', default='MA_NovToFeb_61days')
     parser.add_argument('--config_template', default='USA/MA_data/config') # template for config_file
     parser.add_argument('--input_template', default='USA/MA_data/')
-    parser.add_argument('--output_template', default='USA/MA_data/')
-    parser.add_argument('--random_seed', default=101, type=int) # currently not using it 
-    parser.add_argument('--algorithm', default='abc')
+    parser.add_argument('--output_template', default='USA/MA_results/abc')
+
+    # Details of 
     parser.add_argument('--func_name', default='python')
-    parser.add_argument('--num_iterations', default=10, type=int) # number of sampling iterations 
+    parser.add_argument('--approximate', default='7')
+    parser.add_argument('--num_simulations', default=1, type=int) # number of simulations per proposal. 
+                                                                # More simulations means less dependence on rrandomness, 
+                                                                # but at a much higher computational cost. We keep this to 1
+
+    # arguments for annealing schedule
+    parser.add_argument('--num_iterations', default=32000, type=int) # number of sampling iterations 
                                                                    # each iteration has an inner loop through each probabilistic parameter vector
-    parser.add_argument('--num_simulations', default=1, type=int)
     parser.add_argument('--start_epsilon', default=0.7, type=float)
-    parser.add_argument('--annealing_constant', default=0.999992)
-    parser.add_argument('--train_test_split', default=61) # currently an integer timestep, ultimately will be a string date
+    parser.add_argument('--annealing_constant', default=0.999991)
+    
+    # specify proposal hyperparameters
     parser.add_argument('--dir_scale', default='100-100') # scale parameter for the dirichlet proposal distribution (min-max, linearly interpolated)
     parser.add_argument('--lam_stddev', default='0.5-0.5') # stddev parameter for lambda (truncated normal) (min-max, linearly interpolated)
     parser.add_argument('--tau_stddev', default='0.1-0.1') # stddev parameter for tau (normal) (min-max, linearly interpolated)
 
-    parser.add_argument('--params_init', default='None')
-    parser.add_argument('--abc_prior_type', default='OnCDCTableReasonable')
-    parser.add_argument('--approximate', default='5')
+    # specify parameter initialization and prior
+    parser.add_argument('--params_init', default='None') # default is initialize with sample from prior
     parser.add_argument('--abc_prior_config_template', default='priors/abc_prior_config')
+    parser.add_argument('--abc_prior_type', default='OnCDCTableReasonable')
+
+    # obsolete arguments
+    parser.add_argument('--random_seed', default=101, type=int)
+    parser.add_argument('--algorithm', default='abc')
 
     args, unknown_args = parser.parse_known_args()
 
@@ -764,7 +773,7 @@ if __name__ == '__main__':
     num_simulations = int(args.num_simulations)
     start_epsilon = float(args.start_epsilon)
     annealing_constant = float(args.annealing_constant)
-    train_test_split = int(args.train_test_split)
+    # train_test_split = int(args.train_test_split)
     dir_scale = list(map(int, args.dir_scale.split('-')))
     lam_stddev = list(map(float, args.lam_stddev.split('-')))
     tau_stddev = list(map(float, args.tau_stddev.split('-')))
@@ -798,6 +807,7 @@ if __name__ == '__main__':
     with open(config_file, 'r') as f:
         config_dict = json.load(f)
     num_timesteps = config_dict['num_timesteps']
+    train_test_split = config_dict['num_training_timesteps']
 
     true_df = pd.read_csv(inputfile)
     true_df = true_df[true_df['timestep'] <= train_test_split] # only retain training data
@@ -822,17 +832,17 @@ if __name__ == '__main__':
     print('Elapsed time with %s on %d iterations: %9.3f sec' % (func_name, num_iterations, end - start))
 
     num_to_save = 2000
-    last_thetas = [deepcopy(accepted_thetas[0])] + accepted_thetas[-num_to_save:] # also save the first theta
+    last_thetas = accepted_thetas[-num_to_save:] # also save the first theta
     sampler.save_thetas_to_json(last_thetas, thetas_output)
 
 
     stats = {'all_distances': all_distances, 'accepted_distances': accepted_distances, 'all_alphas': all_alphas, 'accepted_alphas': accepted_alphas, 'epsilon_trace': sampler.epsilon_trace}
     save_stats_to_csv(stats, stats_output)
 
-    # save forecasts on test set for last 1000 samples
-    test_forecasts_to_save = accepted_test_forecasts[-num_to_save:]
-    for i, df in enumerate(test_forecasts_to_save):
-        df['index'] = i
+    # save forecasts on test set for last 2000 samples
+    # test_forecasts_to_save = accepted_test_forecasts[-num_to_save:]
+    # for i, df in enumerate(test_forecasts_to_save):
+    #     df['index'] = i
 
-    df = pd.concat(test_forecasts_to_save)
-    df.to_csv(test_forecasts_output)
+    # df = pd.concat(test_forecasts_to_save)
+    # df.to_csv(test_forecasts_output)
