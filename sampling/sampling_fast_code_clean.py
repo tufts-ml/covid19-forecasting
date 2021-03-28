@@ -735,7 +735,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_template', default='USA/MA_data/')
     parser.add_argument('--output_template', default='USA/MA_results/abc')
 
-    # Details of 
+    # Details of simulation
     parser.add_argument('--func_name', default='python')
     parser.add_argument('--approximate', default='7')
     parser.add_argument('--num_simulations', default=1, type=int) # number of simulations per proposal. 
