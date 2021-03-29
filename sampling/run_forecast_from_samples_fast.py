@@ -8,7 +8,7 @@ import sys
 import time
 from tqdm import tqdm
 import scipy
-from semimarkov_forecaster import run_forecast__python, run_forecast__cython
+from semimarkov_forecaster import run_forecast__python
 
 def run_simulation(random_seed, output_file, config_dict, states, func_name, approximate=None):
     prng = np.random.RandomState(random_seed)
@@ -134,6 +134,7 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
     states_by_id = np.array([0, 1, 2], dtype=np.int32)
     
     if func_name.count('cython'):
+        from semimarkov_forecaster import run_forecast__cython
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__cython(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
     else:
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__python(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
