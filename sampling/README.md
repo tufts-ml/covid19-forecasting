@@ -15,7 +15,13 @@ Requirements:
     - A source to draw admissions from, usually a pointer to a file containing admissions per timestep  
     - Parameters of the model. Values are just placeholders, with the exception of *proba_Die_after_Declining_OnVentInICU* which must be set to 1.0 and never changed  
 - A csv file containing admissions per timestep. These admissions an be at any state of the hospital  
-- A csv file containing the true hospital census counts for training and testing  
+- A csv file containing the true hospital census counts for training and testing
+
+## US States data collection
+
+We provide code and a notebook to automatically collect and format US state level data from HHS and from the Covid Tracking project.  
+The code snippet (latest version) is USA/HospitalData_v20210330.py and the notebook is USA/generate_US_states_data.ipynb.  
+Currently, the smoothing of terminal counts is not automatically generated.
 
 ## Step 0: Setup the use of cython (if C programming language is installed)
 
