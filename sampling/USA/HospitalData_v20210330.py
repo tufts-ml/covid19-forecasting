@@ -66,8 +66,8 @@ class HospitalData(object):
 
     def get_HHS_data(self):
         ## download csv from hhs website to the current directory of this HospitalData.py file
-        csv_name = 'reported_hospital_utilization_timeseries_20210330.csv'
         today = datetime.now().date()
+        csv_name = 'reported_hospital_utilization_timeseries_%s.csv' % str(today).replace('-', '')
 
         if not Path(csv_name).exists() or datetime.fromtimestamp(os.path.getctime(csv_name)).date() != today:
             print('DOWNLOADING FRESH HHS DATA.........')
@@ -112,8 +112,8 @@ class HospitalData(object):
             return pd.read_csv(csv_name) #tc.SFrame(csv_name)
     def get_covidtracking_data(self):
         ## download csv from covidtracking website to the current directory of this HospitalData.py file
-        csv_name = 'covid_tracking_20210330.csv'
         today = datetime.now().date()
+        csv_name = 'covid_tracking_%s.csv' % str(today).replace('-', '')
         
         if not Path(csv_name).exists() or datetime.fromtimestamp(os.path.getctime(csv_name)).date() != today:
             print('DOWNLOADING FRESH COVIDTRACKING DATA.........')
