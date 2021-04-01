@@ -73,18 +73,20 @@ class HospitalData(object):
 
         if not Path(csv_name).exists()  or datetime.fromtimestamp(os.path.getctime(csv_name)).date() != today  :
             print('DOWNLOADING FRESH HHS DATA.........')
-            hhs_url = 'https://healthdata.gov/dataset/covid-19-reported-patient-impact-and-hospital-capacity-state-timeseries'
-            u = urllib.request.urlopen(hhs_url)
-            content_decoded = u.read().decode('utf-8')
-            parsed_html = BeautifulSoup(content_decoded)
-            url = parsed_html.body.find('a', attrs ={'class':'data-link'})['href']
-            response = requests.get(url)  
+            # hhs_url = 'https://healthdata.gov/dataset/covid-19-reported-patient-impact-and-hospital-capacity-state-timeseries'
+            hhs_url = 'https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD'
+            # u = urllib.request.urlopen(hhs_url)
+            # content_decoded = u.read().decode('utf-8')
+            # parsed_html = BeautifulSoup(content_decoded)
+            # url = parsed_html.body.find('a', attrs ={'class':'data-link'})['href']
+            response = requests.get(hhs_url)  
             with open(csv_name, 'w') as f:
                 writer = csv.writer(f)
                 for line in response.iter_lines():
                     writer.writerow(line.decode('utf-8').split(','))
-
-            return tc.SFrame(csv_name) # raw to be handled by join_HHS_covidtracking_data
+            tc_data = tc.SFrame(csv_name) # raw to be handled by join_HHS_covidtracking_data        
+            tc_data['date'] = tc_data.apply(lambda x: x['date'].replace('/',''))
+            return tc_data
         else: 
             return tc.SFrame(csv_name)
     def get_covidtracking_data(self):
@@ -139,7 +141,7 @@ class HospitalData(object):
 
     def get_filtered_data(self):
         # returns Sframe within specified [self.start_date, self.end_date] and self.us_state 
-        self.data['selected_row'] = self.data.apply(lambda x: 1 if (x['state']==self.us_state and (x['date']>=int(self._start_date) and x['date']<=int(self._end_date)) ) else 0) #1 means row selected, 0 means row not selected for filtered data
+        self.data['selected_row'] = self.data.apply(lambda x: 1 if (x['state']==self.us_state and (int(x['date'])>=int(self._start_date) and int(x['date'])<=int(self._end_date)) ) else 0) #1 means row selected, 0 means row not selected for filtered data
         return self.data.filter_by([1],'selected_row').sort(['date'],ascending=True)
     
 

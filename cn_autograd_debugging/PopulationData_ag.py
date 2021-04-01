@@ -17,7 +17,11 @@ from pathlib import Path
 # import autograd.scipy.stats as stat
 
 from autograd.scipy.special import gamma as gamma_fcn
+# from autograd.scipy.special import gammainc
+from autograd_gamma import gammainc
 from autograd.scipy.stats import beta,norm
+
+# from autograd.scipy.stats import gamma as gamma_dist
 import autograd
 
 import csv
@@ -27,18 +31,29 @@ import urllib
 
 
 
-
-
+factorial=lambda x: np.prod([i for i in list(range(1,x+1))])
 
 def log_gamma_pdf(x,alpha,beta):
     return np.log((beta**alpha)*(x**(alpha-1))*np.exp(-beta*x)/gamma_fcn(alpha))
-
-
+    # print(gamma_dist.logpdf(x, alpha, loc=0, scale = 1 / beta), 'DEBUGGING')
+    # return gamma_dist.logpdf(x, alpha, loc=0, scale = 1 / beta)
+    # return np.log(gamma_at_x({'alpha':alpha,'beta',beta},x))
 def gamma_at_x(params,x):
-    # logpdf(x, a, loc=0, scale=1)
-    # return gamma_pdf(x=x,alpha=params['alpha'], beta = params['beta'])
+#     return np.exp(log_gamma_pdf(x=x,alpha=params['alpha'], beta = params['beta']))
+    if x==0:
+        return 0.0 
+    if x==1:
+        return cdf_at_x(params,x)
+    elif x>1:
+        return cdf_at_x(params,x) - cdf_at_x(params,x-1)
 
-    return np.exp(log_gamma_pdf(x=x,alpha=params['alpha'], beta = params['beta']))
+def cdf_at_x(params,x):
+    return (gammainc(params['alpha'],params['beta']*x))    
+    
+
+def pmf_at_x(params,x):
+    k = x-params['loc']
+    return (params['mu']**(k))*np.exp(-params['mu'])/ factorial(k)   
 
 class PopulationData(object):
     ''' Represents a Turicreate SFrame of csv data extracted from covidEstim project state-level estimates.csv
@@ -178,8 +193,8 @@ class PopulationData(object):
         flow_sus_to_inf_list_return = flow_sus_to_inf_list
         flow_sus_to_inf_list = list(self.filtered_data['infections'][-20:].to_numpy())+flow_sus_to_inf_list
         
-        if self.training_mode and self.params_for_training['forecast_type'] == 'infections':
-            return flow_sus_to_inf_list_return[self.params_for_training['t']]
+        # if self.training_mode and self.params_for_training['forecast_type'] == 'infections':
+        #     return flow_sus_to_inf_list_return[self.params_for_training['t']]
         
         # EQ 2-2 ##################################################################
         flow_inf_to_symp_list = []
@@ -191,8 +206,8 @@ class PopulationData(object):
         
         flow_inf_to_symp_list_return = flow_inf_to_symp_list
         flow_inf_to_symp_list = list(self.filtered_data['symptomatic'][-40:].to_numpy())+flow_inf_to_symp_list
-        if self.training_mode and self.params_for_training['forecast_type'] == 'symptomatic': 
-            return flow_inf_to_symp_list_return[self.params_for_training['t']]
+        # if self.training_mode and self.params_for_training['forecast_type'] == 'symptomatic': 
+        #     return flow_inf_to_symp_list_return[self.params_for_training['t']]
 
         # EQ 2-3 ##################################################################
         flow_symp_to_severe_list = []
@@ -202,36 +217,33 @@ class PopulationData(object):
                 # [self.params['prob_severe']*(flow_inf_to_symp_list[:i+40])[-j]*self.params['prob_soujourn_symp_fcn'](j) for j in range(1,1+len(flow_inf_to_symp_list[:i+40]))]))]                   
         
         flow_symp_to_severe_list_return = flow_symp_to_severe_list
-        if self.training_mode and self.params_for_training['forecast_type'] == 'severe':
-            return flow_symp_to_severe_list_return[self.params_for_training['t']]
+        # if self.training_mode and self.params_for_training['forecast_type'] == 'severe':
+        #     return flow_symp_to_severe_list_return[self.params_for_training['t']]
 
         # EQ in section 2.2C ##################################################################
         flow_symp_to_severe_list_right_shifted = [self.filtered_data['severe'][-1]]+flow_symp_to_severe_list[:-1]        
         flow_severe_to_hosp_list = [flow_symp_to_severe*self.params['prob_hosp'] for flow_symp_to_severe in flow_symp_to_severe_list_right_shifted]
         flow_severe_to_hosp_list_return = flow_severe_to_hosp_list
-        if self.training_mode and self.params_for_training['forecast_type'] == 'hosp':
-            return flow_severe_to_hosp_list_return[self.params_for_training['t']]
+        # if self.training_mode and self.params_for_training['forecast_type'] == 'hosp':
+        #     return flow_severe_to_hosp_list_return[self.params_for_training['t']]
 
-
+        if self.training_mode:
+            return {'date':self.dates_to_forecast,'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return}
         return tc.SFrame({'date':self.dates_to_forecast,'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return})
     
 
 
     def get_loss_given_truthdict_and_params(self, params, truth_dict, lambda_reg):
         # pop_states = ['infections', 'symptomatic','severe','hosp']
-        pop_states = ['hosp']
-        pred_dict = {'infections':[], 'symptomatic':[], 'severe':[], 'hosp':[],}
-        # print('get_loss_given_truthdict_and_params', truth_dict,'truth_dict')
-        for forecast_type in pop_states:
-            for t in range(len(truth_dict[forecast_type])):
-                self.params_for_training['t'] = t
-                self.params_for_training['forecast_type'] = forecast_type
-                pred_dict[forecast_type] += [self.get_forecasted_data(params)]
-
+        pop_states = ['hosp'] # we are only penalizing loss based on observable hosp admission and not other non observables 'infections', 'symptomatic','severe'
+        pred_dict = self.get_forecasted_data(params)
         loss = 0
-        for i,k in enumerate(pop_states):
-            loss+=np.sum(np.abs(np.array(pred_dict[k]) - np.array(truth_dict[k]))*np.linspace(0.1, 1, num=len(pred_dict[k])) )*(i+1)
 
+        # print(pred_dict['hosp'], 'PRED from get loss fcn')
+        # print(np.array(pred_dict['hosp']).shape, np.array(truth_dict['hosp']).shape)
+        for i,k in enumerate(pop_states):
+            loss+=np.sum(np.abs(np.array(pred_dict[k]) - np.array(truth_dict[k]))*np.linspace(0.1, 1, num=len(pred_dict[k])) )
+        
         try:
             self.loss_per_iteration[-1] = float(loss._value)
         except:
