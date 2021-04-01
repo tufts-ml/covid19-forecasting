@@ -8,14 +8,60 @@ from datetime import datetime, timedelta
 
 import os
 import argparse
+from _ctypes import PyObj_FromPtr
 import json
-
+import re
 from HospitalData_v20210330 import HospitalData
+
+########################################################
+# taken from https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
+# prints config file in nice and readable format, so that it is easier to edit
+
+class NoIndent(object):
+    """ Value wrapper. """
+    def __init__(self, value):
+        self.value = value
+
+
+class MyEncoder(json.JSONEncoder):
+    FORMAT_SPEC = '@@{}@@'
+    regex = re.compile(FORMAT_SPEC.format(r'(\d+)'))
+
+    def __init__(self, **kwargs):
+        # Save copy of any keyword argument values needed for use here.
+        self.__sort_keys = kwargs.get('sort_keys', None)
+        super(MyEncoder, self).__init__(**kwargs)
+
+    def default(self, obj):
+        return (self.FORMAT_SPEC.format(id(obj)) if isinstance(obj, NoIndent)
+                else super(MyEncoder, self).default(obj))
+
+    def encode(self, obj):
+        format_spec = self.FORMAT_SPEC  # Local var to expedite access.
+        json_repr = super(MyEncoder, self).encode(obj)  # Default JSON.
+
+        # Replace any marked-up object ids in the JSON repr with the
+        # value returned from the json.dumps() of the corresponding
+        # wrapped Python object.
+        for match in self.regex.finditer(json_repr):
+            # see https://stackoverflow.com/a/15012814/355230
+            id = int(match.group(1))
+            no_indent = PyObj_FromPtr(id)
+            json_obj_repr = json.dumps(no_indent.value, sort_keys=self.__sort_keys)
+
+            # Replace the matched id string with json formatted representation
+            # of the corresponding Python object.
+            json_repr = json_repr.replace(
+                            '"{}"'.format(format_spec.format(id)), json_obj_repr)
+
+        return json_repr
+
+########################################################
 
 def generate_config(hObj, directory):
 
     # initialize config file
-    config = {'states': ['InGeneralWard', 'OffVentInICU', 'OnVentInICU']}
+    config = {'states': NoIndent(['InGeneralWard', 'OffVentInICU', 'OnVentInICU'])}
 
     # warm start
     num_warm_up_days = 5
@@ -28,6 +74,7 @@ def generate_config(hObj, directory):
         config['init_num_InGeneralWard'][str(prev_day)] = init_InGeneralWard_div
         if prev_day == 0:
             config['init_num_InGeneralWard'][str(prev_day)] += init_InGeneralWard_mod
+    config['init_num_InGeneralWard'] = NoIndent(config['init_num_InGeneralWard'])
 
     # handling case in which only aggregate ICU counts are shown
     if np.isnan(hObj.get_OffVentInICU_counts()).all() and np.isnan(hObj.get_OnVentInICU_counts()).all():
@@ -45,6 +92,7 @@ def generate_config(hObj, directory):
         config['init_num_OffVentInICU'][str(prev_day)] = init_OffVentInICU_div
         if prev_day == 0:
             config['init_num_OffVentInICU'][str(prev_day)] += init_OffVentInICU_mod
+    config['init_num_OffVentInICU'] = NoIndent(config['init_num_OffVentInICU'])
 
     init_OnVentInICU_div = init_OnVentInICU // num_warm_up_days
     init_OnVentInICU_mod = init_OnVentInICU % num_warm_up_days
@@ -53,16 +101,17 @@ def generate_config(hObj, directory):
         config['init_num_OnVentInICU'][str(prev_day)] = init_OnVentInICU_div
         if prev_day == 0:
             config['init_num_OnVentInICU'][str(prev_day)] += init_OnVentInICU_mod
+    config['init_num_OnVentInICU'] = NoIndent(config['init_num_OnVentInICU'])
 
     # summary statistics names to be considered for ABC, and their relative weights (empirically deterimined, must average to 1.0)
     # these are contingent upon the available data. we handle here only the two most common cases
     # we assume 5-days smoothing for terminal counts for all states
     if np.isnan(hObj.get_OffVentInICU_counts()).all() and np.isnan(hObj.get_OnVentInICU_counts()).all():
-        config['summary_statistics_names'] = ["n_InGeneralWard", "n_InICU", "n_TERMINAL_5daysSmoothed"]
-        config['summary_statistics_weights'] = {"n_InGeneralWard": 0.7, "n_InICU": 1.0, "n_TERMINAL_5daysSmoothed": 1.3}
+        config['summary_statistics_names'] = NoIndent(["n_InGeneralWard", "n_InICU", "n_TERMINAL_5daysSmoothed"])
+        config['summary_statistics_weights'] = NoIndent({"n_InGeneralWard": 0.7, "n_InICU": 1.0, "n_TERMINAL_5daysSmoothed": 1.3})
     else:
-        config['summary_statistics_names'] = ["n_InGeneralWard", "n_OffVentInICU", "n_OnVentInICU",  "n_TERMINAL_5daysSmoothed"]
-        config['summary_statistics_weights'] = {"n_InGeneralWard": 0.7, "n_OffVentInICU": 0.9, "n_OnVentInICU": 1.1, "n_TERMINAL_5daysSmoothed": 1.3}
+        config['summary_statistics_names'] = NoIndent(["n_InGeneralWard", "n_OffVentInICU", "n_OnVentInICU",  "n_TERMINAL_5daysSmoothed"])
+        config['summary_statistics_weights'] = NoIndent({"n_InGeneralWard": 0.7, "n_OffVentInICU": 0.9, "n_OnVentInICU": 1.1, "n_TERMINAL_5daysSmoothed": 1.3})
 
     # various numbers
     config['num_past_timesteps'] = num_warm_up_days - 1
@@ -88,16 +137,16 @@ def generate_config(hObj, directory):
     config["proba_Die_after_Declining_InGeneralWard"] = 0.01
     config["proba_Die_after_Declining_OffVentInICU"] = 0.02
     config["proba_Die_after_Declining_OnVentInICU"] = 1.0 # this one MUST be fixed at 1.0
-    config["pmf_duration_Declining_InGeneralWard"] = {"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055}
-    config["pmf_duration_Recovering_InGeneralWard"] = {"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055}
-    config["pmf_duration_Declining_OffVentInICU"] = {"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055}
-    config["pmf_duration_Recovering_OffVentInICU"] = {"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055}
-    config["pmf_duration_Declining_OnVentInICU"] = {"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055}
-    config["pmf_duration_Recovering_OnVentInICU"] = {"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055}
+    config["pmf_duration_Declining_InGeneralWard"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    config["pmf_duration_Recovering_InGeneralWard"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    config["pmf_duration_Declining_OffVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    config["pmf_duration_Recovering_OffVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    config["pmf_duration_Declining_OnVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    config["pmf_duration_Recovering_OnVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
 
     # save config file as json
     with open(os.path.join(directory, 'config.json'), 'w+') as f:
-        json.dump(config, f, indent=0)
+        f.write(json.dumps(config, cls=MyEncoder, indent=2))
 
 
 if __name__ == '__main__':
