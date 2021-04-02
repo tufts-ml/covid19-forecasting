@@ -182,10 +182,10 @@ class PopulationData(object):
         #modify Rt based on government restrictionss
         Rt_0 = self.filtered_data['Rt'][-1]
         Rt_sf = self.future_data.filter_by([d.replace('-','') for d in dates_to_forecast], 'date').sort(['date'])['Rt'].to_numpy().tolist()
-
         
         for i,d in enumerate(dates_to_forecast):
             flow_sus_to_inf_list+= [flow_sus_to_inf_list[-1]*(Rt_list[-1]**(1/T_serial_list[-1]))]
+
             Rt_list+=[Rt_sf[i]]
             T_serial_list += [T_serial_list[-1]]
         
@@ -196,7 +196,7 @@ class PopulationData(object):
         
         # EQ 2-2 ##################################################################
         flow_inf_to_symp_list = []
-        for i,d in enumerate(self.dates_to_forecast):
+        for i,d in enumerate(dates_to_forecast):
             flow_sus_to_inf_list
             flow_inf_to_symp_list+= [np.sum(np.array(\
                 [self.params['prob_sympt']*(flow_sus_to_inf_list[:i+20])[-j]*gamma_at_x({'alpha':self.params['prob_soujourn_inf_alpha'],'beta':self.params['prob_soujourn_inf_beta']},j) for j in range(1,1+len(flow_sus_to_inf_list[:i+20]))]))]                   
@@ -206,7 +206,7 @@ class PopulationData(object):
 
         # EQ 2-3 ##################################################################
         flow_symp_to_severe_list = []
-        for i,d in enumerate(self.dates_to_forecast):
+        for i,d in enumerate(dates_to_forecast):
             flow_symp_to_severe_list+= [np.sum(np.array(\
                 [self.params['prob_severe']*(flow_inf_to_symp_list[:i+40])[-j]*gamma_at_x({'alpha':self.params['prob_soujourn_symp_alpha'],'beta':self.params['prob_soujourn_symp_beta']},j) for j in range(1,1+len(flow_inf_to_symp_list[:i+40]))]))]                   
 
@@ -218,10 +218,11 @@ class PopulationData(object):
         flow_severe_to_hosp_list = [flow_symp_to_severe*self.params['prob_hosp'] for flow_symp_to_severe in flow_symp_to_severe_list]
         flow_severe_to_hosp_list_return = flow_severe_to_hosp_list
 
-        # print(len(self.dates_to_forecast),len(Rt_list[1:]),'dates to forecast and Rt list len')
+        # print(len(dates_to_forecast),len(Rt_list[1:]),'dates to forecast and Rt list len')
+        # print(len(dates_to_forecast),len(Rt_list[1:]),len(flow_sus_to_inf_list_return),len(flow_inf_to_symp_list_return),len(flow_symp_to_severe_list_return),len(flow_severe_to_hosp_list_return))
         if self.training_mode:
-            return {'date':self.dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return}
-        return tc.SFrame({'date':self.dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return})
+            return {'date':dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return}
+        return tc.SFrame({'date':dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return})
     
 
 
