@@ -19,7 +19,7 @@ from pathlib import Path
 from autograd.scipy.special import gamma as gamma_fcn
 # from autograd.scipy.special import gammainc
 from autograd_gamma import gammainc
-from autograd.scipy.stats import beta,norm
+from autograd.scipy.stats import beta,norm,poisson
 
 # from autograd.scipy.stats import gamma as gamma_dist
 import autograd
@@ -181,7 +181,7 @@ class PopulationData(object):
 
         #modify Rt based on government restrictionss
         Rt_0 = self.filtered_data['Rt'][-1]
-        Rt_sf = self.future_data.filter_by([d.replace('-','') for d in dates_to_forecast], 'date').sort(['date'])['Rt'].to_numpy()
+        Rt_sf = self.future_data.filter_by([d.replace('-','') for d in dates_to_forecast], 'date').sort(['date'])['Rt'].to_numpy().tolist()
 
         
         for i,d in enumerate(dates_to_forecast):
@@ -193,8 +193,6 @@ class PopulationData(object):
         flow_sus_to_inf_list_return = flow_sus_to_inf_list
         flow_sus_to_inf_list = list(self.filtered_data['infections'][-20:].to_numpy())+flow_sus_to_inf_list
         
-        # if self.training_mode and self.params_for_training['forecast_type'] == 'infections':
-        #     return flow_sus_to_inf_list_return[self.params_for_training['t']]
         
         # EQ 2-2 ##################################################################
         flow_inf_to_symp_list = []
@@ -202,54 +200,51 @@ class PopulationData(object):
             flow_sus_to_inf_list
             flow_inf_to_symp_list+= [np.sum(np.array(\
                 [self.params['prob_sympt']*(flow_sus_to_inf_list[:i+20])[-j]*gamma_at_x({'alpha':self.params['prob_soujourn_inf_alpha'],'beta':self.params['prob_soujourn_inf_beta']},j) for j in range(1,1+len(flow_sus_to_inf_list[:i+20]))]))]                   
-                # [self.params['prob_sympt']*(flow_sus_to_inf_list[:i+20])[-j]*self.params['prob_soujourn_inf_fcn'](j) for j in range(1,1+len(flow_sus_to_inf_list[:i+20]))]))]                   
         
         flow_inf_to_symp_list_return = flow_inf_to_symp_list
         flow_inf_to_symp_list = list(self.filtered_data['symptomatic'][-40:].to_numpy())+flow_inf_to_symp_list
-        # if self.training_mode and self.params_for_training['forecast_type'] == 'symptomatic': 
-        #     return flow_inf_to_symp_list_return[self.params_for_training['t']]
 
         # EQ 2-3 ##################################################################
         flow_symp_to_severe_list = []
         for i,d in enumerate(self.dates_to_forecast):
             flow_symp_to_severe_list+= [np.sum(np.array(\
                 [self.params['prob_severe']*(flow_inf_to_symp_list[:i+40])[-j]*gamma_at_x({'alpha':self.params['prob_soujourn_symp_alpha'],'beta':self.params['prob_soujourn_symp_beta']},j) for j in range(1,1+len(flow_inf_to_symp_list[:i+40]))]))]                   
-                # [self.params['prob_severe']*(flow_inf_to_symp_list[:i+40])[-j]*self.params['prob_soujourn_symp_fcn'](j) for j in range(1,1+len(flow_inf_to_symp_list[:i+40]))]))]                   
+
         
         flow_symp_to_severe_list_return = flow_symp_to_severe_list
-        # if self.training_mode and self.params_for_training['forecast_type'] == 'severe':
-        #     return flow_symp_to_severe_list_return[self.params_for_training['t']]
 
         # EQ in section 2.2C ##################################################################
         flow_symp_to_severe_list_right_shifted = [self.filtered_data['severe'][-1]]+flow_symp_to_severe_list[:-1]        
-        flow_severe_to_hosp_list = [flow_symp_to_severe*self.params['prob_hosp'] for flow_symp_to_severe in flow_symp_to_severe_list_right_shifted]
+        flow_severe_to_hosp_list = [flow_symp_to_severe*self.params['prob_hosp'] for flow_symp_to_severe in flow_symp_to_severe_list]
         flow_severe_to_hosp_list_return = flow_severe_to_hosp_list
-        # if self.training_mode and self.params_for_training['forecast_type'] == 'hosp':
-        #     return flow_severe_to_hosp_list_return[self.params_for_training['t']]
 
+        # print(len(self.dates_to_forecast),len(Rt_list[1:]),'dates to forecast and Rt list len')
         if self.training_mode:
-            return {'date':self.dates_to_forecast,'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return}
-        return tc.SFrame({'date':self.dates_to_forecast,'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return})
+            return {'date':self.dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return}
+        return tc.SFrame({'date':self.dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return})
     
+
 
 
     def get_loss_given_truthdict_and_params(self, params, truth_dict, lambda_reg):
         # pop_states = ['infections', 'symptomatic','severe','hosp']
         pop_states = ['hosp'] # we are only penalizing loss based on observable hosp admission and not other non observables 'infections', 'symptomatic','severe'
         pred_dict = self.get_forecasted_data(params)
-        loss = 0
+        log_loss = 0
 
         # print(pred_dict['hosp'], 'PRED from get loss fcn')
         # print(np.array(pred_dict['hosp']).shape, np.array(truth_dict['hosp']).shape)
         for i,k in enumerate(pop_states):
-            loss+=np.sum(np.abs(np.array(pred_dict[k]) - np.array(truth_dict[k]))*np.linspace(0.1, 1, num=len(pred_dict[k])) )
+            # log_loss+= np.sum(np.array([poisson.logpmf(t,p) for (p,t) in zip(pred_dict[k],truth_dict[k])]))
+            num_preds = len(pred_dict[k])
+            log_loss+= np.sum(np.array([2*(e/num_preds)*poisson.logpmf(t,p) for e,(p,t) in enumerate(zip(pred_dict[k],truth_dict[k]))]))
         
         try:
-            self.loss_per_iteration[-1] = float(loss._value)
+            self.loss_per_iteration[-1] = float(-log_loss._value)
         except:
             self.loss_per_iteration[-1] = float(np.nan)
-
-        return  loss + (lambda_reg*self.get_log_prior_penalty(params))
+        # return  -log_loss 
+        return  -log_loss + (lambda_reg*self.get_log_prior_penalty(params))
 
     def get_log_prior_penalty(self,params):
         log_prior_penalty = 0
