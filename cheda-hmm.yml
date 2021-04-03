@@ -1,4 +1,4 @@
-name: semimarkov_forecaster
+name: cheda-hmm
 channels:
   - defaults
 dependencies:
@@ -21,3 +21,4 @@ dependencies:
   ## Pip-only packages
   - pip:
     - dash>=1.10.0
+    - sodapy
