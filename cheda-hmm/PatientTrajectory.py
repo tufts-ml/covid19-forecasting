@@ -1,9 +1,7 @@
 """
 PatientTrajectory.py
-
 Examples
 --------
-
 # Patient that goes through all stages but eventually recovers
 >>> K = 5
 >>> p = PatientTrajectory()
@@ -11,17 +9,13 @@ Examples
 >>> p.durations = [5, 4, 3, 2, 2]
 >>> p.health_state_ids = [0, 0, 0, 0, 1]
 >>> p.is_terminal_0 = False
-
 >>> T = np.sum(p.durations) + 1
 >>> empty_count_TK = np.zeros((T, K), dtype=np.int32)
-
 >>> t_st = 0 # start time, 
-
 ## Check terminal counts is accurate
 >>> term_T1 = p.update_terminal_count_matrix(empty_count_TK.copy()[:,0], t_st)
 >>> np.sum(term_T1)
 0
-
 ## Check occupancy counts are accurate
 >>> occ_TK = p.update_count_matrix(empty_count_TK.copy(), 0)
 >>> np.allclose(np.sum(occ_TK[:-1,:], axis=1), 1.0)
@@ -44,9 +38,7 @@ array([[1, 0, 0, 0, 0],
        [0, 0, 0, 0, 1],
        [0, 0, 0, 0, 1],
        [0, 0, 0, 0, 0]], dtype=int32)
-
 >>> trans_time_ids = np.hstack([[0], np.cumsum(p.durations)])
-
 ## Check admit counts has only one entry
 >>> admit_TK = p.update_admit_count_matrix(empty_count_TK.copy(), 0)
 >>> np.sum(admit_TK)
@@ -58,7 +50,6 @@ array([[1, 0, 0, 0, 0],
        [0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0]], dtype=int32)
-
 ## Check discharge counts has only one entry
 >>> discharge_TK = p.update_discharge_count_matrix(empty_count_TK.copy(), 0)
 >>> np.sum(discharge_TK)
@@ -70,7 +61,6 @@ array([[0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0],
        [0, 0, 0, 0, 1]], dtype=int32)
-
 >>> summary_dict = p.get_length_of_stay_summary_dict()
 >>> summary_dict['duration_State00']
 5
@@ -96,7 +86,6 @@ HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering'}
 
 class PatientTrajectory(object):
     ''' Represents a simulated patient trajectory using semi-markov model
-
     Attributes
     ----------
     durations: list_of_int
@@ -111,7 +100,6 @@ class PatientTrajectory(object):
 
     def __init__(self, start_state=None, config_dict=None, prng=None, next_state_map=None, state_name_to_id=None, t=None):
         ''' Construct a PatientTrajectory from provided input
-
         Args
         ----
         start_state : str
@@ -119,7 +107,6 @@ class PatientTrajectory(object):
         config_dict : dict
             Dict containing parameters of semi-markov process (read from JSON file)
         prng : numpy RandomState
-
         Returns
         -------
         Newly constructed PatientTrajectory instance
@@ -136,6 +123,7 @@ class PatientTrajectory(object):
         else:
             self.simulate_trajectory(start_state, config_dict, prng, next_state_map, state_name_to_id, t)
 
+    # @profile
     def simulate_trajectory(self, start_state, config_dict, prng, next_state_map, state_name_to_id, t):
         ## Simulate trajectory
         state = start_state
@@ -148,25 +136,25 @@ class PatientTrajectory(object):
             choices_and_probas_dict = config_dict['pmf_duration_%s_%s' % (HEALTH_STATE_ID_TO_NAME[health_state_id], state)]
             choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
             probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-            try:
-                assert(np.allclose(1.0, np.sum(probas)))
-            except AssertionError as e:
-                L = len(probas)
-                diagnostic_df = pd.DataFrame(
-                            np.hstack([probas, np.cumsum(probas)]).reshape((2,L)).T,
-                            columns=['probas', 'cumsum'])
-                raise ValueError("Probabilities do not sum to one for state %s,%s\n%s" % (
-                    state,
-                    HEALTH_STATE_ID_TO_NAME[health_state_id],
-                    str(diagnostic_df)))
+            # try:
+            #     assert(np.allclose(1.0, np.sum(probas))) # this accounts for 57% of the runtime of this function!!!
+            # except AssertionError as e:
+            #     L = len(probas)
+            #     diagnostic_df = pd.DataFrame(
+            #                 np.hstack([probas, np.cumsum(probas)]).reshape((2,L)).T,
+            #                 columns=['probas', 'cumsum'])
+            #     raise ValueError("Probabilities do not sum to one for state %s,%s\n%s" % (
+            #         state,
+            #         HEALTH_STATE_ID_TO_NAME[health_state_id],
+            #         str(diagnostic_df)))
 
-            duration = prng.choice(choices, p=probas)
+            duration = prng.choice(choices, p=probas) # without the assertions, this accounts for 56% of the runtime of this function
             if len(self.state_ids) == 0 and t <= 0:
                 try:
                     choices_and_probas_dict = config_dict['pmf_initial_duration_spent_%s' % (state)]
                     choices = np.fromiter(choices_and_probas_dict.keys(), dtype=np.int32)
                     probas = np.fromiter(choices_and_probas_dict.values(), dtype=np.float64)
-                    assert np.allclose(1.0, np.sum(probas))
+                    # assert np.allclose(1.0, np.sum(probas))
                     duration_spent = prng.choice(choices, p=probas)
                     duration = np.maximum(duration - duration_spent, 1)
                 except KeyError:
@@ -194,10 +182,9 @@ class PatientTrajectory(object):
 
         self.is_terminal_0 = (state == 'TERMINAL' and health_state_id < 1)
             
-
+    # @profile
     def update_count_matrix(self, count_TK, t_start):
         ''' Update count matrix tracking population of each state at each time
-
         Returns
         -------
         count_TK : 2D array with shape (T, K)
@@ -210,9 +197,9 @@ class PatientTrajectory(object):
             t += self.durations[ii]
         return count_TK
 
+    # @profile
     def update_terminal_count_matrix(self, count_T1, t_start):
         ''' Update count matrix tracking population of each state at each time
-
         Returns
         -------
         count_T1 : 2D array with shape (T, 1)
@@ -224,9 +211,9 @@ class PatientTrajectory(object):
             count_T1[t_terminal, 0] += 1
         return count_T1
 
+    # @profile
     def update_admit_count_matrix(self, count_TK, t_start):
         ''' Update count matrix tracking "newly admitted" at each state, time
-
         Returns
         -------
         count_TK : 2D array with shape (T, K)
@@ -237,9 +224,9 @@ class PatientTrajectory(object):
         count_TK[t_start, self.state_ids[0]] += 1
         return count_TK
 
+    # @profile
     def update_discharge_count_matrix(self, count_TK, t_start):
         ''' Update count matrix tracking "recovery" from each state at each time
-
         Returns
         -------
         count_TK : 2D array with shape (T, K)
@@ -251,9 +238,9 @@ class PatientTrajectory(object):
             count_TK[t_start + np.sum(self.durations), self.state_ids[-1]] += 1
         return count_TK
 
+    # @profile
     def get_length_of_stay_summary_dict(self):
         ''' Compute summary statistics about this patient's entire stay
-
         Returns
         -------
         summary_dict : dict 
@@ -272,11 +259,17 @@ class PatientTrajectory(object):
         summary_dict['is_Terminal'] = int(self.is_terminal_0)
         summary_dict['is_InICU'] = 0
         summary_dict['is_OnVent'] = 0
-        summary_dict['duration_All'] = np.sum(self.durations)
+        # summary_dict['duration_All'] = np.sum(self.durations) # this is just extra. leaving it here just to be sure
+
+        # doing this to cut down on time
+        summary_dict['duration_All'] = 0
         for ll in range(L):
             health_state = HEALTH_STATE_ID_TO_NAME[self.health_state_ids[ll]]
             state_name = state_id_to_name[self.state_ids[ll]]
             duration = self.durations[ll]
+
+            summary_dict['duration_All'] += duration
+
             summary_dict['duration_' + state_name] += duration
             summary_dict['duration_' + state_name + "+" + health_state] += duration
 
@@ -285,5 +278,4 @@ class PatientTrajectory(object):
             if state_name.count("OnVent"):
                 summary_dict['is_OnVent'] = 1
 
-        summary_dict['duration_All'] = np.sum(self.durations)
         return summary_dict
