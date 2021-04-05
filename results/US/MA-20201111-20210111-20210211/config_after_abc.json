@@ -191,5 +191,5 @@
   "21": 0.045,
   "22": 0.055
  },
- "last_samples": "results/US/MA-20201111-20210111-20210211\\posterior_samples.json"
+ "samples_file": "results/US/MA-20201111-20210111-20210211\\posterior_samples.json"
 }

@@ -8,29 +8,21 @@ import seaborn as sns
 
 sns.set_style("whitegrid")
 
-def plot_distances(priors, stat):
-    stats = {}
-    for prior in priors:
-        stats[prior] = pd.read_csv(prior, index_col=0)
+def plot_stat(stats_filepath, stat, last_N_not_nan=None):
+    stats = pd.read_csv(stats_filepath, index_col=0)
+    data = np.array(stats[stat])
 
-    plt.figure(figsize=(8, 5))
-    for prior in priors:
-        data = np.array(stats[prior][stat])
-#         data = data[~np.isnan(data)][-250:]
-#         data = data[-1000:]
-        plt.plot(data, label=prior, marker='.')
-    plt.ylabel('Distance')
+    if last_N_not_nan:
+        data = data[~np.isnan(data)][-last_N_not_nan:]
+
+    sns.set_context("notebook", font_scale=1.25)
+    plt.figure(figsize=(10, 6))
+    plt.plot(data, marker='.')
+    plt.ylabel(stat)
     plt.xlabel('Iterations')
-#     plt.legend()
     plt.tight_layout()
-    plt.savefig("USA/figures/distances_plot_south_tees.png", bbox_inches='tight', pad_inches=0)
     plt.show()
 
-
-sns.set_context("notebook", font_scale=1.25)
-stat = 'accepted_distances'
-priors = ['NHS_results/final_results/abc_0_south_tees_hospitals_nhs_foundation_trust_TrainingAndTesting_stats_OnCDCTableReasonable.csv']
-plot_distances(priors, stat)
 
 
 def sample_params_from_prior(prior_dict, states, num_samples=100):
@@ -105,12 +97,12 @@ def gather_params(config_file, num_samples=2000):
             for health in ['Recovering', 'Declining']:
                 max_dur = len(config['pmf_duration_%s_%s' % (health, state)])
                 durations = [str(x) for x in range(1, max_dur+1)] + ['lam', 'tau']
-            for dur in durations:
-                results['pmf_duration_%s_%s' % (health, state)][dur].append(theta['pmf_duration_%s_%s' % (health, state)][dur])
+                for dur in durations:
+                    results['pmf_duration_%s_%s' % (health, state)][dur].append(theta['pmf_duration_%s_%s' % (health, state)][dur])
     return results
 
 def plot_params(params_list, filename_prior='priors/abc_prior_config_OnCDCTableReasonable.json', filename_to_save=None, filename_true_params=None, plot_disjointly=False):
-    if not params_list.isinstance(list):
+    if not isinstance(params_list, list):
         params_list = [params_list]
 
     num_samples = len(params_list)
@@ -155,7 +147,6 @@ def plot_params(params_list, filename_prior='priors/abc_prior_config_OnCDCTableR
             for arr in param_distributions[name]:
                 temp = np.append(temp, arr)
             param_distributions[name] = np.copy(temp)
-            
 
     if filename_true_params is not None:
         with open(filename_true_params, 'r') as f:
@@ -202,7 +193,7 @@ def plot_params(params_list, filename_prior='priors/abc_prior_config_OnCDCTableR
                 plt.ylim([0.0, 0.5])
                 plt.legend()
                 plt.tight_layout()
-                if save:
+                if filename_to_save:
                     plt.savefig(filename_to_save + "_%s.pdf" % (param), bbox_inches='tight', pad_inches=0)
                 # plt.show()
             else:
@@ -232,7 +223,7 @@ def plot_params(params_list, filename_prior='priors/abc_prior_config_OnCDCTableR
                     plt.xlim((0, 1))
                 plt.legend()
                 plt.tight_layout()
-                if save:
+                if filename_to_save:
                     plt.savefig(filename_to_save + "_%s.pdf" % (param), bbox_inches='tight', pad_inches=0)
                 # plt.show()
             else:
@@ -254,9 +245,87 @@ def plot_params(params_list, filename_prior='priors/abc_prior_config_OnCDCTableR
 
     if not plot_disjointly:
         plt.tight_layout()
-        if save:
+        if filename_to_save:
             plt.savefig(filename_to_save, bbox_inches='tight', pad_inches=0)
         plt.show()
 
 
-# if __name__ == '__main__':
+#################################################
+
+def compute_true_summary_statistics(csv_df, expected_columns, smooth_terminal_counts=True):
+    new_dict = {}
+
+    for column in expected_columns:
+        if column == 'timestep' or column == 'date':
+            continue
+        elif column == 'n_occupied_beds':
+            new_dict[column] = csv_df['n_InGeneralWard'] + csv_df['n_OffVentInICU'] + csv_df['n_OnVentInICU']
+        elif column == 'n_InICU':
+            new_dict[column] = csv_df['n_OffVentInICU'] + csv_df['n_OnVentInICU']
+        elif column == 'n_TERMINAL' and smooth_terminal_counts:
+            try:
+                new_dict[column] = csv_df['n_TERMINAL_5daysSmoothed']
+            except:
+                new_dict[column] = csv_df[column]
+        else:
+            new_dict[column] = csv_df[column]
+
+    return pd.DataFrame(new_dict)
+
+def plot_forecasts(forecasts_template_path, config_filepath, true_counts_filepath, figure_template_path=None, smooth_terminal_counts=True,
+                    expected_columns=['n_InGeneralWard', 'n_OffVentInICU', 'n_OnVentInICU', 'n_InICU', 'n_TERMINAL']):
+
+    title_map = {'n_discharged_InGeneralWard': 'Number of Discharged Patients', 'n_occupied_beds': 'Number of Occupied Beds', 'n_InGeneralWard': 'Number of Patients in General Ward', 'n_OffVentInICU': 'Number of Patients in ICU, not on the Ventilator', 'n_OnVentInICU': 'Number of Patients on the Ventilator in the ICU', 'n_InICU': 'Number of Patients in ICU', 'n_TERMINAL': 'Number of Terminal Patients'}
+
+    true_df = pd.read_csv(true_counts_filepath)
+
+    pred_df = pd.read_csv(forecasts_template_path + '_mean.csv')
+    pred_lower_df = pd.read_csv(forecasts_template_path + '_percentile=002.50.csv')
+    pred_upper_df = pd.read_csv(forecasts_template_path + '_percentile=097.50.csv')
+
+    timesteps = true_df['timestep']
+
+    with open(config_filepath, 'r') as f:
+        config = json.load(f)
+        num_training_timesteps = config['num_training_timesteps']
+
+    sns.set_context("notebook", font_scale=1.25)        
+
+    for column in expected_columns:
+        plt.figure(figsize=(16, 4))
+        plt.axvline(num_training_timesteps, ls='--', color='grey')
+        
+        if column == 'n_TERMINAL' and smooth_terminal_counts:
+            plt.plot(timesteps, true_df['n_TERMINAL_5daysSmoothed'], label='true-smoothed', marker='d', color='k')
+            plt.plot(timesteps[num_training_timesteps:], true_df['n_TERMINAL'][num_training_timesteps:], label='true', marker='o', color='brown')
+        else:
+            plt.plot(timesteps, true_df[column], label='true', marker='d', color='k')
+        
+        plt.plot(timesteps, compute_true_summary_statistics(pred_df, expected_columns, smooth_terminal_counts)[column], color='blue', label='ABC')
+        plt.fill_between(timesteps, compute_true_summary_statistics(pred_lower_df, expected_columns, smooth_terminal_counts)[column], compute_true_summary_statistics(pred_upper_df, expected_columns, smooth_terminal_counts)[column], color='blue', alpha=0.15)
+        
+        plt.xticks(np.arange(timesteps.shape[0]//7)*7)    
+        plt.xlabel('Days since Start of Training Period')
+        plt.ylabel('Census Counts')
+        plt.title(title_map[column])
+        plt.legend(loc='upper left')
+        if figure_template_path:
+            plt.savefig(figure_template_path + '_%s.pdf' % (column), bbox_inches='tight', pad_inches=0)
+        plt.show()
+
+#################################################
+
+if __name__ == '__main__':
+
+    ## Plot statistics across iterations of ABC
+    ## works!!!
+    # plot_stat('results/US/MA-20201111-20210111-20210211/PRETRAINED_abc_training_stats.csv', 'accepted_distances')
+
+    ## Plot learned posterior and prior
+    ## works!!!
+    # params = gather_params('results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json', num_samples = 2000)
+    # plot_params(params)
+
+    ## Plot forecasts for counts of interest
+    ## works!!!
+    # plot_forecasts('results/US/MA-20201111-20210111-20210211/PRETRAINED_summary_after_abc', 'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json', 'datasets/US/MA-20201111-20210111-20210211/daily_counts.csv')

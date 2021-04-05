@@ -183,12 +183,12 @@ def update_config_given_sample(config_dict, samples_file, i):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--func_name', default='python', type=str)
-    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/config_after_abc.json')
+    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
     parser.add_argument('--output_dir', default='output/US/MA-20201111-20210111-20210211')
-    parser.add_argument('--output_file', default='results_after_abc_random_seed=SEED.csv')
+    parser.add_argument('--output_file', default='PRETRAINED_results_after_abc_random_seed=SEED.csv')
     parser.add_argument('--approximate', default='5', type=str)
     parser.add_argument('--random_seed', default=1001, type=int)
-    parser.add_argument('--num_seeds', default=200, type=int)
+    parser.add_argument('--num_seeds', default=2000, type=int)
     args = parser.parse_args()
 
     if args.approximate == 'None':
@@ -200,10 +200,12 @@ if __name__ == '__main__':
         config_dict = json.load(f)
 
     if 'samples_file' in config_dict:
+        print('Forecasting from samples ...')
         with open(config_dict['samples_file'], 'r') as f:
             samples_file = json.load(f)
         run_from_samples = True
     else:
+        print('Forecasting from fixed params ...')
         run_from_samples = False
 
     if not os.path.exists(args.output_dir): # creates directory if it does not exist

@@ -694,7 +694,7 @@ class ABCSampler(object):
     def save_thetas_to_json(self, thetas, filename):
         states = self.config_dict['states']
 
-        json_to_save = {'last_thetas': []}
+        json_to_save = {'last_samples': []}
         for theta in thetas:
             params_dict = {}
             for s in range(len(states)):
@@ -720,7 +720,7 @@ class ABCSampler(object):
                         # update each individual choice with the value in theta
                         params_dict['pmf_duration_%s_%s' % (health_state, states[s])][choice] = probas[c]
                             
-            json_to_save['last_thetas'].append(deepcopy(params_dict))
+            json_to_save['last_samples'].append(deepcopy(params_dict))
 
         with open(filename, 'w+') as f:
             json.dump(json_to_save, f, indent=1)
@@ -845,7 +845,7 @@ if __name__ == '__main__':
     sampler.save_thetas_to_json(last_thetas, thetas_output)
 
     with open(config_post_output, 'w+') as f:
-        config_copy['last_samples'] = thetas_output
+        config_copy['samples_file'] = thetas_output
         json.dump(config_copy, f, indent=1)
 
     stats = {'all_distances': all_distances, 'accepted_distances': accepted_distances, 'all_alphas': all_alphas, 'accepted_alphas': accepted_alphas, 'epsilon_trace': sampler.epsilon_trace}
