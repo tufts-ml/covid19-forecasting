@@ -8,7 +8,7 @@ import sys
 import time
 from tqdm import tqdm
 import scipy
-from semimarkov_forecaster import run_forecast__python
+from cheda_hmm import run_forecast__python
 
 def run_simulation(random_seed, output_file, config_dict, states, func_name, approximate=None):
     prng = np.random.RandomState(random_seed)
@@ -134,7 +134,7 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
     states_by_id = np.array([0, 1, 2], dtype=np.int32)
     
     if func_name.count('cython'):
-        from semimarkov_forecaster import run_forecast__cython
+        from cheda_hmm import run_forecast__cython
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__cython(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
     else:
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__python(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
@@ -168,8 +168,8 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
         index=False, float_format="%.0f")
 
 def update_config_given_sample(config_dict, samples_file, i):
-    num_thetas = len(samples_file['last_thetas'])
-    theta = samples_file['last_thetas'][num_thetas - 1 - i]
+    num_thetas = len(samples_file['last_samples'])
+    theta = samples_file['last_samples'][num_thetas - 1 - i]
     for key in theta:
         if 'duration' in key:
             config_dict[key] = {}
@@ -183,29 +183,34 @@ def update_config_given_sample(config_dict, samples_file, i):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--func_name', default='python', type=str)
-    parser.add_argument('--config_file', default='results/US/MA-20201111-20210111-20210211/config_after_abc.json')
-    parser.add_argument('--output_file', default='output/US/MA-20201111-20210111-20210211/results_after_abc_random_seed=SEED.csv')
-    parser.add_argument('--approximate', default='None', type=str)
+    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/config_after_abc.json')
+    parser.add_argument('--output_dir', default='output/US/MA-20201111-20210111-20210211')
+    parser.add_argument('--output_file', default='results_after_abc_random_seed=SEED.csv')
+    parser.add_argument('--approximate', default='5', type=str)
     parser.add_argument('--random_seed', default=1001, type=int)
-    parser.add_argument('--num_seeds', default=1000, type=int)
+    parser.add_argument('--num_seeds', default=200, type=int)
     args = parser.parse_args()
-
-    output_file_base = args.output_file
 
     if args.approximate == 'None':
         approximate = None
     else:
         approximate = int(args.approximate)
 
-    with open(args.params_json_file, 'r') as f:
+    with open(args.config_path, 'r') as f:
         config_dict = json.load(f)
 
-    if 'samples_file' in config_dic:
-        with open(config_dic['samples_file'], 'r') as f:
+    if 'samples_file' in config_dict:
+        with open(config_dict['samples_file'], 'r') as f:
             samples_file = json.load(f)
         run_from_samples = True
     else:
         run_from_samples = False
+
+    if not os.path.exists(args.output_dir): # creates directory if it does not exist
+        from pathlib import Path
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    
+    output_file_base = os.path.join(args.output_dir, args.output_file)
 
     states = config_dict['states']
     for i in tqdm(range(args.num_seeds)):

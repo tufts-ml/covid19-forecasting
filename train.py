@@ -11,7 +11,10 @@ import warnings
 from copy import deepcopy
 import pickle
 import itertools
-from semimarkov_forecaster import run_forecast__python
+from cheda_hmm import run_forecast__python
+
+import warnings
+warnings.filterwarnings('ignore')
 
 def run_simulation(random_seed, config_dict, states, func_name, approximate=None):
     prng = np.random.RandomState(random_seed)
@@ -103,7 +106,7 @@ def run_simulation(random_seed, config_dict, states, func_name, approximate=None
     states_by_id = np.array([0, 1, 2], dtype=np.int32)
     
     if func_name.count('cython'):
-        from semimarkov_forecaster import run_forecast__cython
+        from cheda_hmm import run_forecast__cython
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__cython(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
     else:
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__python(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
@@ -731,37 +734,36 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
     # Input files
-    parser.add_argument('--hospital', default='MA_NovToFeb_61days')
-    parser.add_argument('--config_template', default='USA/MA_data/config') # template for config_file
-    parser.add_argument('--input_template', default='USA/MA_data/')
-    parser.add_argument('--output_template', default='USA/MA_results/abc')
+    parser.add_argument('--input_dir', default='datasets/US/MA-20201111-20210111-20210211')
+    parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211')
+    parser.add_argument('--num_samples_to_save', default=0.999991)
 
     # Details of simulation
     parser.add_argument('--func_name', default='python')
-    parser.add_argument('--approximate', default='7')
+    parser.add_argument('--approximate', default='5')
     parser.add_argument('--num_simulations', default=1, type=int) # number of simulations per proposal. 
-                                                                # More simulations means less dependence on rrandomness, 
-                                                                # but at a much higher computational cost. We keep this to 1
+                                                                  # More simulations means less dependence on rrandomness, 
+                                                                  # but at a much higher computational cost. We keep this to 1
 
     # arguments for annealing schedule
     parser.add_argument('--num_iterations', default=32000, type=int) # number of sampling iterations 
-                                                                   # each iteration has an inner loop through each probabilistic parameter vector
+                                                                     # each iteration has an inner loop through each probabilistic parameter vector
     parser.add_argument('--start_epsilon', default=0.7, type=float)
     parser.add_argument('--annealing_constant', default=0.999991)
     
     # specify proposal hyperparameters
     parser.add_argument('--dir_scale', default='100-100') # scale parameter for the dirichlet proposal distribution (min-max, linearly interpolated)
+                                                          #     gets doubled (less variance) for the proposals of proba_die_after_declining
     parser.add_argument('--lam_stddev', default='0.5-0.5') # stddev parameter for lambda (truncated normal) (min-max, linearly interpolated)
     parser.add_argument('--tau_stddev', default='0.1-0.1') # stddev parameter for tau (normal) (min-max, linearly interpolated)
 
     # specify parameter initialization and prior
     parser.add_argument('--params_init', default='None') # default is initialize with sample from prior
-    parser.add_argument('--abc_prior_config_template', default='priors/abc_prior_config')
-    parser.add_argument('--abc_prior_type', default='OnCDCTableReasonable')
+    parser.add_argument('--abc_prior_config', default='priors/abc_prior_config_OnCDCTableReasonable.json')
 
-    # obsolete arguments
-    parser.add_argument('--random_seed', default=101, type=int)
-    parser.add_argument('--algorithm', default='abc')
+    # obsolete arguments, ignore them
+    parser.add_argument('--random_seed', default=101, type=int) # unused
+    parser.add_argument('--algorithm', default='abc') # stays fixed on 'abc'
 
     args, unknown_args = parser.parse_known_args()
 
@@ -774,14 +776,14 @@ if __name__ == '__main__':
     num_simulations = int(args.num_simulations)
     start_epsilon = float(args.start_epsilon)
     annealing_constant = float(args.annealing_constant)
-    # train_test_split = int(args.train_test_split)
+    num_samples_to_save = int(args.num_samples_to_save)
     dir_scale = list(map(int, args.dir_scale.split('-')))
     lam_stddev = list(map(float, args.lam_stddev.split('-')))
     tau_stddev = list(map(float, args.tau_stddev.split('-')))
     algorithm = args.algorithm
     func_name = args.func_name
 
-    if args.approximate == 'None':
+    if args.approximate == 'None' or args.approximate is None:
         approximate = None
     else:
         approximate = int(args.approximate)
@@ -790,29 +792,37 @@ if __name__ == '__main__':
         params_init = None
     else:
         params_init = args.params_init
+    
     if algorithm == 'abc' or algorithm == 'abc_exp':
-        with open(args.abc_prior_config_template + '_%s.json' % args.abc_prior_type, 'r') as f:
+        with open(args.abc_prior_config, 'r') as f:
             abc_prior = json.load(f)
-        thetas_output = args.output_template + '_%s_last_thetas_%s.json' % (args.hospital, args.abc_prior_type)
-        stats_output = args.output_template + '_%s_stats_%s.csv' % (args.hospital, args.abc_prior_type)
-        test_forecasts_output = args.output_template + '_%s_last_test_forecasts_%s.csv' % (args.hospital, args.abc_prior_type)
+
+        if not os.path.exists(args.output_dir): # creates directory if it does not exist
+            from pathlib import Path
+            Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+
+        thetas_output = os.path.join(args.output_dir, 'posterior_samples.json')
+        config_post_output = os.path.join(args.output_dir, 'config_after_abc.json')
+        stats_output = os.path.join(args.output_dir, 'abc_training_stats.csv')
     else:
+        # just obsolete things
         abc_prior = None
         thetas_output = args.output_template + '_last_thetas_%s.json' % (params_init)
         stats_output = args.output_template + '_stats_%s.csv' % (params_init)
 
-    config_file = args.config_template + '_%s.json' % args.hospital
-    inputfile = args.input_template + '%s.csv' % args.hospital
+    config_file = os.path.join(args.input_dir, 'config.json')
+    inputfile = os.path.join(args.input_dir, 'daily_counts.csv')
 
     ## Load JSON
     with open(config_file, 'r') as f:
         config_dict = json.load(f)
+        config_copy = deepcopy(config_dict)
+
     num_timesteps = config_dict['num_timesteps']
     train_test_split = config_dict['num_training_timesteps']
 
     true_df = pd.read_csv(inputfile)
     true_df = true_df[true_df['timestep'] <= train_test_split] # only retain training data
-    print(true_df)
 
     # condensing the true results in a summary vector
     T_y = []
@@ -824,7 +834,6 @@ if __name__ == '__main__':
     sampler = ABCSampler(seed, start_epsilon, annealing_constant, T_y, train_test_split, config_dict, func_name, num_timesteps, num_simulations, approximate=approximate)
 
     sampler.initialize_theta(algorithm, abc_prior, params_init)
-    print(sampler.theta_init)
 
     import time
     start = time.time()
@@ -832,18 +841,12 @@ if __name__ == '__main__':
     end = time.time()
     print('Elapsed time with %s on %d iterations: %9.3f sec' % (func_name, num_iterations, end - start))
 
-    num_to_save = 2000
-    last_thetas = accepted_thetas[-num_to_save:] # also save the first theta
+    last_thetas = accepted_thetas[-num_samples_to_save:]
     sampler.save_thetas_to_json(last_thetas, thetas_output)
 
+    with open(config_post_output, 'w+') as f:
+        config_copy['last_samples'] = thetas_output
+        json.dump(config_copy, f, indent=1)
 
     stats = {'all_distances': all_distances, 'accepted_distances': accepted_distances, 'all_alphas': all_alphas, 'accepted_alphas': accepted_alphas, 'epsilon_trace': sampler.epsilon_trace}
     save_stats_to_csv(stats, stats_output)
-
-    # save forecasts on test set for last 2000 samples
-    # test_forecasts_to_save = accepted_test_forecasts[-num_to_save:]
-    # for i, df in enumerate(test_forecasts_to_save):
-    #     df['index'] = i
-
-    # df = pd.concat(test_forecasts_to_save)
-    # df.to_csv(test_forecasts_output)
