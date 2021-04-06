@@ -81,6 +81,6 @@ def gar_grid_search(counts, output_model_file, perf_ax, forecast_ax, end):
     samples = best_model.forecast()
     forecast_ax.set_title('Single-site GAR Heldout Forecasts')
     start = date.fromisoformat(end) - timedelta(F-1)
-    plot_forecasts(samples, start, forecast_ax, y_va, y_te, future=False)
+    plot_forecasts(samples, start, forecast_ax, y_va, y_te)
 
 

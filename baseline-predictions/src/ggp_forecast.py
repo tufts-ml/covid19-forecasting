@@ -20,4 +20,4 @@ def ggp_forecast(model_dict, counts, n_predictions,
 
     samples = model.forecast(output_csv_file_pattern)
     ax.set_title('GGP Forecasts')
-    plot_forecasts(samples, start, ax, [], counts[-30:])
+    plot_forecasts(samples, start, ax, counts[-30:], [])
