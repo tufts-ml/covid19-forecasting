@@ -7,7 +7,8 @@ To create a set of forecasts for a single site:
 4. Run `python run_simple_forecast.py -a <input_csv_file>`, where `<input_csv_file>` is any of the provided csv files.
 
 Output from running forecasts for Tufts Medical Center:
-![Example forecast plot](forecasts.png)
+
+![Example forecast plot](forecasts.pdf)
 
 Files & Directories
 ===================
