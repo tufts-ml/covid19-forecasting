@@ -1,10 +1,16 @@
 Quickstart Guide
 ================
-![Example forecast plot](forecasts.pdf)
+To create a set of forecasts for a single site:
+1. Download all files in `src` and `mass_dot_gov_datasets`
+2. Install and activate conda environment
+3. Create a subdirectory called `gar_samples`
+4. Run `python run_simple_forecast.py -a <input_csv_file>`, where `<input_csv_file>` is any of the provided csv files.
+
+Output from running forecasts for Tufts Medical Center:
+![Example forecast plot](forecasts.png)
 
 Files & Directories
 ===================
-
 - `notebooks` - Jupyter notebooks with detailed specifications of the models and how they translate to code.
 - `mass_dot_gov_datasets` - CSV files with data used for experiments.
 - `src`
