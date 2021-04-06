@@ -778,13 +778,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
     # Input files
-    parser.add_argument('--input_dir', default='datasets/US/MA-20201111-20210111-20210211')
-    parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211')
+    parser.add_argument('--input_dir', default='datasets/UK/south_tees-20201103-20210103-20210203')
+    parser.add_argument('--output_dir', default='results/UK/south_tees-20201103-20210103-20210203')
     parser.add_argument('--num_samples_to_save', default=0.999991)
 
     # Details of simulation
     parser.add_argument('--func_name', default='python')
-    parser.add_argument('--approximate', default='5') # Vary this by dataset. The higher the admissions, the higher this can be
+    parser.add_argument('--approximate', default='None') # Vary this by dataset. The higher the admissions, the higher this can be
                                                         # while preserving the modeling and predictive power.
     parser.add_argument('--num_simulations', default=1, type=int) # Number of simulations per proposal. 
                                                                   # More simulations means less dependence on rrandomness, 

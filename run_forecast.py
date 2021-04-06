@@ -183,10 +183,10 @@ def update_config_given_sample(config_dict, samples_file, i):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--func_name', default='python', type=str)
-    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
-    parser.add_argument('--output_dir', default='output/US/MA-20201111-20210111-20210211')
+    parser.add_argument('--config_path', default='results/UK/south_tees-20201103-20210103-20210203/PRETRAINED_config_after_abc.json')
+    parser.add_argument('--output_dir', default='output/UK/south_tees-20201103-20210103-20210203')
     parser.add_argument('--output_file', default='PRETRAINED_results_after_abc_random_seed=SEED.csv')
-    parser.add_argument('--approximate', default='5')
+    parser.add_argument('--approximate', default='None')
     parser.add_argument('--random_seed', default=1001, type=int)
     parser.add_argument('--num_seeds', default=None) # None value here defaults to 1 when running with fixed parameters, 
                                                      # and to total number of samples in the samples file when running from multiple samples

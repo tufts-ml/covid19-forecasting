@@ -275,7 +275,7 @@ def compute_true_summary_statistics(csv_df, expected_columns, smooth_terminal_co
     return pd.DataFrame(new_dict)
 
 def plot_forecasts(forecasts_template_path, config_filepath, true_counts_filepath, figure_template_path=None, smooth_terminal_counts=True,
-                    expected_columns=['n_InGeneralWard', 'n_OffVentInICU', 'n_OnVentInICU', 'n_InICU', 'n_TERMINAL']):
+                    expected_columns=['n_discharged_InGeneralWard', 'n_InGeneralWard', 'n_OffVentInICU', 'n_OnVentInICU', 'n_InICU', 'n_occupied_beds', 'n_TERMINAL']):
 
     title_map = {'n_discharged_InGeneralWard': 'Number of Discharged Patients', 'n_occupied_beds': 'Number of Occupied Beds', 'n_InGeneralWard': 'Number of Patients in General Ward', 'n_OffVentInICU': 'Number of Patients in ICU, not on the Ventilator', 'n_OnVentInICU': 'Number of Patients on the Ventilator in the ICU', 'n_InICU': 'Number of Patients in ICU', 'n_TERMINAL': 'Number of Terminal Patients'}
 
@@ -325,11 +325,11 @@ if __name__ == '__main__':
 
     ## Plot learned posterior and prior
     ## works!!!
-    params = gather_params('results/US/CA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
+    params = gather_params('results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
     plot_params(params)
 
     ## Plot forecasts for counts of interest
     ## works!!!
-    plot_forecasts('results/US/CA-20201111-20210111-20210211/PRETRAINED_summary_after_abc',
-                   'results/US/CA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json',
-                   'datasets/US/CA-20201111-20210111-20210211/daily_counts.csv')
+    plot_forecasts('results/US/MA-20201111-20210111-20210211/PRETRAINED_summary_after_abc',
+                   'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json',
+                   'datasets/US/MA-20201111-20210111-20210211/daily_counts.csv')
