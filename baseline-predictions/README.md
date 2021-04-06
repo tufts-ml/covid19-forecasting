@@ -1,3 +1,7 @@
+Quickstart Guide
+================
+![Example forecast plot](forecasts.pdf)
+
 Files & Directories
 ===================
 
