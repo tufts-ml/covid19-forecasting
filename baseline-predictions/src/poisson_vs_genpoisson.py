@@ -12,7 +12,6 @@ import scipy
 
 from GenPoisson import GenPoisson
 from GenPoissonAutoregression import GenPoissonAutoregression
-from plot_forecasts import plot_forecasts
 
 input_files = os.listdir('../mass_dot_gov_datasets')
 input_files.sort()

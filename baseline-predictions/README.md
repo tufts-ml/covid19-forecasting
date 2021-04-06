@@ -39,7 +39,6 @@ Reads all files in the directory specified on line 17 of the script. To change t
 
 - `GenPoisson.py`
 - `GenPoissonAutoregression.py`
-- `plot_forecasts.py`
 
 **Output**
 
