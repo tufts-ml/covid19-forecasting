@@ -10,21 +10,20 @@ forecasts : (n_samples, n_days_of_forecasts)
 start : start date of forecasts (datetime.date)
 ax : axis for plot
 past : array of observed counts prior to forecast window
-observed : array of observed counts (either recent counts before future predictions or
-                                    heldout observed counts to compare against predictions)
-future=True : plotting future forecasts (plot observed before forecasts).
-future=False : plotting heldout forecasts (plot observed on top of forecasts).
+observed : array of observed counts on same days as forecasts
+           (either empty if making future predictions, or
+            must have same number of days as forecasts)
 '''
 
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import timedelta
 
-def plot_forecasts(forecasts, start, ax, past, observed, future=True):
+def plot_forecasts(forecasts, start, ax, past, observed):
     n_predictions = len(forecasts[0])
 
-    if future == False:
-        assert len(observed) == n_predictions
+    if len(observed) != 0:
+        assert len(observed) == n_predictions, 'observed must be either empty or same length as each set of forecasts'
 
     low = np.zeros(n_predictions)
     high = np.zeros(n_predictions)
@@ -38,29 +37,24 @@ def plot_forecasts(forecasts, start, ax, past, observed, future=True):
     x_future = np.arange(n_predictions)
     ax.errorbar(x_future, median,
                 yerr=[median-low, high-median],
-                capsize=2, fmt='.', linewidth=1,
+                capsize=2, fmt='x', linewidth=1,
                 label='2.5, 50, 97.5 percentiles')
 
-    if future == True:
-        x_past = np.arange(-len(observed), 0)
-        ax.plot(x_past, observed, 'x', label='observed')
-        dates = np.full(len(observed) + n_predictions, start)
-        j = -len(observed)
-        for i in range(len(dates)):
-            dates[i] = start + timedelta(j)
-            j += 1
-        ax.set_xticks(np.concatenate((x_past, x_future)))
-        ax.set_xticklabels(dates, rotation=30)
+    x_past = np.arange(-len(past), 0)
 
+    if len(observed) == 0:
+        ax.plot(x_past, past, '.', label='observed')
     else:
-        x_past = np.arange(-len(past), 0)
         ax.plot(np.concatenate((x_past, x_future)),
                 np.concatenate((past, observed)),
-                'x', label='observed')
-        ax.set_xticks([-len(past), 0, len(x_future)-1])
-        ax.set_xticklabels([start + timedelta(-len(past)),
-                            start,
-                            start + timedelta(len(x_future)-1)])
+                '.', label='observed')
+
+    ax.set_xticks([-len(past), 0, len(x_future)-1])
+    dates = [start + timedelta(-len(past)),
+             start,
+             start + timedelta(len(x_future)-1)]
+    ax.set_xticklabels([date.strftime('%d-%b-%y') for date in dates])
+
 
     ax.legend()
 
