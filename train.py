@@ -6,7 +6,9 @@ import scipy.stats
 from scipy import stats
 import pandas as pd
 import tqdm
+from _ctypes import PyObj_FromPtr
 import json
+import re
 import warnings
 from copy import deepcopy
 import pickle
@@ -15,6 +17,51 @@ from cheda_hmm import run_forecast__python
 
 import warnings
 warnings.filterwarnings('ignore')
+
+########################################################
+# taken from https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
+# prints config file in nice and readable format, so that it is easier to edit
+
+class NoIndent(object):
+    """ Value wrapper. """
+    def __init__(self, value):
+        self.value = value
+
+
+class MyEncoder(json.JSONEncoder):
+    FORMAT_SPEC = '@@{}@@'
+    regex = re.compile(FORMAT_SPEC.format(r'(\d+)'))
+
+    def __init__(self, **kwargs):
+        # Save copy of any keyword argument values needed for use here.
+        self.__sort_keys = kwargs.get('sort_keys', None)
+        super(MyEncoder, self).__init__(**kwargs)
+
+    def default(self, obj):
+        return (self.FORMAT_SPEC.format(id(obj)) if isinstance(obj, NoIndent)
+                else super(MyEncoder, self).default(obj))
+
+    def encode(self, obj):
+        format_spec = self.FORMAT_SPEC  # Local var to expedite access.
+        json_repr = super(MyEncoder, self).encode(obj)  # Default JSON.
+
+        # Replace any marked-up object ids in the JSON repr with the
+        # value returned from the json.dumps() of the corresponding
+        # wrapped Python object.
+        for match in self.regex.finditer(json_repr):
+            # see https://stackoverflow.com/a/15012814/355230
+            id = int(match.group(1))
+            no_indent = PyObj_FromPtr(id)
+            json_obj_repr = json.dumps(no_indent.value, sort_keys=self.__sort_keys)
+
+            # Replace the matched id string with json formatted representation
+            # of the corresponding Python object.
+            json_repr = json_repr.replace(
+                            '"{}"'.format(format_spec.format(id)), json_obj_repr)
+
+        return json_repr
+
+########################################################
 
 def run_simulation(random_seed, config_dict, states, func_name, approximate=None):
     prng = np.random.RandomState(random_seed)
@@ -134,9 +181,6 @@ def run_simulation(random_seed, config_dict, states, func_name, approximate=None
         results_df[col_name] = discharge_count_TK[:, k]
 
     return results_df
-
-
-HEALTH_STATE_ID_TO_NAME = {0: 'Declining', 1: 'Recovering', 'Declining': 0, 'Recovering': 1}
 
 class ABCSampler(object):
 
@@ -740,16 +784,18 @@ if __name__ == '__main__':
 
     # Details of simulation
     parser.add_argument('--func_name', default='python')
-    parser.add_argument('--approximate', default='5')
-    parser.add_argument('--num_simulations', default=1, type=int) # number of simulations per proposal. 
+    parser.add_argument('--approximate', default='5') # Vary this by dataset. The higher the admissions, the higher this can be
+                                                        # while preserving the modeling and predictive power.
+    parser.add_argument('--num_simulations', default=1, type=int) # Number of simulations per proposal. 
                                                                   # More simulations means less dependence on rrandomness, 
                                                                   # but at a much higher computational cost. We keep this to 1
 
     # arguments for annealing schedule
-    parser.add_argument('--num_iterations', default=32000, type=int) # number of sampling iterations 
-                                                                     # each iteration has an inner loop through each probabilistic parameter vector
-    parser.add_argument('--start_epsilon', default=0.7, type=float)
-    parser.add_argument('--annealing_constant', default=0.999991)
+    parser.add_argument('--num_iterations', default=25, type=int) # Number of sampling iterations (we set this to 32000 in our experiments).
+                                                                     # Each iteration has an inner loop through each probabilistic parameter vector
+    parser.add_argument('--start_epsilon', default=0.7, type=float) # Heuristically reasonable starting point. Theoretical upper bound is 1.
+    parser.add_argument('--annealing_constant', default=0.999991) # We tune this by dataset, keeping num_iterations fixed.
+                                                                    # Usually, the higher the admissions, the lower the value.
     
     # specify proposal hyperparameters
     parser.add_argument('--dir_scale', default='100-100') # scale parameter for the dirichlet proposal distribution (min-max, linearly interpolated)
@@ -801,7 +847,7 @@ if __name__ == '__main__':
             from pathlib import Path
             Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-        thetas_output = os.path.join(args.output_dir, 'posterior_samples.json')
+        thetas_output = args.output_dir + '/posterior_samples.json' # need to do it this way to be compatible with linux-like environments...
         config_post_output = os.path.join(args.output_dir, 'config_after_abc.json')
         stats_output = os.path.join(args.output_dir, 'abc_training_stats.csv')
     else:
@@ -816,7 +862,15 @@ if __name__ == '__main__':
     ## Load JSON
     with open(config_file, 'r') as f:
         config_dict = json.load(f)
-        config_copy = deepcopy(config_dict)
+    
+    ## Set up copy of config for pretty display on json file
+    config_copy = deepcopy(config_dict)
+    for key in ['states', 'init_num_InGeneralWard', 'init_num_OffVentInICU', 'init_num_OnVentInICU',
+                'summary_statistics_names', 'summary_statistics_weights', 'pmf_duration_Declining_InGeneralWard',
+                'pmf_duration_Recovering_InGeneralWard', 'pmf_duration_Declining_OffVentInICU', 'pmf_duration_Recovering_OffVentInICU',
+                'pmf_duration_Declining_OnVentInICU', 'pmf_duration_Recovering_OnVentInICU']:
+        config_copy[key] = NoIndent(config_copy[key])
+
 
     num_timesteps = config_dict['num_timesteps']
     train_test_split = config_dict['num_training_timesteps']
@@ -846,7 +900,7 @@ if __name__ == '__main__':
 
     with open(config_post_output, 'w+') as f:
         config_copy['samples_file'] = thetas_output
-        json.dump(config_copy, f, indent=1)
+        f.write(json.dumps(config_copy, cls=MyEncoder, indent=2))
 
     stats = {'all_distances': all_distances, 'accepted_distances': accepted_distances, 'all_alphas': all_alphas, 'accepted_alphas': accepted_alphas, 'epsilon_trace': sampler.epsilon_trace}
     save_stats_to_csv(stats, stats_output)

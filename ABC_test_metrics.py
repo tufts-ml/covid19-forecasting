@@ -27,10 +27,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', default='results/US/MA-20201111-20210111-20210211')
     parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211')
-    parser.add_argument('--config_file', default='results/US/MA-20201111-20210111-20210211/config_after_abc.json')
-    parser.add_argument('--output_template', default='after_abc')
-    parser.add_argument('--true_stats', default='results/US/MA-20201111-20210111-20210211/daily_counts.csv')
-    parser.add_argument('--input_summaries_template', default='summary_MA_NovToFeb_61days_OnCDCTableReasonable_')
+    parser.add_argument('--config_file', default='results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
+    parser.add_argument('--output_template', default='PRETRAINED_after_abc')
+    parser.add_argument('--true_stats', default='datasets/US/MA-20201111-20210111-20210211/daily_counts.csv')
+    parser.add_argument('--input_summaries_template', default='PRETRAINED_summary_after_abc_')
     parser.add_argument('--coverages',
                             type=str,
                             default='2.5_97.5,10_90,25_75')

@@ -64,7 +64,7 @@ def sample_params_from_prior(prior_dict, states, num_samples=100):
 #   - config file that contains a pointer to a samples file
 #   - number of samples wish to be taken from the samples file
 # Note: the *last* N samples are taken, so we assume that the last samples are considered to be the most relevant
-def gather_params(config_file, num_samples=2000):
+def gather_params(config_file, num_samples=None):
     with open(config_file, 'r') as f:
         config = json.load(f)
 
@@ -72,7 +72,9 @@ def gather_params(config_file, num_samples=2000):
 
     with open(config['samples_file'], 'r') as f:
         last_thetas = json.load(f)['last_samples']
-        last_thetas = last_thetas[-num_samples:]
+        
+        if num_samples is not None:
+            last_thetas = last_thetas[-num_samples:]
     
     # initialize results
     results = {}
@@ -323,9 +325,11 @@ if __name__ == '__main__':
 
     ## Plot learned posterior and prior
     ## works!!!
-    # params = gather_params('results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json', num_samples = 2000)
-    # plot_params(params)
+    params = gather_params('results/US/CA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
+    plot_params(params)
 
     ## Plot forecasts for counts of interest
     ## works!!!
-    # plot_forecasts('results/US/MA-20201111-20210111-20210211/PRETRAINED_summary_after_abc', 'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json', 'datasets/US/MA-20201111-20210111-20210211/daily_counts.csv')
+    plot_forecasts('results/US/CA-20201111-20210111-20210211/PRETRAINED_summary_after_abc',
+                   'results/US/CA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json',
+                   'datasets/US/CA-20201111-20210111-20210211/daily_counts.csv')

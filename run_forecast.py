@@ -186,27 +186,48 @@ if __name__ == '__main__':
     parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
     parser.add_argument('--output_dir', default='output/US/MA-20201111-20210111-20210211')
     parser.add_argument('--output_file', default='PRETRAINED_results_after_abc_random_seed=SEED.csv')
-    parser.add_argument('--approximate', default='5', type=str)
+    parser.add_argument('--approximate', default='5')
     parser.add_argument('--random_seed', default=1001, type=int)
-    parser.add_argument('--num_seeds', default=2000, type=int)
+    parser.add_argument('--num_seeds', default=None) # None value here defaults to 1 when running with fixed parameters, 
+                                                     # and to total number of samples in the samples file when running from multiple samples
     args = parser.parse_args()
 
-    if args.approximate == 'None':
+    if args.approximate == 'None' or args.approximate is None:
         approximate = None
     else:
         approximate = int(args.approximate)
+
+    if args.num_seeds == 'None' or args.num_seeds is None:
+        num_seeds = None
+    else:
+        num_seeds = int(args.num_seeds)
 
     with open(args.config_path, 'r') as f:
         config_dict = json.load(f)
 
     if 'samples_file' in config_dict:
         print('Forecasting from samples ...')
+        run_from_samples = True
+
         with open(config_dict['samples_file'], 'r') as f:
             samples_file = json.load(f)
-        run_from_samples = True
+
+        if num_seeds is None:
+            num_seeds = len(samples_file['last_samples'])
+
+        if len(samples_file['last_samples']) < num_seeds:
+            print('Too many samples requested: there are %d available samples, you have requested %d.\nExiting.' % (len(samples_file['last_samples']), num_seeds))
+            exit(1)
+
+        print('Using %d samples, each with a distinct random seed.' % (num_seeds))
     else:
-        print('Forecasting from fixed params ...')
+        print('Forecasting with fixed parameters ...')
         run_from_samples = False
+
+        if num_seeds is None:
+            num_seeds = 1
+
+        print('Using %d random seeds.' % (num_seeds))
 
     if not os.path.exists(args.output_dir): # creates directory if it does not exist
         from pathlib import Path
@@ -215,7 +236,7 @@ if __name__ == '__main__':
     output_file_base = os.path.join(args.output_dir, args.output_file)
 
     states = config_dict['states']
-    for i in tqdm(range(args.num_seeds)):
+    for i in tqdm(range(num_seeds)):
         seed = int(args.random_seed) + i
         output_file = output_file_base.replace("random_seed=SEED", "random_seed=%s" % str(seed))
 
