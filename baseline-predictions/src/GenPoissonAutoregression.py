@@ -81,12 +81,12 @@ class GenPoissonAutoregression:
         scores = np.zeros(10)
         for i in range(10):
             scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / T
-        print(f'Chain 1: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
+        print(f'Chain 1: {round(np.mean(scores), 3)} ± {round(scipy.stats.sem(scores), 3)}')
         logp_samples = self.trace.get_values('y_past_logp', chains=1)
         scores = np.zeros(10)
         for i in range(10):
             scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / T
-        print(f'Chain 2: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
+        print(f'Chain 2: {round(np.mean(scores), 3)} ± {round(scipy.stats.sem(scores), 3)}')
         print()
 
     '''
@@ -108,12 +108,12 @@ class GenPoissonAutoregression:
         for i in range(10):
             scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / self.F
         mean_score = np.mean(scores)
-        print(f'Chain 1: {mean_score} ± {scipy.stats.sem(scores)}')
+        print(f'Chain 1: {round(mean_score, 3)} ± {round(scipy.stats.sem(scores), 3)}')
         logp_samples = logp_list['y_logp'][1]
         scores = np.zeros(10)
         for i in range(10):
             scores[i] = np.log(np.mean(np.exp(logp_samples[500*i : 500*i+500]))) / self.F
-        print(f'Chain 2: {np.mean(scores)} ± {scipy.stats.sem(scores)}')
+        print(f'Chain 2: {round(np.mean(scores), 3)} ± {round(scipy.stats.sem(scores), 3)}')
         print()
         return mean_score
 
@@ -134,7 +134,7 @@ class GenPoissonAutoregression:
                     print(f'Saved {i} forecasts...')
                 output_dict = {'forecast': samples[i]}
                 output_df = pd.DataFrame(output_dict)
-                output_df.to_csv(output_csv_file_pattern.replace('*', str(i+1)))
+                output_df.to_csv(output_csv_file_pattern.replace('*', str(i)))
 
         return samples
 
