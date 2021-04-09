@@ -131,18 +131,18 @@ def generate_config(hObj, directory):
     # Parameters!
     # Only placeholder values (except Die after declining OnVentInICU, which is always at 1.0)
     # Assumes 22 days for all durations
-    config["proba_Recovering_given_InGeneralWard"] = 0.1
-    config["proba_Recovering_given_OffVentInICU"] = 0.1
-    config["proba_Recovering_given_OnVentInICU"] = 0.1
-    config["proba_Die_after_Declining_InGeneralWard"] = 0.01
-    config["proba_Die_after_Declining_OffVentInICU"] = 0.02
-    config["proba_Die_after_Declining_OnVentInICU"] = 1.0 # this one MUST be fixed at 1.0
-    config["pmf_duration_Declining_InGeneralWard"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
-    config["pmf_duration_Recovering_InGeneralWard"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
-    config["pmf_duration_Declining_OffVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
-    config["pmf_duration_Recovering_OffVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
-    config["pmf_duration_Declining_OnVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
-    config["pmf_duration_Recovering_OnVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    # config["proba_Recovering_given_InGeneralWard"] = 0.1
+    # config["proba_Recovering_given_OffVentInICU"] = 0.1
+    # config["proba_Recovering_given_OnVentInICU"] = 0.1
+    # config["proba_Die_after_Declining_InGeneralWard"] = 0.01
+    # config["proba_Die_after_Declining_OffVentInICU"] = 0.02
+    # config["proba_Die_after_Declining_OnVentInICU"] = 1.0 # this one MUST be fixed at 1.0
+    # config["pmf_duration_Declining_InGeneralWard"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    # config["pmf_duration_Recovering_InGeneralWard"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    # config["pmf_duration_Declining_OffVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    # config["pmf_duration_Recovering_OffVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    # config["pmf_duration_Declining_OnVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
+    # config["pmf_duration_Recovering_OnVentInICU"] = NoIndent({"1": 0.045, "2": 0.045, "3": 0.045, "4": 0.045, "5": 0.045, "6": 0.045, "7": 0.045, "8": 0.045, "9": 0.045, "10": 0.045, "11": 0.045, "12": 0.045, "13": 0.045, "14": 0.045, "15": 0.045, "16": 0.045, "17": 0.045, "18": 0.045, "19": 0.045, "20": 0.045, "21": 0.045, "22": 0.055})
 
     # save config file as json
     with open(os.path.join(directory, 'config.json'), 'w+') as f:
@@ -222,7 +222,7 @@ if __name__ == '__main__':
 
     admissions_dict = {'timestep': np.arange(admissions.shape[0]),
                        'date': dates,
-                       'num_InGeneralWard': np.append(np.array([0]), admissions[1:])} # admissions at timestep 0
+                       'n_admitted_InGeneralWard': np.append(np.array([0]), admissions[1:])} # admissions at timestep 0
                                                                                       # are handled by the warm-up schedule
 
     admissions_df = pd.DataFrame(admissions_dict)

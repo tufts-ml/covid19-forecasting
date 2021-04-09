@@ -60,50 +60,11 @@ def sample_params_from_prior(prior_dict, states, num_samples=100):
     
     return samples
 
-# Arguments: 
-#   - config file that contains a pointer to a samples file
-#   - number of samples wish to be taken from the samples file
-# Note: the *last* N samples are taken, so we assume that the last samples are considered to be the most relevant
-def gather_params(config_file, num_samples=None):
-    with open(config_file, 'r') as f:
-        config = json.load(f)
 
-    states = config['states']
+def plot_params(params_filename, filename_prior='priors/abc_prior_config_OnCDCTableReasonable.json', filename_to_save=None, filename_true_params=None, plot_disjointly=False):
+    with open(params_filename, 'r') as f:
+        params_list = json.load(f)
 
-    with open(config['samples_file'], 'r') as f:
-        last_thetas = json.load(f)['last_samples']
-        
-        if num_samples is not None:
-            last_thetas = last_thetas[-num_samples:]
-    
-    # initialize results
-    results = {}
-    for theta in last_thetas:
-        for state in states:
-            results['proba_Recovering_given_%s' % state] = []
-            if state != 'OnVentInICU':
-                results['proba_Die_after_Declining_%s' % state] = []
-            for health in ['Recovering', 'Declining']:
-                results['pmf_duration_%s_%s' % (health, state)] = {}
-                max_dur = len(config['pmf_duration_%s_%s' % (health, state)])
-                durations = [str(x) for x in range(1, max_dur+1)] + ['lam', 'tau']
-                for dur in durations:
-                    results['pmf_duration_%s_%s' % (health, state)][dur] = []
-
-    # fill up results
-    for theta in last_thetas:
-        for state in states:
-            results['proba_Recovering_given_%s' % state].append(theta['proba_Recovering_given_%s' % state])
-            if state != 'OnVentInICU':
-                results['proba_Die_after_Declining_%s' % state].append(theta['proba_Die_after_Declining_%s' % state])
-            for health in ['Recovering', 'Declining']:
-                max_dur = len(config['pmf_duration_%s_%s' % (health, state)])
-                durations = [str(x) for x in range(1, max_dur+1)] + ['lam', 'tau']
-                for dur in durations:
-                    results['pmf_duration_%s_%s' % (health, state)][dur].append(theta['pmf_duration_%s_%s' % (health, state)][dur])
-    return results
-
-def plot_params(params_list, filename_prior='priors/abc_prior_config_OnCDCTableReasonable.json', filename_to_save=None, filename_true_params=None, plot_disjointly=False):
     if not isinstance(params_list, list):
         params_list = [params_list]
 
@@ -165,8 +126,10 @@ def plot_params(params_list, filename_prior='priors/abc_prior_config_OnCDCTableR
         fig, ax_grid = plt.subplots(nrows=3, ncols=4, figsize=(16, 10))
         ax_grid = ax_grid.flatten()
 
-    i = 0    
+    i = 0
     for param in param_distributions:
+        if param == 'proba_Die_after_Declining_OnVentInICU':
+            continue
         if not plot_disjointly:
             ax = ax_grid[i]
         if 'duration' in param:
@@ -325,8 +288,7 @@ if __name__ == '__main__':
 
     ## Plot learned posterior and prior
     ## works!!!
-    params = gather_params('results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
-    plot_params(params)
+    plot_params('results/US/MA-20201111-20210111-20210211/PRETRAINED_posterior_samples.json')
 
     ## Plot forecasts for counts of interest
     ## works!!!

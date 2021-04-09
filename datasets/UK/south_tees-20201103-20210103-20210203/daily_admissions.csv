@@ -1,4 +1,4 @@
-timestep,date,num_InGeneralWard
+timestep,date,n_admitted_InGeneralWard
 0,20201103,0
 1,20201104,10
 2,20201105,26

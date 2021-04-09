@@ -8,8 +8,8 @@ import numpy as np
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', default='output/UK/south_tees-20201103-20210103-20210203')
-    parser.add_argument('--output_dir', default='results/UK/south_tees-20201103-20210103-20210203')
+    parser.add_argument('--input_dir', default='results/US/MA-20201111-20210111-20210211/individual_forecasts')
+    parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211')
     parser.add_argument('--output_template', default='PRETRAINED_summary_after_abc_')
     parser.add_argument('--input_csv_file_pattern', default='PRETRAINED_results_after_abc_random_seed*.csv')
     parser.add_argument('--comma_sep_percentiles',

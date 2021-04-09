@@ -13,7 +13,7 @@ import warnings
 from copy import deepcopy
 import pickle
 import itertools
-from cheda_hmm import run_forecast__python
+from aced_hmm import run_forecast__python
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -118,7 +118,7 @@ def run_simulation(random_seed, config_dict, states, func_name, approximate=None
                 continue
         
         csv_df = pd.read_csv(csvfile)
-        state_key = 'num_%s' % state
+        state_key = 'n_admitted_%s' % state
         if state_key not in csv_df.columns:
             continue
         admissions_per_state_Tplus1K[:, ss] = np.array(csv_df[state_key][:T+1])
@@ -153,7 +153,7 @@ def run_simulation(random_seed, config_dict, states, func_name, approximate=None
     states_by_id = np.array([0, 1, 2], dtype=np.int32)
     
     if func_name.count('cython'):
-        from cheda_hmm import run_forecast__cython
+        from aced_hmm import run_forecast__cython
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__cython(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
     else:
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__python(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
@@ -309,16 +309,22 @@ class ABCSampler(object):
 
             if states[s] != "OnVentInICU":
                 self.config_dict['proba_Die_after_Declining_%s' % states[s]] = theta['die_after_declining'][s][1]
+            else:
+                self.config_dict['proba_Die_after_Declining_%s' % states[s]] = 1.0 # proba die after declining on the vent is always 1!!!
 
             # updating durations probabilities
             for health_state in ["Declining", "Recovering"]:
-                choices = list(self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])].keys())
+                # choices = list(self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])].keys())
+                lower = int(theta['durations'][health_state][s]['lower'])
+                upper = int(theta['durations'][health_state][s]['upper'])
+                choices = [str(x) for x in range(lower, upper + 1)]
 
                 lam = theta['durations'][health_state][s]['lam']
                 tau = theta['durations'][health_state][s]['tau']
 
                 probas = scipy.special.softmax(scipy.stats.poisson.logpmf(np.arange(len(choices)), lam) / np.power(10, tau))
 
+                self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])] = {}
                 for c, choice in enumerate(choices):
                     # update each individual choice with the value in theta
                     self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])][choice] = probas[c]
@@ -735,7 +741,7 @@ class ABCSampler(object):
         beta = (upper - mean) / stddev
         return stats.truncnorm.rvs(alpha, beta, loc=mean, scale=stddev, size=1)[0]
 
-    def save_thetas_to_json(self, thetas, filename):
+    def save_thetas_to_json_old(self, thetas, filename):
         states = self.config_dict['states']
 
         json_to_save = {'last_samples': []}
@@ -769,6 +775,56 @@ class ABCSampler(object):
         with open(filename, 'w+') as f:
             json.dump(json_to_save, f, indent=1)
 
+    def save_thetas_to_json(self, thetas, filename):
+        states = self.config_dict['states']
+
+        params_dict = {}
+
+        # initialize parameter names
+        for s in range(len(states)):
+            params_dict['proba_Recovering_given_%s' % states[s]] = []
+            params_dict['proba_Die_after_Declining_%s' % states[s]] = []
+            for health_state in ['Recovering', 'Declining']:
+                params_dict['pmf_duration_%s_%s' % (health_state, states[s])] = {}
+                lower = int(thetas[0]['durations'][health_state][s]['lower'])
+                upper = int(thetas[0]['durations'][health_state][s]['upper'])
+                durations = [str(x) for x in range(lower, upper + 1)] + ['lam', 'tau']
+                for dur in durations:
+                    params_dict['pmf_duration_%s_%s' % (health_state, states[s])][dur] = []
+
+        for theta in thetas:
+            for s in range(len(states)):
+                # updating health state probabilities
+                params_dict['proba_Recovering_given_%s' % states[s]].append(theta['health'][s][1])
+                if states[s] != "OnVentInICU":
+                    params_dict['proba_Die_after_Declining_%s' % states[s]].append(theta['die_after_declining'][s][1])
+                else:
+                    params_dict['proba_Die_after_Declining_%s' % states[s]].append(1.0)
+
+                # updating durations probabilities
+                for health_state in ["Declining", "Recovering"]:
+                    # choices = list(self.config_dict['pmf_duration_%s_%s' % (health_state, states[s])].keys())
+                    lower = int(theta['durations'][health_state][s]['lower'])
+                    upper = int(theta['durations'][health_state][s]['upper'])
+                    choices = [str(x) for x in range(lower, upper + 1)]
+
+                    lam = theta['durations'][health_state][s]['lam']
+                    tau = theta['durations'][health_state][s]['tau']
+
+                    params_dict['pmf_duration_%s_%s' % (health_state, states[s])]['lam'].append(lam)
+                    params_dict['pmf_duration_%s_%s' % (health_state, states[s])]['tau'].append(tau)
+
+                    probas = scipy.special.softmax(scipy.stats.poisson.logpmf(np.arange(len(choices)), lam) / np.power(10, tau))
+
+                    for c, choice in enumerate(choices):
+                        # update each individual choice with the value in theta
+                        params_dict['pmf_duration_%s_%s' % (health_state, states[s])][choice].append(probas[c])
+
+        for key in params_dict:
+            params_dict[key] = NoIndent(params_dict[key])
+
+        with open(filename, 'w+') as f:
+            f.write(json.dumps(params_dict, cls=MyEncoder, indent=2))
 
 def save_stats_to_csv(stats, filename):
     df = pd.DataFrame(stats)
@@ -778,13 +834,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
     # Input files
-    parser.add_argument('--input_dir', default='datasets/UK/south_tees-20201103-20210103-20210203')
-    parser.add_argument('--output_dir', default='results/UK/south_tees-20201103-20210103-20210203')
+    parser.add_argument('--input_dir', default='datasets/US/MA-20201111-20210111-20210211')
+    parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211')
     parser.add_argument('--num_samples_to_save', default=0.999991)
 
     # Details of simulation
     parser.add_argument('--func_name', default='python')
-    parser.add_argument('--approximate', default='None') # Vary this by dataset. The higher the admissions, the higher this can be
+    parser.add_argument('--approximate', default='5') # Vary this by dataset. The higher the admissions, the higher this can be
                                                         # while preserving the modeling and predictive power.
     parser.add_argument('--num_simulations', default=1, type=int) # Number of simulations per proposal. 
                                                                   # More simulations means less dependence on rrandomness, 
@@ -866,9 +922,7 @@ if __name__ == '__main__':
     ## Set up copy of config for pretty display on json file
     config_copy = deepcopy(config_dict)
     for key in ['states', 'init_num_InGeneralWard', 'init_num_OffVentInICU', 'init_num_OnVentInICU',
-                'summary_statistics_names', 'summary_statistics_weights', 'pmf_duration_Declining_InGeneralWard',
-                'pmf_duration_Recovering_InGeneralWard', 'pmf_duration_Declining_OffVentInICU', 'pmf_duration_Recovering_OffVentInICU',
-                'pmf_duration_Declining_OnVentInICU', 'pmf_duration_Recovering_OnVentInICU']:
+                'summary_statistics_names', 'summary_statistics_weights']:
         config_copy[key] = NoIndent(config_copy[key])
 
 
@@ -899,7 +953,7 @@ if __name__ == '__main__':
     sampler.save_thetas_to_json(last_thetas, thetas_output)
 
     with open(config_post_output, 'w+') as f:
-        config_copy['samples_file'] = thetas_output
+        config_copy['parameters'] = thetas_output
         f.write(json.dumps(config_copy, cls=MyEncoder, indent=2))
 
     stats = {'all_distances': all_distances, 'accepted_distances': accepted_distances, 'all_alphas': all_alphas, 'accepted_alphas': accepted_alphas, 'epsilon_trace': sampler.epsilon_trace}

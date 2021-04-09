@@ -8,7 +8,7 @@ import sys
 import time
 from tqdm import tqdm
 import scipy
-from cheda_hmm import run_forecast__python
+from aced_hmm import run_forecast__python
 
 def run_simulation(random_seed, output_file, config_dict, states, func_name, approximate=None):
     prng = np.random.RandomState(random_seed)
@@ -65,7 +65,7 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
                 continue
         
         csv_df = pd.read_csv(csvfile)
-        state_key = 'num_%s' % state
+        state_key = 'n_admitted_%s' % state
         if state_key not in csv_df.columns:
             continue
         admissions_per_state_Tplus1K[:, ss] = np.array(csv_df[state_key][:T+1])
@@ -134,7 +134,7 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
     states_by_id = np.array([0, 1, 2], dtype=np.int32)
     
     if func_name.count('cython'):
-        from cheda_hmm import run_forecast__cython
+        from aced_hmm import run_forecast__cython
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__cython(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
     else:
         occupancy_count_TK, discharge_count_TK, terminal_count_T1 = run_forecast__python(Tpast=Tpast, T=T, Tmax=Tmax, states=states_by_id, rand_vals_M=rand_vals_M, **sim_kwargs)
@@ -167,26 +167,26 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
         columns=['timestep'] + col_names + ['n_TERMINAL'] + discharge_col_names,
         index=False, float_format="%.0f")
 
-def update_config_given_sample(config_dict, samples_file, i):
-    num_thetas = len(samples_file['last_samples'])
-    theta = samples_file['last_samples'][num_thetas - 1 - i]
-    for key in theta:
-        if 'duration' in key:
-            config_dict[key] = {}
-            for choice in theta[key]:
+def update_config_given_sample(config_dict, parameters, i):
+    num_thetas = len(parameters['proba_Recovering_given_InGeneralWard'])
+    index = num_thetas - 1 - i
+    for param_name in parameters:
+        if 'duration' in param_name:
+            config_dict[param_name] = {}
+            for choice in parameters[param_name]:
                 if choice not in ['lam', 'tau']:
-                    config_dict[key][choice] = theta[key][choice]
+                    config_dict[param_name][choice] = parameters[param_name][choice][index]
         else:
-            config_dict[key] = theta[key]
+            config_dict[param_name] = parameters[param_name][index]
     return config_dict
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--func_name', default='python', type=str)
-    parser.add_argument('--config_path', default='results/UK/south_tees-20201103-20210103-20210203/PRETRAINED_config_after_abc.json')
-    parser.add_argument('--output_dir', default='output/UK/south_tees-20201103-20210103-20210203')
+    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
+    parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211/individual_forecasts')
     parser.add_argument('--output_file', default='PRETRAINED_results_after_abc_random_seed=SEED.csv')
-    parser.add_argument('--approximate', default='None')
+    parser.add_argument('--approximate', default='5')
     parser.add_argument('--random_seed', default=1001, type=int)
     parser.add_argument('--num_seeds', default=None) # None value here defaults to 1 when running with fixed parameters, 
                                                      # and to total number of samples in the samples file when running from multiple samples
@@ -205,19 +205,25 @@ if __name__ == '__main__':
     with open(args.config_path, 'r') as f:
         config_dict = json.load(f)
 
-    if 'samples_file' in config_dict:
+    with open(config_dict['parameters'], 'r') as f:
+        parameters = json.load(f)
+
+    ###############
+
+    if isinstance(parameters['proba_Recovering_given_InGeneralWard'], list):
         print('Forecasting from samples ...')
         run_from_samples = True
 
-        with open(config_dict['samples_file'], 'r') as f:
-            samples_file = json.load(f)
-
         if num_seeds is None:
-            num_seeds = len(samples_file['last_samples'])
+            num_seeds = len(parameters['proba_Recovering_given_InGeneralWard'])
 
-        if len(samples_file['last_samples']) < num_seeds:
-            print('Too many samples requested: there are %d available samples, you have requested %d.\nExiting.' % (len(samples_file['last_samples']), num_seeds))
+        if len(parameters['proba_Recovering_given_InGeneralWard']) < num_seeds:
+            print('Too many samples requested: there are %d available samples, you have requested %d.\nExiting.' % (len(parameters['proba_Recovering_given_InGeneralWard']), num_seeds))
             exit(1)
+
+        # initialize parameters in config dictionary
+        for param_name in parameters:
+            config_dict[param_name] = None # can just be None here, it will change dynamically
 
         print('Using %d samples, each with a distinct random seed.' % (num_seeds))
     else:
@@ -226,6 +232,10 @@ if __name__ == '__main__':
 
         if num_seeds is None:
             num_seeds = 1
+
+        # initialize parameters in config dictionary
+        for param_name in parameters:
+            config_dict[param_name] = parameters[param_name]
 
         print('Using %d random seeds.' % (num_seeds))
 
@@ -241,6 +251,6 @@ if __name__ == '__main__':
         output_file = output_file_base.replace("random_seed=SEED", "random_seed=%s" % str(seed))
 
         if run_from_samples:
-            config_dict = update_config_given_sample(config_dict, samples_file, i)
+            config_dict = update_config_given_sample(config_dict, parameters, i)
 
         run_simulation(seed, output_file, config_dict, states, args.func_name, approximate=approximate)

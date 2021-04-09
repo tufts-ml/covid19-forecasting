@@ -1,4 +1,4 @@
-name: cheda-hmm
+name: aced_hmm
 channels:
   - defaults
 dependencies:
