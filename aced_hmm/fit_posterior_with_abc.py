@@ -13,7 +13,8 @@ import warnings
 from copy import deepcopy
 import pickle
 import itertools
-from aced_hmm import run_forecast__python
+
+from aced_hmm.simulator import run_forecast__python
 
 import warnings
 warnings.filterwarnings('ignore')

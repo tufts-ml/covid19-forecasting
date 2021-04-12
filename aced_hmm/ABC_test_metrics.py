@@ -1,10 +1,11 @@
-import os
-import json
 import argparse
+import json
+import os
+import glob
+
+import numpy as np
 import pandas as pd
 import tqdm
-import glob
-import numpy as np
 
 # This function maps the statistics outputted by the hospital model
 #   to the statistics of the true data
