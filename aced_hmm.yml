@@ -1,0 +1,23 @@
+name: aced_hmm
+channels:
+  - defaults
+dependencies:
+  - python>=3.6
+  - pip
+  ## Scientific Computing
+  - numpy>=1.16
+  - scipy>=1.3
+  ## Visualization
+  - jupyter>=1.0
+  - matplotlib>=2.1
+  - seaborn>=0.9 
+  - tqdm>=4.41
+  ## Data I/O
+  - pandas>=0.22
+  - dill>=0.2
+  ## Machine Learning
+  - scikit-learn>=0.21
+  ## Pip-only packages
+  - pip:
+    - dash>=1.10.0
+    - sodapy
