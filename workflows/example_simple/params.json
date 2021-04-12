@@ -1,0 +1,23 @@
+{
+"states": ["InGeneralWard", "OffVentInICU", "OnVentInICU"],
+"init_num_InGeneralWard": 10,
+"init_num_OffVentInICU": 10,
+"init_num_OnVentInICU": 10,
+"num_timesteps": 21,
+"pmf_num_per_timestep_InGeneralWard": "scipy.stats.poisson(10)",
+"proba_Recovering_given_InGeneralWard": 0.1,
+"proba_Recovering_given_OffVentInICU": 0.1,
+"proba_Recovering_given_OnVentInICU": 0.1,
+"pmf_duration_Declining_InGeneralWard": {
+    "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
+"pmf_duration_Recovering_InGeneralWard": {
+    "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
+"pmf_duration_Declining_OffVentInICU": {
+    "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
+"pmf_duration_Recovering_OffVentInICU": {
+    "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
+"pmf_duration_Declining_OnVentInICU": {
+    "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625},
+"pmf_duration_Recovering_OnVentInICU": {
+    "1": 0.5, "2": 0.25, "3": 0.125, "4": 0.0625, "5": 0.0625}
+}
