@@ -1,10 +1,27 @@
-# ACED-HMM hospital progression modeling for COVID-19
+# ACED-HMM hospitalized patient trajectory modeling for COVID-19
 
-Simulation software for forecasting demand at various stages of hospitalization
+Our proposed model can be used to forecast how a hospitalized COVID-19 patient can move through various stages of care (in general ward, in ICU, in ICU on the ventilator)
 
-PI: Michael C. Hughes
+Using this model, we can:
+
+* **fit parameters** to aggregated daily count time-series from a specific hospital site or region
+* **forecast** future daily counts to help administrative officials understand future demand for resources
+* **assess the societal value** of possible interventions (e.g. would decreasing admissions by X% help California avoid a lockdown in late 2020?)
+
+See our preprint manuscript:
+
+    Approximate Bayesian Computation for an Explicit-Duration Hidden Markov Model of COVID-19 Hospital Trajectories.
+    Gian Marco Visani, Alexandra Hope Lee, Cuong Nguyen, David M. Kent, John B. Wong, Joshua T. Cohen, and Michael C. Hughes
+    [TODO arXiv link here]
 
 Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation)
+
+For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model/issues)
+
+Contact:
+
+* [Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
+
 
 # Usage
 
