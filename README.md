@@ -1,6 +1,6 @@
-# ACED-HMM hospitalized patient trajectory modeling for COVID-19
+# ACED-HMM - A model for COVID-19 hospitalized patient trajectories
 
-Our proposed model can be used to forecast how a hospitalized COVID-19 patient can move through various stages of care (in general ward, in ICU, in ICU on the ventilator)
+Our proposed mechanistic model can be used to forecast how a hospitalized COVID-19 patient can move through various stages of care (in general ward, in ICU, in ICU on the ventilator)
 
 Using this model, we can:
 
@@ -18,9 +18,11 @@ Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation)
 
 For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model/issues)
 
-Contact:
+### Contact:
 
-* [Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
+For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model/issues)
+
+For general questions, please email [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
 
 
 # Usage
