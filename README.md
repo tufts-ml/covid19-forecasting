@@ -141,7 +141,7 @@ We have developed a probabilistic "semi-Markov" model to simulate individual pat
 
 At each timestep, a patient can be described by:
 * a binary health state ('Recovering' or 'Declining')
-* an ordinal location state (e.g. 'Presenting', 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
+* an ordinal location state (e.g. 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
 * the time left before transition to the next location state
 
 Every parameter governing these distributions can be specified by the user, and all are readily estimated from local data or the literature (e.g. by counting the fraction of ventilator patients who recover).
