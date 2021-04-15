@@ -33,7 +33,7 @@ Here's a very simple example, that will run our probabilistic progression model 
 
 ```console
 $ conda activate aced_hmm
-$ python aced_hmm/run_forecast.py --func_name python --config_path workflows/example_simple/config.json --output_dir workflows/example_output --output_file results-{{random_seed}}.csv --approximate None --random_seed 1001 --num_seeds 10
+$ python -m aced_hmm.run_forecast --func_name python --config_path workflows/example_simple/config.json --output_dir workflows/example_output --output_file results-{{random_seed}}.csv --approximate None --random_seed 1001 --num_seeds 10
 ```
 
 **Expected output:**
