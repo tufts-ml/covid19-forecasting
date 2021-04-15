@@ -136,7 +136,7 @@ By reading parameters in from a plain text file [example](./workflows/example_si
 
 # ABC
 
-We provide here an example workflow, together with an overview of the necessary commands, to fit the posterior of our model parameters to true counts via ABC, and to run forecasts from such posterior. To get started, we recommend running each command with the default parameters, which will "fit" the parameters to the MA data we used in our experiments (NOT until convergence), and then generate forecasts from the "fitted" posterior.  
+We provide here an example workflow, together with an overview of the necessary commands, to fit the posterior of our model parameters to true counts via ABC, and to run forecasts from such posterior. To get started, we recommend running each command with the default parameters, which will "fit" the parameters to the MA data we used in our experiments (only for 25 timesteps, NOT until convergence), and then generate forecasts from the "fitted" posterior.  
 In the results folder, we also provide posteriors already fitted to 4 US states and 1 UK hospital.
 
 ## Setup
@@ -169,7 +169,7 @@ Run the following command:
 $ python -m aced_hmm.fit_posterior_with_abc
 ```
 
-See the file for an explanation of the arguments.
+See the source code at aced_hmm/fit_posterior_with_abc.py for an explanation of the arguments.
 
 Output:  
 - Samples file (json), containing the last 2000 samples of parameters as a list of dictionaries.  
