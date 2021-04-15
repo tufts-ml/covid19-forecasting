@@ -10,8 +10,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', default='results/US/MA-20201111-20210111-20210211/individual_forecasts')
     parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211')
-    parser.add_argument('--output_template', default='PRETRAINED_summary_after_abc_')
-    parser.add_argument('--input_csv_file_pattern', default='PRETRAINED_results_after_abc*.csv')
+    parser.add_argument('--output_template', default='summary_after_abc_')
+    parser.add_argument('--input_csv_file_pattern', default='results_after_abc*.csv')
     parser.add_argument('--comma_sep_percentiles',
                             type=str,
                             default='1,2.5,5,10,25,50,75,90,95,97.5,99')

@@ -137,7 +137,7 @@ By reading parameters in from a plain text file [example](./workflows/example_si
 # ABC
 
 We provide here an example workflow, together with an overview of the necessary commands, to fit the posterior of our model parameters to true counts via ABC, and to run forecasts from such posterior. To get started, we recommend running each command with the default parameters, which will "fit" the parameters to the MA data we used in our experiments (only for 25 timesteps, NOT until convergence), and then generate forecasts from the "fitted" posterior.  
-In the results folder, we also provide posteriors already fitted to 4 US states and 1 UK hospital.
+In the results folder, we also provide posteriors already fitted to 4 US states and 2 UK hospitals.
 
 ## Setup
 
@@ -195,7 +195,7 @@ Arguments:
 - *output_file*: must include '-{{random_seed}}' at the end of your desired output file to allow the scripts to generate and then identify the individual forecasts. The script will generate *num_seeds* csv files, each containing one forecast.  
 - *num_seeds*: if None, it defaults to 1 if forecasting with fixed parameters, and to number of samples if forecasting from samples.
 
-We already provide a set of samples from the posterior distribution of 4 US states, trained from Nov 11th to Jan 11th, and of 1 UK hospital, trained from Nov 3rd to Jan 3rd. To make forecasts with the MA posterior, simply set *config_path* to 'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json'.
+We already provide a set of samples from the posterior distribution of 4 US states, trained from Nov 11th to Jan 11th, and of 2 UK hospitals, trained from Nov 3rd to Jan 3rd. To make forecasts with the MA posterior, simply set *config_path* to 'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json'.
 
 We **strongly** recommend making forecasts using samples from multiple runs of ABC, as opposed to just one.
 
