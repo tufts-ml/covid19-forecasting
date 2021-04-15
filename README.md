@@ -14,7 +14,7 @@ See our preprint manuscript:
     Gian Marco Visani, Alexandra Hope Lee, Cuong Nguyen, David M. Kent, John B. Wong, Joshua T. Cohen, and Michael C. Hughes
     [TODO arXiv link here]
 
-Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation)
+Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
 
 For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model/issues)
 
@@ -166,7 +166,7 @@ To use the cython implementation, set the argument *func_name* to *cython* in an
 
 Run the following command:  
 ```console
-python -m aced_hmm.fit_posterior_with_abc
+$ python -m aced_hmm.fit_posterior_with_abc
 ```
 
 See the file for an explanation of the arguments.
@@ -180,10 +180,13 @@ Output:
 
 Run the following command:  
 ```console
-python -m aced_hmm.run_forecast --func_name [python] --config_path [results/US/MA-20201111-20210111-20210211/config_after_abc.json]
-                                              --output_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts]
-                                              --output_file [results_after_abc-{{random_seed}}.csv]
-                                              --approximate [5] --random_seed [1001] --num_seeds [None]
+$ python -m aced_hmm.run_forecast --func_name [python] \
+                                  --config_path [results/US/MA-20201111-20210111-20210211/config_after_abc.json] \
+                                  --output_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts] \
+                                  --output_file [results_after_abc-{{random_seed}}.csv] \
+                                  --approximate [5] \
+                                  --random_seed [1001] \
+                                  --num_seeds [None]
 ```
 
 Arguments:  
@@ -200,10 +203,11 @@ We **strongly** recommend making forecasts using samples from multiple runs of A
 
 Run the following command:  
 ```console
-python -m aced_hmm.summarize_forecasts --input_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts] --output_dir [results/US/MA-20201111-20210111-20210211 
-                                   --output_template [summary_after_abc_]
-                                   --input_csv_file_pattern [results_after_abc*.csv] 
-                                   --comma_sep_percentiles [1,2.5,5,10,25,50,75,90,95,97.5,99]
+$ python -m aced_hmm.summarize_forecasts --input_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts] \
+                                         --output_dir [results/US/MA-20201111-20210111-20210211] \
+                                         --output_template [summary_after_abc_] \
+                                         --input_csv_file_pattern [results_after_abc*.csv] \
+                                         --comma_sep_percentiles [1,2.5,5,10,25,50,75,90,95,97.5,99]
 ```
 
 Arguments:  
@@ -215,11 +219,14 @@ The summaries include (one file for each one): mean, stddev, and all percentiles
 
 Run the following command:  
 ```console
-python -m aced_hmm.abc_test_metrics --input_dir [results/US/MA-20201111-20210111-20210211] --output_dir [results/US/MA-20201111-20210111-20210211] 
-                                --output_template [after_abc] --config_file [results/US/MA-20201111-20210111-20210211/config_after_abc.json]
-                                --true_stats [datasets/US/MA-20201111-20210111-20210211/daily_counts.csv]
-                                --input_summaries_template [summary_after_abc_] --coverages [2.5_97.5,10_90,25_75]
-                                --comma_sep_expected_columns [n_InGeneralWard,n_OffVentInICU,n_OnVentInICU,n_InICU,n_occupied_beds,n_TERMINAL,n_TERMINAL_5daysSmoothed]
+$ python -m aced_hmm.abc_test_metrics --input_dir [results/US/MA-20201111-20210111-20210211] \
+                                      --output_dir [results/US/MA-20201111-20210111-20210211] \
+                                      --output_template [metrics_after_abc] \
+                                      --config_file [results/US/MA-20201111-20210111-20210211/config_after_abc.json] \
+                                      --true_stats [datasets/US/MA-20201111-20210111-20210211/daily_counts.csv] \
+                                      --input_summaries_template [summary_after_abc_] \
+                                      --coverages [2.5_97.5,10_90,25_75] \
+                                      --comma_sep_expected_columns [n_InGeneralWard,n_OffVentInICU,n_OnVentInICU,n_InICU,n_occupied_beds,n_TERMINAL,n_TERMINAL_5daysSmoothed]
 ```
 
 Arguments:  
@@ -230,3 +237,12 @@ The script currently computes:
 - MAE for each expected_column, averaged over timesteps.  
 - Coverage for each expected_column. Coverages are user-specified in the following format: low1_high1,low2_high2,...,lowN_highN. The requested coverages must be computable from the percentiles computed in step 3 (e.g. can compute 10\_90 coverage only if 10 and 90 percentiles were computed in step 3).
 
+## Step 5: visualize posterior and forecasts
+
+Run the following command:  
+```console
+$ python -m aced_hmm.visalize_forecasts --samples_path [results/US/MA-20201111-20210111-20210211/posterior_samples.json] \
+                                        --config_path [results/US/MA-20201111-20210111-20210211/config_after_abc.json] \
+                                        --input_summaries_template_path [results/US/MA-20201111-20210111-20210211/summary_after_abc] \
+                                        --true_stats [datasets/US/MA-20201111-20210111-20210211/daily_counts.csv]
+```

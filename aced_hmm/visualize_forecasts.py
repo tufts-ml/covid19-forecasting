@@ -5,6 +5,7 @@ import json
 import scipy
 from scipy import stats
 import seaborn as sns
+import argparse
 
 sns.set_style("whitegrid")
 
@@ -281,17 +282,15 @@ def plot_forecasts(forecasts_template_path, config_filepath, true_counts_filepat
 #################################################
 
 if __name__ == '__main__':
-
-    ## Plot statistics across iterations of ABC
-    ## works!!!
-    # plot_stat('results/US/MA-20201111-20210111-20210211/PRETRAINED_abc_training_stats.csv', 'accepted_distances')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--samples_path', default='results/US/MA-20201111-20210111-20210211/posterior_samples.json', type=str)
+    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/config_after_abc.json', type=str)
+    parser.add_argument('--input_summaries_template_path', default='results/US/MA-20201111-20210111-20210211/summary_after_abc', type=str)
+    parser.add_argument('--true_stats', default='datasets/US/MA-20201111-20210111-20210211/daily_counts.csv', type=str)
+    args = parser.parse_args()
 
     ## Plot learned posterior and prior
-    ## works!!!
-    plot_params('results/US/MA-20201111-20210111-20210211/PRETRAINED_posterior_samples.json')
+    plot_params(args.samples_path)
 
     ## Plot forecasts for counts of interest
-    ## works!!!
-    plot_forecasts('results/US/MA-20201111-20210111-20210211/PRETRAINED_summary_after_abc',
-                   'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json',
-                   'datasets/US/MA-20201111-20210111-20210211/daily_counts.csv')
+    plot_forecasts(args.input_summaries_template_path, args.config_path, args.true_stats)
