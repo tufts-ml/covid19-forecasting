@@ -2,8 +2,8 @@
 
 ## Generating datasets for US states
 
-To generate a dataset for any US stateof interest for a specific timeframe, simply run the following command:  
-`python generate_data_UC.py --state [MA] --start_date [20201111] --end_training_date [20210111] --end_date [20210201]`
+To generate a dataset for any US state of interest for a specific timeframe, simply run the following command:  
+`python generate_data_US.py --state [MA] --start_date [20201111] --end_training_date [20210111] --end_date [20210201]`
 
 This will automatically create a new directory with the necessary data files.
 

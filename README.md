@@ -133,3 +133,92 @@ Every parameter governing these distributions can be specified by the user, and 
 We take an initial population, and run the model forward for a desired number of days.
 
 By reading parameters in from a plain text file [example](./workflows/example_simple/params.json), the model transparently facilitates communication of assumptions and invites modifications.
+
+# ABC
+
+We provide here an example workflow, together with an overview of the necessary commands, to fit the posterior of our model parameters to true counts via ABC, and to run forecasts from such posterior. To get started, we recommend running each command with the default parameters, which will "fit" the parameters to the MA data we used in our experiments (NOT until convergence), and then generate forecasts from the "fitted" posterior.  
+In the results folder, we also provide posteriors already fitted to 4 US states and 1 UK hospital.
+
+## Setup
+
+Requirements:  
+- A json file containing the prior over each set of parameters  
+- A json file containing the config information necessary for the hospital model to run a simulation. This includes:  
+    - Initial counts at each state of the hospital  
+    - Number of timesteps to simulate (training + testing)  
+    - Number of *training* timesteps only  
+    - A source to draw admissions from, usually a pointer to a file containing admissions per timestep  
+    - Parameters of the model. Values are just placeholders, with the exception of *proba_Die_after_Declining_OnVentInICU* which must be set to 1.0 and never changed  
+- A csv file containing admissions per timestep. These admissions an be at any state of the hospital  
+- A csv file containing the true hospital census counts for training and testing
+
+## Data collection
+
+We provide the datasets we used in our experiments, as well as code to automatically collect and format US state level data from HHS and from the Covid Tracking Project.  
+Code and README are provided in the folder datasets/US.
+
+## Step 0: Cython
+
+We provide a cython implementation of our model, which grants a 2-fold speedup over our optimized python implementation. Follow the [installation](#installation) instructions to enable the use of cython for fitting the posterior using ABC, and for running forecasts.
+To use the cython implementation, set the argument *func_name* to *cython* in any script that has the argument.
+
+## Step 1: Run ABC
+
+Run the following command:  
+    `python -m aced_hmm.fit_posterior_with_abc`
+
+See the file for an explanation of the arguments.
+
+Output:  
+- Samples file (json), containing the last 2000 samples of parameters as a list of dictionaries.  
+- Config file (json), a copy of the input config file, with also a pointer to the samples file
+- Stats file (csv) containing a history of all relevant statistics at each step of the sampling procedure (epsilon trace, accepted distances, all distances, accepted alphas, all alphas). Useful to check convergence of the algorithm (code to automatically analyze this coming soon).
+
+## Step 2: run forecasts (training + testing)
+
+Run the following command:  
+    `python -m aced_hmm.run_forecast --func_name [python] --config_path [results/US/MA-20201111-20210111-20210211/config_after_abc.json]
+                                              --output_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts]
+                                              --output_file [results_after_abc-{{random_seed}}.csv]
+                                              --approximate [5] --random_seed [1001] --num_seeds [None]`
+
+Arguments:  
+- *config_path* is the config file for the model. It must contain a pointer to a JSON file containing model parameters with which to forecast. These parameters can be provided either as single float values, in which case forecasts are made with fixed parameters and changing random seeds, or as parallel lists of float values (i.e. samples), in which case forecasts are made with unique pairs of samples and random seeds.
+- *approximate* number of patients modeled jointly. Higher approximation means less granularity in forecast, but much higher speedup. We recommend the use of higher approximations for higher admissions regimes, where the speedup is much needed and the granularity can be lower without reducing the quality of the forecasts.  
+- *output_file*: must include '-{{random_seed}}' at the end of your desired output file to allow the scripts to generate and then identify the individual forecasts. The script will generate *num_seeds* csv files, each containing one forecast.  
+- *num_seeds*: if None, it defaults to 1 if forecasting with fixed parameters, and to number of samples if forecasting from samples.
+
+We already provide a set of samples from the posterior distribution of 4 US states, trained from Nov 11th to Jan 11th, and of 1 UK hospital, trained from Nov 3rd to Jan 3rd. To make forecasts with the MA posterior, simply set *config_path* to 'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json'.
+
+We **strongly** recommend making forecasts using samples from multiple runs of ABC, as opposed to just one.
+
+## Step 3: compute summaries of forecasts
+
+Run the following command:  
+    `python -m aced_hmm.summarize_forecasts --input_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts] --output_dir [results/US/MA-20201111-20210111-20210211 
+                                   --output_template [summary_after_abc_]
+                                   --input_csv_file_pattern [results_after_abc*.csv] 
+                                   --comma_sep_percentiles [1,2.5,5,10,25,50,75,90,95,97.5,99]`
+
+Arguments:  
+- *input_csv_file_pattern* identifies all the files containing the forecasts.
+
+The summaries include (one file for each one): mean, stddev, and all percentiles specified by *comma_sep_percentiles*.
+
+## Step 4: compute relevant metrics
+
+Run the following command:  
+    `python -m aced_hmm.abc_test_metrics --input_dir [results/US/MA-20201111-20210111-20210211] --output_dir [results/US/MA-20201111-20210111-20210211] 
+                                --output_template [after_abc] --config_file [results/US/MA-20201111-20210111-20210211/config_after_abc.json]
+                                --true_stats [datasets/US/MA-20201111-20210111-20210211/daily_counts.csv]
+                                --input_summaries_template [summary_after_abc_] --coverages [2.5_97.5,10_90,25_75]
+                                --comma_sep_expected_columns [n_InGeneralWard,n_OffVentInICU,n_OnVentInICU,n_InICU,n_occupied_beds,n_TERMINAL,n_TERMINAL_5daysSmoothed]`
+
+Arguments:  
+- *input_summaries_template* identifies the files containing summaries of the forecasts, i.e. the files generated by the script summarize_forecasts.py.
+- *comma_sep_expected_columns* identifies the columns for which metrics want to be computed. It defaults to all possible columns. We note, however, that the 'n_TERMINAL_5daysSmoothed' column is only available for US states).
+
+The script currently computes:  
+- MAE for each expected_column, averaged over timesteps.  
+- Coverage for each expected_column. Coverages are user-specified in the following format: low1_high1,low2_high2,...,lowN_highN. The requested coverages must be computable from the percentiles computed in step 3 (e.g. can compute 10\_90 coverage only if 10 and 90 percentiles were computed in step 3).
+

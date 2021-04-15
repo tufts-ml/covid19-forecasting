@@ -92,40 +92,6 @@ def run_simulation(random_seed, output_file, config_dict, states, func_name, app
     sim_kwargs['discharge_count_TK'] = discharge_count_TK
     sim_kwargs['terminal_count_T1'] = terminal_count_T1
 
-    ##################### Prior Stuff ###########################
-
-    # a = 1.0
-    # b = 22.0
-    # lam_mean = 8.0
-    # lam_stddev = 3.0
-    # alpha = (a - lam_mean) / lam_stddev
-    # beta = (b - lam_mean) / lam_stddev
-    # tau_mean = 0.5
-    # tau_stddev = 0.5
-
-    # lam = scipy.stats.truncnorm.rvs(alpha, beta, loc=lam_mean, scale=lam_stddev, random_state=random_seed)
-    # tau = scipy.stats.norm.rvs(loc=tau_mean, scale=tau_stddev, random_state=random_seed)
-
-    # probas = scipy.special.softmax(scipy.stats.poisson.logpmf(np.arange(len(choices)), lam) / np.power(10, tau)).astype(np.float64)
-    # prior_duration_cdf_HKT = np.zeros((H, K, Tmax))
-    # for health, stage in itertools.product(health_ids, np.arange(K)):
-    #     choices = np.arange(1, 23, dtype=np.int32)
-    #     for c, p in zip(choices, probas):
-    #         assert c >= 1
-    #         prior_duration_cdf_HKT[health, stage, c - 1] = p
-    #     prior_duration_cdf_HKT[health, stage, :] = np.cumsum(prior_duration_cdf_HKT[health, stage, :])
-
-    # RECOVER = [[34, 66], [20.4, 13.6], [17.952, 2.448]]
-    # DIE = [[198, 2], [196, 4]]
-    # prior_pRecover_K = np.array([scipy.stats.dirichlet.rvs(alpha)[0][1] for alpha in RECOVER]).astype(np.float64)
-    # prior_pDieAfterDeclining_K = np.append(np.array([scipy.stats.dirichlet.rvs(alpha)[0][1] for alpha in DIE]), np.array([1.0])).astype(np.float64)
-
-    # sim_kwargs['prior_pRecover_K'] = prior_pRecover_K
-    # sim_kwargs['prior_pDieAfterDeclining_K'] = prior_pDieAfterDeclining_K
-    # sim_kwargs['prior_duration_cdf_HKT'] = prior_duration_cdf_HKT
-
-    #############################################################
-
     if approximate is not None:
         init_num_per_state_Tpastplus1K = np.rint(init_num_per_state_Tpastplus1K.astype(np.float64) / float(approximate)).astype(np.int32)
         admissions_per_state_Tplus1K = np.rint(admissions_per_state_Tplus1K.astype(np.float64) / float(approximate)).astype(np.int32)
@@ -184,9 +150,9 @@ def update_config_given_sample(config_dict, parameters, i):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--func_name', default='python', type=str)
-    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json')
+    parser.add_argument('--config_path', default='results/US/MA-20201111-20210111-20210211/config_after_abc.json')
     parser.add_argument('--output_dir', default='results/US/MA-20201111-20210111-20210211/individual_forecasts')
-    parser.add_argument('--output_file', default='PRETRAINED_results_after_abc-{{random_seed}}.csv')
+    parser.add_argument('--output_file', default='results_after_abc-{{random_seed}}.csv')
     parser.add_argument('--approximate', default='5')
     parser.add_argument('--random_seed', default=1001, type=int)
     parser.add_argument('--num_seeds', default=None) # None value here defaults to 1 when running with fixed parameters, 
