@@ -17,8 +17,10 @@ def summarize_pmf(pmf_dict):
         np.percentile(samps, 99))
 
 
-def pprint_params(params_dict):
-    states = params_dict['states']
+def pprint_params(config_dict):
+    states = config_dict['states']
+    with open(config_dict['parameters'], 'r') as f:
+        params_dict = json.load(f)
     next_state_map = dict()
     for ss, state in enumerate(states):
         if ss < len(states) - 1:
@@ -41,12 +43,12 @@ def pprint_params(params_dict):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--params_json_file',
+        '--config_json_file',
         help="Path to JSON file with simulation parameters",
         default=None)
     args = parser.parse_args()
 
-    with open(args.params_json_file, 'r') as f:
+    with open(args.config_json_file, 'r') as f:
         params = json.load(f)
     print("----------------------------------------")
     pprint_params(params)

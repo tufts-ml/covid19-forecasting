@@ -32,45 +32,41 @@ For general questions, please email [Prof. Michael C. Hughes](https://www.michae
 Here's a very simple example, that will run our probabilistic progression model (with dummy initial conditions and dummy parameters) to forecast ahead for 120 days. (Requires you have already [installed this project's conda environment](#installation)
 
 ```console
-$ conda activate semimarkov_forecaster
-$ python run_forecast.py \
-    --config_file workflows/example_simple/params.json \
-    --output_file /tmp/results-101.csv \
-    --random_seed 101
+$ conda activate aced_hmm
+$ python aced_hmm/run_forecast.py --func_name python --config_path workflows/example_simple/config.json --output_dir workflows/example_output --output_file results-{{random_seed}}.csv --approximate None --random_seed 1001 --num_seeds 10
 ```
 
 **Expected output:**
 ```console
-----------------------------------------
-Loaded SemiMarkovModel from config_file:
-----------------------------------------
-State #0 Presenting
-    prob. 0.100 recover
-    prob. 0.900 advance to state InGeneralWard
-State #1 InGeneralWard
+Forecasting with fixed parameters ...
+Using 10 random seeds to generate simulations using the following parameters:
+State #0 InGeneralWard
     prob. 0.100 recover
     prob. 0.900 advance to state OffVentInICU
-State #2 OffVentInICU
+    Recovering Duration: mean 1.9 | 1st% 1.0   10th% 1.0   90th% 4.0   99th% 5.0
+    Declining Duration:  mean 1.9 | 1st% 1.0   10th% 1.0   90th% 4.0   99th% 5.0
+State #1 OffVentInICU
     prob. 0.100 recover
     prob. 0.900 advance to state OnVentInICU
-State #3 OnVentInICU
+    Recovering Duration: mean 1.9 | 1st% 1.0   10th% 1.0   90th% 4.0   99th% 5.0
+    Declining Duration:  mean 1.9 | 1st% 1.0   10th% 1.0   90th% 4.0   99th% 5.0
+State #2 OnVentInICU
     prob. 0.100 recover
     prob. 0.900 advance to state TERMINAL
-random_seed=101 <<<
-----------------------------------------
-Simulating for 120 timesteps with seed 101
-----------------------------------------
-100%|██████████████████████████████████████████████████████████████████████████████| 120/120 [00:00<00:00, 148.03it/s]
-----------------------------------------
-Writing results to /tmp/results-101.csv
-----------------------------------------
+    Recovering Duration: mean 1.9 | 1st% 1.0   10th% 1.0   90th% 4.0   99th% 5.0
+    Declining Duration:  mean 1.9 | 1st% 1.0   10th% 1.0   90th% 4.0   99th% 5.0
+--------------------------------------------
+           Running 10 simulations
+--------------------------------------------
+100%|██████████████████████████████████████████████████████████████████████████████████| 10/10 [00:00<00:00, 15.41it/s]
+
 ```
 
-This will write a CSV file to /tmp/results-101.csv, with columns for each census count and a row for each day
+This will write 10 CSV files to workflows/example_output, each identified by a specific random seed. Each file will have columns for each census count and a row for each day.
 
 See an example output in (example_output/](.example_output/)
 
-### Using Snakemake workflows for reproducibility
+<!-- ### Using Snakemake workflows for reproducibility
 
 Run the following, which will install all necessary python packages in a separate environment, and then run a single simple simulation with results saved to file `results.csv`
 
@@ -93,7 +89,7 @@ Then login to the HPC system and do:
 $ conda activate semimarkov_forecaster
 $ pushd /cluster/tufts/hugheslab/code/covid19-forecasting/workflows/simple_example/
 $ snakemake --cores 1 run_simple_example_simulation # Do NOT use '--use-conda' here, you already have the environment
-```
+``` -->
 
 
 # Installation
@@ -109,31 +105,19 @@ $ conda install -c bioconda -c conda-forge snakemake-minimal
 ```
 Having trouble? See the full install instructions: <https://snakemake.readthedocs.io/en/stable/getting_started/installation.html>
 
-#### 3. Install `semimarkov_forecaster` conda environment
+#### 3. Install `aced_hmm` conda environment
 
-Use the project's included YAML file to specify all packages needed: [semimarkov_forecaster.yml](./semimarkov_forecaster.yml)
+Use the project's included YAML file to specify all packages needed: [aced_hmm.yml](./aced_hmm.yml)
 ```
-conda env create -f semimarkov_forecaster.yml
+conda env create -f aced_hmm.yml
 ```
 
 #### 4. Setup the Cython extensions (optional)
 
 ```
-$ cd covid19-forecasting/
+$ cd aced-hmm-hospitalized-patient-trajectory-model
 $ python setup.py # builds the Cython extensions!
-
-# python semimarkov_forecaster/simulate_traj__python.py \
-    --params_json_file workflows/example_simple/params.json \
-    --func_name python \
-    --n_trials 10000
 ```
-
-* Expected output *
-
-```
-Finished 10000 trials after     0.062 sec
-```
-
 
 # Modeling
 
