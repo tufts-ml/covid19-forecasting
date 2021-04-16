@@ -10,13 +10,17 @@ Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation)
 
 As of April 2021, we've moved a few polished efforts to their own stand-alone repositories:
 
-* The hospital progression model code now lives here: https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model
+#### Our mechanistic hospitalized patient trajectory model : ACED-HMM
+
+Code is here: https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model
 
 See our paper:
 
 Gian Marco Visani, Alexandra Hope Lee, Cuong Nguyen, David M. Kent, John B. Wong, Joshua T. Cohen, and Michael C. Hughes. <i>Approximate Bayesian Computation for an Explicit-Duration Hidden Markov Model of COVID-19 Hospital Trajectories.</i>. Technical Report, 2021. <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
 
-* The single-site prediction model code now live here: https://github.com/tufts-ml/single-hospital-count-forecasting/
+#### Our latent variable models for single-site future counts
+
+Code is here: https://github.com/tufts-ml/single-hospital-count-forecasting/
 
 See our paper:
 
