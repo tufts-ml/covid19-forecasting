@@ -88,7 +88,10 @@ class HospitalData(object):
             tc_data['date'] = tc_data.apply(lambda x: x['date'].replace('/',''))
             return tc_data
         else: 
-            return tc.SFrame(csv_name)
+#             print('get_HHS_data',tc.SFrame(csv_name))
+            tc_data = tc.SFrame(csv_name)
+            tc_data['date'] = tc_data.apply(lambda x: x['date'].replace('/',''))
+            return tc_data
     def get_covidtracking_data(self):
         ## download csv from covidtracking website to the current directory of this HospitalData.py file
         csv_name = 'CT_data.csv'
@@ -104,6 +107,7 @@ class HospitalData(object):
                     writer.writerow(line.decode('utf-8').split(','))
             return tc.SFrame(csv_name)
         else:
+#             print('get_covidtracking_data',tc.SFrame(csv_name))
             return tc.SFrame(csv_name)
 
     def join_HHS_covidtracking_data(self, hhs_data, ctrack_data):
@@ -129,16 +133,10 @@ class HospitalData(object):
         return hhs_data_truncated.join(ctrack_data_truncated, on=['state_and_date'], how='left')
 
     def load_csv_if_exists(self):
-        if os.path.isfile(self.csv_filename):
-            #load
-            self.data = tc.SFrame(self.csv_filename)
-        else:#download 2 datasets and join
-            self.data = self.join_HHS_covidtracking_data(self.get_HHS_data(),self.get_covidtracking_data())
-            self.data.save(self.csv_filename, format='csv') 
-        
+        self.data = self.join_HHS_covidtracking_data(self.get_HHS_data(),self.get_covidtracking_data())
+        self.data.save(self.csv_filename, format='csv') 
         self.filtered_data = self.get_filtered_data()
         
-
     def get_filtered_data(self):
         # returns Sframe within specified [self.start_date, self.end_date] and self.us_state 
         self.data['selected_row'] = self.data.apply(lambda x: 1 if (x['state']==self.us_state and (int(x['date'])>=int(self._start_date) and int(x['date'])<=int(self._end_date)) ) else 0) #1 means row selected, 0 means row not selected for filtered data
@@ -162,8 +160,14 @@ class HospitalData(object):
 
     def get_Admission_counts(self):
         # returns admission counts within [self.start_date, self.end_date] of the self.us_state specified
-        return (self.filtered_data.apply(lambda x: float('nan') if (None in [x['previous_day_admission_adult_covid_confirmed']]) \
+        prev_admission = (self.filtered_data.apply(lambda x: float('nan') if (None in [x['previous_day_admission_adult_covid_confirmed']]) \
             else x['previous_day_admission_adult_covid_confirmed'])).to_numpy()
+#         print(self.end_date)
+        end_date_plus_1 = datetime.strftime(datetime.strptime(self.end_date,'%Y%m%d')+timedelta(days=1),'%Y%m%d')
+        end_date_plus_1_entry = self.data.filter_by([int(end_date_plus_1)],'date').filter_by([self.us_state],'state')
+        print(end_date_plus_1_entry)
+        current_admission = np.append(prev_admission[1:],end_date_plus_1_entry['previous_day_admission_adult_covid_confirmed'])
+        return current_admission
 
     def get_OnVentInICU_counts(self):
     # # returns OnVentInICU counts within [self.start_date, self.end_date] of the self.us_state specified
@@ -250,9 +254,9 @@ class HospitalData(object):
                                     np.array(self.population_data_obj.forecasted_data['hosp'].to_numpy()))
             
 
-            print(len(previous_day_admission_adult_covid_confirmed[1:]), len(imputed_missing_hhs_admissions), len(self.population_data_obj.forecasted_data['hosp'].to_numpy()), 'lens within admissions.csv DEBUGGG')
-            print((self.filtered_data['date'].unique().sort()), 'dates of unique filtered data')
-            print((self.population_data_obj.dates_to_forecast), 'dates to forecast DEBUGGG')
+#             print(len(previous_day_admission_adult_covid_confirmed[1:]), len(imputed_missing_hhs_admissions), len(self.population_data_obj.forecasted_data['hosp'].to_numpy()), 'lens within admissions.csv DEBUGGG')
+#             print((self.filtered_data['date'].unique().sort()), 'dates of unique filtered data')
+#             print((self.population_data_obj.dates_to_forecast), 'dates to forecast DEBUGGG')
         pmf_SFrame = tc.SFrame({'timestep':list(range(len(presenting_per_day))),'num_InGeneralWard':presenting_per_day})
         csv_filename = str(Path(__file__).resolve().parents[0])+ '/'+self.us_state+'_'+self.start_date+'_'+self.end_date +'_'+'pmf_num_per_timestep_InGeneralWard.csv' 
         pmf_SFrame.save(csv_filename, format='csv')
@@ -305,3 +309,5 @@ class HospitalData(object):
         self._us_state = new_value
         self.filtered_data = self.get_filtered_data()
 
+        
+# h = HospitalData('HHS4.csv', 'MA', '20201001', '20201101', population_data_obj = None)

@@ -29,12 +29,20 @@ import requests
 from bs4 import BeautifulSoup
 import urllib
 
+from autograd.scipy.special import expit as sigmoid
+from autograd.scipy.special import logit as sigmoid_inv
+softplus = lambda x: np.log(1+np.exp(x))
+# plt.plot(range(-10,10,1),softplus(range(-10,10,1)))
+
+softplus_inv = lambda x: np.log(np.exp(x) -1)
+# plt.plot(range(-10,10,1),softplus_inv(softplus(range(-10,10,1))))
 
 
-factorial=lambda x: np.prod([i for i in list(range(1,x+1))])
-
+# factorial=lambda x: np.prod([i for i in list(range(1,x+1))])
+## TODO redefine this fn as autogradable
 def log_gamma_pdf(x,alpha,beta):
-    return np.log((beta**alpha)*(x**(alpha-1))*np.exp(-beta*x)/gamma_fcn(alpha))
+    # return np.log((beta**alpha)*(x**(alpha-1))*np.exp(-beta*x)/gamma_fcn(alpha))
+    return alpha*np.log(beta) + (alpha-1)*np.log(x) - (beta*x) - np.log(gamma_fcn(alpha))
     # print(gamma_dist.logpdf(x, alpha, loc=0, scale = 1 / beta), 'DEBUGGING')
     # return gamma_dist.logpdf(x, alpha, loc=0, scale = 1 / beta)
     # return np.log(gamma_at_x({'alpha':alpha,'beta',beta},x))
@@ -51,9 +59,9 @@ def cdf_at_x(params,x):
     return (gammainc(params['alpha'],params['beta']*x))    
     
 
-def pmf_at_x(params,x):
-    k = x-params['loc']
-    return (params['mu']**(k))*np.exp(-params['mu'])/ factorial(k)   
+# def pmf_at_x(params,x):
+#     k = x-params['loc']
+#     return (params['mu']**(k))*np.exp(-params['mu'])/ factorial(k)   
 
 class PopulationData(object):
     ''' Represents a Turicreate SFrame of csv data extracted from covidEstim project state-level estimates.csv
@@ -103,10 +111,16 @@ class PopulationData(object):
             #             'prob_sympt':0.65,'prob_severe':0.05,'prob_hosp':0.75, \
             #             'prob_soujourn_inf_fcn':(lambda j: (gamma(a=3.41, scale=1/0.605)).pdf(j) ),'prob_soujourn_symp_fcn':(lambda j: (gamma(a=1.62, scale=1/0.218)).pdf(j))}
 
+            ##TODO REPARAM change the relevant params to be their inverse fn transformed
+
+            # self.params = {'T_serial':5.8, 'Rt_shift':0.2, 'days_of_imposed_restrictions':[],'days_of_relaxed_restrictions':[],\
+            # 'prob_sympt':0.65,'prob_severe':0.05,'prob_hosp':0.75, \
+            # 'prob_soujourn_inf_alpha':3.41, 'prob_soujourn_inf_beta':0.605, \
+            # 'prob_soujourn_symp_alpha':1.62, 'prob_soujourn_symp_beta':0.218}
             self.params = {'T_serial':5.8, 'Rt_shift':0.2, 'days_of_imposed_restrictions':[],'days_of_relaxed_restrictions':[],\
-            'prob_sympt':0.65,'prob_severe':0.05,'prob_hosp':0.75, \
-            'prob_soujourn_inf_alpha':3.41, 'prob_soujourn_inf_beta':0.605, \
-            'prob_soujourn_symp_alpha':1.62, 'prob_soujourn_symp_beta':0.218}
+            'prob_sympt_s':sigmoid_inv(0.65),'prob_severe_s':sigmoid_inv(0.05),'prob_hosp_s':sigmoid_inv(0.75), \
+            'prob_soujourn_inf_alpha_s':softplus_inv(3.41), 'prob_soujourn_inf_beta_s':softplus_inv(0.605), \
+            'prob_soujourn_symp_alpha_s':softplus_inv(1.62), 'prob_soujourn_symp_beta_s':softplus_inv(0.218)}
 
         else:
             self.params = params
@@ -154,18 +168,18 @@ class PopulationData(object):
 
         # if params is not None(using default workplan parmas) and self.training_mode:
         if params is not None:
-
+            ##TODO REPARAM change the relevant params to be their inverse fn transformed
             self.params['T_serial']= 5.8
 
             # self.params['T_serial']= params['T_serial']
-            self.params['prob_hosp']= params['prob_hosp']
-            self.params['prob_sympt']= params['prob_sympt']
-            self.params['prob_severe']= params['prob_severe']
+            self.params['prob_hosp_s']= params['prob_hosp_s']
+            self.params['prob_sympt_s']= params['prob_sympt_s']
+            self.params['prob_severe_s']= params['prob_severe_s']
 
-            self.params['prob_soujourn_inf_alpha']= params['prob_soujourn_inf_alpha']
-            self.params['prob_soujourn_inf_beta']= params['prob_soujourn_inf_beta']
-            self.params['prob_soujourn_symp_alpha']= params['prob_soujourn_symp_alpha']
-            self.params['prob_soujourn_symp_beta']= params['prob_soujourn_symp_beta']
+            self.params['prob_soujourn_inf_alpha_s']= params['prob_soujourn_inf_alpha_s']
+            self.params['prob_soujourn_inf_beta_s']= params['prob_soujourn_inf_beta_s']
+            self.params['prob_soujourn_symp_alpha_s']= params['prob_soujourn_symp_alpha_s']
+            self.params['prob_soujourn_symp_beta_s']= params['prob_soujourn_symp_beta_s']
 
             self.params['days_of_relaxed_restrictions'] = []
             self.params['days_of_imposed_restrictions'] = []
@@ -193,29 +207,31 @@ class PopulationData(object):
         flow_sus_to_inf_list_return = flow_sus_to_inf_list
         flow_sus_to_inf_list = list(self.filtered_data['infections'][-20:].to_numpy())+flow_sus_to_inf_list
         
-        
+        ##TODO REPARAM change the relevant params to be their inverse fn transformed
         # EQ 2-2 ##################################################################
         flow_inf_to_symp_list = []
         for i,d in enumerate(dates_to_forecast):
             flow_sus_to_inf_list
             flow_inf_to_symp_list+= [np.sum(np.array(\
-                [self.params['prob_sympt']*(flow_sus_to_inf_list[:i+20])[-j]*gamma_at_x({'alpha':self.params['prob_soujourn_inf_alpha'],'beta':self.params['prob_soujourn_inf_beta']},j) for j in range(1,1+len(flow_sus_to_inf_list[:i+20]))]))]                   
+                [sigmoid(self.params['prob_sympt_s'])*(flow_sus_to_inf_list[:i+20])[-j]*gamma_at_x({'alpha':softplus(self.params['prob_soujourn_inf_alpha_s']),'beta':softplus(self.params['prob_soujourn_inf_beta_s'])},j) for j in range(1,1+len(flow_sus_to_inf_list[:i+20]))]))]                   
         
         flow_inf_to_symp_list_return = flow_inf_to_symp_list
         flow_inf_to_symp_list = list(self.filtered_data['symptomatic'][-40:].to_numpy())+flow_inf_to_symp_list
 
+        ##TODO REPARAM change the relevant params to be their inverse fn transformed
         # EQ 2-3 ##################################################################
         flow_symp_to_severe_list = []
         for i,d in enumerate(dates_to_forecast):
             flow_symp_to_severe_list+= [np.sum(np.array(\
-                [self.params['prob_severe']*(flow_inf_to_symp_list[:i+40])[-j]*gamma_at_x({'alpha':self.params['prob_soujourn_symp_alpha'],'beta':self.params['prob_soujourn_symp_beta']},j) for j in range(1,1+len(flow_inf_to_symp_list[:i+40]))]))]                   
+                [sigmoid(self.params['prob_severe_s'])*(flow_inf_to_symp_list[:i+40])[-j]*gamma_at_x({'alpha':softplus(self.params['prob_soujourn_symp_alpha_s']),'beta':softplus(self.params['prob_soujourn_symp_beta_s'])},j) for j in range(1,1+len(flow_inf_to_symp_list[:i+40]))]))]                   
 
         
         flow_symp_to_severe_list_return = flow_symp_to_severe_list
 
+        ##TODO REPARAM change the relevant params to be their inverse fn transformed
         # EQ in section 2.2C ##################################################################
         flow_symp_to_severe_list_right_shifted = [self.filtered_data['severe'][-1]]+flow_symp_to_severe_list[:-1]        
-        flow_severe_to_hosp_list = [flow_symp_to_severe*self.params['prob_hosp'] for flow_symp_to_severe in flow_symp_to_severe_list]
+        flow_severe_to_hosp_list = [flow_symp_to_severe*sigmoid(self.params['prob_hosp_s']) for flow_symp_to_severe in flow_symp_to_severe_list]
         flow_severe_to_hosp_list_return = flow_severe_to_hosp_list
 
         # print(len(dates_to_forecast),len(Rt_list[1:]),'dates to forecast and Rt list len')
@@ -238,32 +254,42 @@ class PopulationData(object):
         for i,k in enumerate(pop_states):
             # log_loss+= np.sum(np.array([poisson.logpmf(t,p) for (p,t) in zip(pred_dict[k],truth_dict[k])]))
             num_preds = len(pred_dict[k])
-            log_loss+= np.sum(np.array([2*(e/num_preds)*poisson.logpmf(t,p) for e,(p,t) in enumerate(zip(pred_dict[k],truth_dict[k]))]))
+            for val in pred_dict[k]:
+
+                print(val._value, 'predicted for', k, ' ' )
+                # np.max([1,p])
+            log_loss+= np.sum(np.array([2*(e/num_preds)*poisson.logpmf(t,softplus(p)) for e,(p,t) in enumerate(zip(pred_dict[k],truth_dict[k]))]))
         
+
+        reg_penalty = (lambda_reg*self.get_log_prior_penalty(params))
         try:
-            self.loss_per_iteration[-1] = float(-log_loss._value)
+            self.loss_per_iteration[-1] = float(-log_loss._value + reg_penalty._value)
         except:
             self.loss_per_iteration[-1] = float(np.nan)
         # return  -log_loss 
-        return  -log_loss + (lambda_reg*self.get_log_prior_penalty(params))
+        return  -log_loss + reg_penalty
 
     def get_log_prior_penalty(self,params):
         log_prior_penalty = 0
-        prior_params_ab = {'prob_sympt':[9,2],'prob_severe':[2,8],'prob_hosp':[2,6]}
+
+        ##TODO REPARAM change the relevant params to be their inverse fn transformed
+        prior_params_ab = {'prob_sympt_s':[9,2],'prob_severe_s':[2,8],'prob_hosp_s':[2,6]}
 
         for k,v in prior_params_ab.items():
             a = v[0]
             b = v[1]
-            log_prior_penalty += beta.logpdf(params[k], a, b)
+            log_prior_penalty += beta.logpdf(sigmoid(params[k]), a, b)
     
-        prior_params_ab2 = {'prob_soujourn_inf_alpha':[4.693986464958364, 1.0832804882575846],\
-        'prob_soujourn_inf_beta':[1.351693639556777, 0.5813118009202929],\
-        'prob_soujourn_symp_alpha':[2.2019589211697066, 0.741949951339325],\
-        'prob_soujourn_symp_beta': [1.115102258598192, 0.527992011918313]}
+
+        ##TODO REPARAM change the relevant params to be their inverse fn transformed
+        prior_params_ab2 = {'prob_soujourn_inf_alpha_s':[4.693986464958364, 1.0832804882575846],\
+        'prob_soujourn_inf_beta_s':[1.351693639556777, 0.5813118009202929],\
+        'prob_soujourn_symp_alpha_s':[2.2019589211697066, 0.741949951339325],\
+        'prob_soujourn_symp_beta_s': [1.115102258598192, 0.527992011918313]}
         for k,v in prior_params_ab2.items():
             a = v[0]
             b = v[1]
-            log_prior_penalty += log_gamma_pdf(params[k],a,b)
+            log_prior_penalty += log_gamma_pdf(softplus(params[k]),a,b) ## TODO redefine this fn as autogradable
 
         return -log_prior_penalty
 
