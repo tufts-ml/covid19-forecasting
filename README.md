@@ -6,6 +6,26 @@ PI: Michael C. Hughes
 
 Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation)
 
+# Updates
+
+As of April 2021, we've moved a few polished efforts to their own stand-alone repositories:
+
+* The hospital progression model code now lives here: https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model
+
+See our paper:
+
+Gian Marco Visani, Alexandra Hope Lee, Cuong Nguyen, David M. Kent, John B. Wong, Joshua T. Cohen, and Michael C. Hughes. <i>Approximate Bayesian Computation for an Explicit-Duration Hidden Markov Model of COVID-19 Hospital Trajectories.</i>. Technical Report, 2021. <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
+
+* The single-site prediction model code now live here: https://github.com/tufts-ml/single-hospital-count-forecasting/
+
+See our paper:
+
+Alexandra Hope Lee, Panagiotis Lymperopoulos, Joshua T. Cohen, John B. Wong, and Michael C. Hughes. <i> Forecasting COVID-19 counts at a single hospital: A Hierarchical Bayesian approach. </i> In ICLR 2021 Workshop on Machine Learning for Preventing and Combating Pandemics, 2021. PDF URL: <a href="https://www.michaelchughes.com/papers/LeeEtAl_ICLRWorkshopMLPreventingCombatingPandemics_2021.pdf">https://www.michaelchughes.com/papers/LeeEtAl_ICLRWorkshopMLPreventingCombatingPandemics_2021.pdf</a>
+
+
+
+We will continue to use this repo for a few earlier-stage efforts.
+
 # Usage
 
 ### Getting Started
