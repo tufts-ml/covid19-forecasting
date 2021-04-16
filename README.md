@@ -64,53 +64,20 @@ This will write 10 CSV files to workflows/example_output, each identified by a s
 
 See an example output in (example_output/](.example_output/)
 
-<!-- ### Using Snakemake workflows for reproducibility
-
-Run the following, which will install all necessary python packages in a separate environment, and then run a single simple simulation with results saved to file `results.csv`
-
-```
-$ cd /path/to/covid19-forecasting/workflows/simple_example
-$ snakemake --use-conda --cores 1 run_simple_example_simulation
-```
-
-### Using Snakemake workflows on the Tufts HPC cluster
-
-If you are in the hugheslab group and have access to the HPC cluster, you can 
-
-PREREQUISITE bashrc settings:
-```
-export PATH="/cluster/tufts/hugheslab/miniconda2/bin:$PATH"
-```
-
-Then login to the HPC system and do:
-```
-$ conda activate semimarkov_forecaster
-$ pushd /cluster/tufts/hugheslab/code/covid19-forecasting/workflows/simple_example/
-$ snakemake --cores 1 run_simple_example_simulation # Do NOT use '--use-conda' here, you already have the environment
-``` -->
-
-
 # Installation
 
 #### 1. Install Anaconda
 
 Follow the instructions here: <https://conda.io/projects/conda/en/latest/user-guide/install/index.html>
 
-#### 2. Install Snakemake
-
-```
-$ conda install -c bioconda -c conda-forge snakemake-minimal
-```
-Having trouble? See the full install instructions: <https://snakemake.readthedocs.io/en/stable/getting_started/installation.html>
-
-#### 3. Install `aced_hmm` conda environment
+#### 2. Install `aced_hmm` conda environment
 
 Use the project's included YAML file to specify all packages needed: [aced_hmm.yml](./aced_hmm.yml)
 ```
 conda env create -f aced_hmm.yml
 ```
 
-#### 4. Setup the Cython extensions (optional)
+#### 3. Setup the Cython extensions (optional)
 
 ```
 $ cd aced-hmm-hospitalized-patient-trajectory-model
