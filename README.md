@@ -77,7 +77,7 @@ Use the project's included YAML file to specify all packages needed: [aced_hmm.y
 conda env create -f aced_hmm.yml
 ```
 
-#### 3. Setup the Cython extensions (optional)
+#### 3. **[CURRENTLY NOT SUPPORTED]** Setup the Cython extensions (optional)
 
 ```
 $ cd aced-hmm-hospitalized-patient-trajectory-model
