@@ -39,7 +39,7 @@ if __name__ == '__main__':
                             default='n_InGeneralWard,n_OffVentInICU,n_OnVentInICU,n_InICU,n_occupied_beds,n_TERMINAL,n_TERMINAL_5daysSmoothed')
     args = parser.parse_args()
 
-    with open(args.config_file, 'r') as f:
+    with open(args.config_path, 'r') as f:
         config = json.load(f)
     num_training_timesteps = config['num_training_timesteps']
 
