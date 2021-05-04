@@ -1,6 +1,6 @@
 # ACED-HMM - A model for COVID-19 hospitalized patient trajectories
 
-Our proposed mechanistic model can be used to forecast how a hospitalized COVID-19 patient can move through various stages of care (in general ward, in ICU, in ICU on the ventilator)
+Our proposed mechanistic model can be used to forecast how a hospitalized COVID-19 patient will move through various stages of care (in general ward, in ICU, in ICU on the ventilator). 
 
 Using this model, we can:
 
@@ -8,11 +8,18 @@ Using this model, we can:
 * **forecast** future daily counts to help administrative officials understand future demand for resources
 * **assess the societal value** of possible interventions (e.g. would decreasing admissions by X% help California avoid a lockdown in late 2020?)
 
+The model and its fitting and forecasting procedures satisfy two desired properties:
+
+* We focus on **probabilistic** modeling using a Bayesian approach, in order to capture and communicate uncertainty about the varied possible outcomes. We estimate distributions over all quantities of interest.
+* To be **portable** to health systems around the world, we assume access only to aggregated daily counts of resource usage (number of occupied beds in general ward, in ICU, on ventilator)
+
 See our preprint manuscript:
 
 Gian Marco Visani, Alexandra Hope Lee, Cuong Nguyen, David M. Kent, John B. Wong, Joshua T. Cohen, and Michael C. Hughes. <i>Approximate Bayesian Computation for an Explicit-Duration Hidden Markov Model of COVID-19 Hospital Trajectories.</i>. Technical Report, 2021. <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
 
 Now also available on arXiv preprint server: <https://arxiv.org/abs/2105.00773>
+
+See also this slide deck overview: <https://docs.google.com/presentation/d/1MLkQLV8a5w1o6hBdfa8-b1J0DKh13JHWyVhEo8ddyB8>
 
 Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
 
