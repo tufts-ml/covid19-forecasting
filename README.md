@@ -12,6 +12,8 @@ See our preprint manuscript:
 
 Gian Marco Visani, Alexandra Hope Lee, Cuong Nguyen, David M. Kent, John B. Wong, Joshua T. Cohen, and Michael C. Hughes. <i>Approximate Bayesian Computation for an Explicit-Duration Hidden Markov Model of COVID-19 Hospital Trajectories.</i>. Technical Report, 2021. <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
 
+Now also available on arXiv preprint server: <https://arxiv.org/abs/2105.00773>
+
 Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
 
 For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model/issues)
