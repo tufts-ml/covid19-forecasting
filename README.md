@@ -11,7 +11,7 @@ Using this model, we can:
 The model and its fitting and forecasting procedures satisfy two desired properties:
 
 * We focus on **probabilistic** modeling using a Bayesian approach, in order to capture and communicate uncertainty about the varied possible outcomes. We estimate distributions over all quantities of interest.
-* To be **portable** to health systems around the world, we assume access only to aggregated daily counts of resource usage (number of occupied beds in general ward, in ICU, on ventilator)
+* To be **portable** to health systems around the world, we assume access only to aggregated daily counts of resource usage (number of occupied beds in general ward, in ICU, on ventilator). No patient-specific data (demographics, comorbidities, length-of-stay, etc.) are used.
 
 See our preprint manuscript:
 
