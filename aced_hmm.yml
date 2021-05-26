@@ -2,7 +2,7 @@ name: aced_hmm
 channels:
   - defaults
 dependencies:
-  - python>=3.6
+  - python >=3.6,<3.9
   - pip
   ## Scientific Computing
   - numpy>=1.16

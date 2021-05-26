@@ -1,6 +1,7 @@
 *.csv
 *.xlsx
 *.html
+*.DS_Store
 
 .slurm-logs/
 .snakemake/
