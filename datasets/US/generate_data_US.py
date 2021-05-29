@@ -193,24 +193,34 @@ if __name__ == '__main__':
     n_occupied_beds = n_InGeneralWard + n_InICU
     n_TERMINAL = hObj.get_Death_counts()
 
+    # truncate dates at the last available count...
+    max_admissions = admissions.shape[0]
+    admissions_dates = dates[:max_admissions]
+
+    # truncate dates for counts dataset at the last available count...
+    max_counts = n_InGeneralWard.shape[0]
+    counts_dates = dates[:max_counts]
+
     # perform 5-days smoothing on TERMINAL counts, making sure that test information does not leak into training
     cumsum = np.cumsum(np.insert(n_TERMINAL, 0, 0)) 
     middle_smoothed = ((cumsum[5:] - cumsum[:-5]) / float(5)).round().astype(np.int32)
     first_smoothed = np.array([round(np.sum(n_TERMINAL[:3]) / 3), round(np.sum(n_TERMINAL[:4]) / 4)], dtype=np.int32)
     last_smoothed = np.array([round(np.sum(n_TERMINAL[-4:]) / 4), round(np.sum(n_TERMINAL[-3:]) / 3)], dtype=np.int32)
     n_TERMINAL_5daysSmoothed = np.append(first_smoothed, np.append(middle_smoothed, last_smoothed))
-    n_TERMINAL_5daysSmoothed[num_training_timesteps] = round(np.sum(n_TERMINAL[num_training_timesteps-2 : num_training_timesteps+1]) / 3)
-    n_TERMINAL_5daysSmoothed[num_training_timesteps-1] = round(np.sum(n_TERMINAL[num_training_timesteps-3 : num_training_timesteps+1]) / 4)
 
+    # make sure no leaking of test data occurs on training dats, if there is test data
+    if max_counts > num_training_timesteps+1:
+        n_TERMINAL_5daysSmoothed[num_training_timesteps] = round(np.sum(n_TERMINAL[num_training_timesteps-2 : num_training_timesteps+1]) / 3)
+        n_TERMINAL_5daysSmoothed[num_training_timesteps-1] = round(np.sum(n_TERMINAL[num_training_timesteps-3 : num_training_timesteps+1]) / 4)
 
     # create directory if it does not yet exist
     directory = '%s-%s-%s-%s' % (state, start_date, end_training_date, end_date)
     if not os.path.exists(directory):
         os.mkdir(directory)
 
-    data_dict = {'timestep': np.arange(admissions.shape[0]),
-                 'date': dates,
-                 'n_discharged_InGeneralWard': np.full(admissions.shape[0], np.nan),
+    data_dict = {'timestep': np.arange(n_InGeneralWard.shape[0]),
+                 'date': counts_dates,
+                 'n_discharged_InGeneralWard': np.full(n_InGeneralWard.shape[0], np.nan),
                  'n_InGeneralWard': n_InGeneralWard,
                  'n_OffVentInICU': n_OffVentInICU,
                  'n_OnVentInICU': n_OnVentInICU,
@@ -224,7 +234,7 @@ if __name__ == '__main__':
     data_df.to_csv(os.path.join(directory, 'daily_counts.csv'))
 
     admissions_dict = {'timestep': np.arange(admissions.shape[0]),
-                       'date': dates,
+                       'date': admissions_dates,
                        'n_admitted_InGeneralWard': np.append(np.array([0]), admissions[1:])} # admissions at timestep 0
                                                                                       # are handled by the warm-up schedule
 
