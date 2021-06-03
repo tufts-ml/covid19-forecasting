@@ -1,0 +1,61 @@
+
+
+step 0 
+cd datasets/US
+python generate_data_US.py --state MA --start_date 20210101 --end_training_date 20210524 --end_date 20210801
+
+// python -m datasets.US.generate_data_US.py --state MA --start_date 20210101 --end_training_date 20210525 --end_date 20210801
+
+step 1
+# conda, aced_hmm environment, cython install
+# must be python 3.6,3.7,3.8 or less such that turicreate works
+
+python -m aced_hmm.fit_posterior_with_abc --input_dir datasets/US/MA-20210101-20210524-20210801 --output_dir results/US/MA-20210101-20210524-20210801
+
+step 2
+
+python -m aced_hmm.run_forecast --func_name python \
+                                  --config_path results/US/MA-20210101-20210524-20210801/config_after_abc.json \
+                                  --output_dir results/US/MA-20210101-20210524-20210801/individual_forecasts \
+                                  --output_file results_after_abc-{{random_seed}}.csv \
+                                  --approximate 5 \
+                                  --random_seed 1001 \
+                                  --num_seeds None
+
+
+
+
+step 3
+# remove the  brackets
+
+
+python -m aced_hmm.summarize_forecasts --input_dir results/US/MA-20201111-20210111-20210211/individual_forecasts \
+                                         --output_dir results/US/MA-20201111-20210111-20210211 \
+                                         --output_template summary_after_abc_ \
+                                         --input_csv_file_pattern results_after_abc*.csv \
+                                         --comma_sep_percentiles 1,2.5,5,10,25,50,75,90,95,97.5,99
+
+
+step 4
+#abc capitalized
+# config_file to config_path
+
+python -m aced_hmm.ABC_test_metrics --input_dir results/US/MA-20201111-20210111-20210211 \
+                                      --output_dir results/US/MA-20201111-20210111-20210211 \
+                                      --output_template metrics_after_abc \
+                                      --config_path results/US/MA-20201111-20210111-20210211/config_after_abc.json \
+                                      --true_stats datasets/US/MA-20201111-20210111-20210211/daily_counts.csv \
+                                      --input_summaries_template summary_after_abc_ \
+                                      --coverages 2.5_97.5,10_90,25_75 \
+                                      --comma_sep_expected_columns n_InGeneralWard,n_OffVentInICU,n_OnVentInICU,n_InICU,n_occupied_beds,n_TERMINAL,n_TERMINAL_5daysSmoothed
+
+
+
+step 5
+#visualize spelled wrong
+
+
+python -m aced_hmm.visualize_forecasts --samples_path results/US/MA-20201111-20210111-20210211/posterior_samples.json \
+                                        --config_path results/US/MA-20201111-20210111-20210211/config_after_abc.json \
+                                        --input_summaries_template_path results/US/MA-20201111-20210111-20210211/summary_after_abc \
+                                        --true_stats datasets/US/MA-20201111-20210111-20210211/daily_counts.csv
