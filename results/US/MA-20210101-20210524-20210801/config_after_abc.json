@@ -8,6 +8,6 @@
   "num_past_timesteps": 4,
   "num_training_timesteps": 143,
   "num_timesteps": 212,
-  "pmf_num_per_timestep_InGeneralWard": "datasets/US/MA-20210101-20210524-20210801/daily_admissions.csv",
+  "pmf_num_per_timestep_InGeneralWard": "results/US/MA-20210101-20210524-20210801/daily_admissions_forecast.csv",
   "parameters": "results/US/MA-20210101-20210524-20210801/posterior_samples.json"
 }

@@ -1,0 +1,32 @@
+-----------------------
+CONSOLE COMMAND
+-----------------------
+
+(aced_hmm) Cuongs-MacBook-Air:aced-hmm cuongnguyen$ 
+
+python -m aced_hmm.visualize_forecasts --samples_path results/US/MA-20210101-20210524-20210801/posterior_samples.json                                         --config_path results/US/MA-20210101-20210524-20210801/config_after_abc.json                                         --input_summaries_template_path results/US/MA-20210101-20210524-20210801/summary_after_abc                                         --true_stats datasets/US/MA-20210101-20210524-20210801/daily_counts.csv
+
+-----------------------
+ERROR MESSAGE
+-----------------------
+
+
+Traceback (most recent call last):
+  File "/Users/cuongnguyen/opt/anaconda3/envs/aced_hmm/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Users/cuongnguyen/opt/anaconda3/envs/aced_hmm/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/cuongnguyen/Desktop/aced-hmm/aced_hmm/visualize_forecasts.py", line 296, in <module>
+    plot_forecasts(args.input_summaries_template_path, args.config_path, args.true_stats)
+  File "/Users/cuongnguyen/Desktop/aced-hmm/aced_hmm/visualize_forecasts.py", line 270, in plot_forecasts
+    plt.plot(timesteps, compute_true_summary_statistics(pred_df, expected_columns, smooth_terminal_counts)[column], color='blue', label='ABC')
+  File "/Users/cuongnguyen/opt/anaconda3/envs/aced_hmm/lib/python3.8/site-packages/matplotlib/pyplot.py", line 2840, in plot
+    return gca().plot(
+  File "/Users/cuongnguyen/opt/anaconda3/envs/aced_hmm/lib/python3.8/site-packages/matplotlib/axes/_axes.py", line 1743, in plot
+    lines = [*self._get_lines(*args, data=data, **kwargs)]
+  File "/Users/cuongnguyen/opt/anaconda3/envs/aced_hmm/lib/python3.8/site-packages/matplotlib/axes/_base.py", line 273, in __call__
+    yield from self._plot_args(this, kwargs)
+  File "/Users/cuongnguyen/opt/anaconda3/envs/aced_hmm/lib/python3.8/site-packages/matplotlib/axes/_base.py", line 399, in _plot_args
+    raise ValueError(f"x and y must have same first dimension, but "
+ValueError: x and y must have same first dimension, but have shapes (149,) and (93,)
+(aced_hmm) Cuongs-MacBook-Air:aced-hmm cuongnguyen$ 
