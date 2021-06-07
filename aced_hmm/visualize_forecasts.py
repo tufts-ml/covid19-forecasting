@@ -249,7 +249,7 @@ def plot_forecasts(forecasts_template_path, config_filepath, true_counts_filepat
     pred_lower_df = pd.read_csv(forecasts_template_path + '_percentile=002.50.csv')
     pred_upper_df = pd.read_csv(forecasts_template_path + '_percentile=097.50.csv')
 
-    timesteps = true_df['timestep']
+    timesteps = pred_df['timestep']
 
     with open(config_filepath, 'r') as f:
         config = json.load(f)
@@ -262,10 +262,10 @@ def plot_forecasts(forecasts_template_path, config_filepath, true_counts_filepat
         plt.axvline(num_training_timesteps, ls='--', color='grey')
         
         if column == 'n_TERMINAL' and smooth_terminal_counts:
-            plt.plot(timesteps, true_df['n_TERMINAL_5daysSmoothed'], label='true-smoothed', marker='d', color='k')
-            plt.plot(timesteps[num_training_timesteps:], true_df['n_TERMINAL'][num_training_timesteps:], label='true', marker='o', color='brown')
+            plt.plot(timesteps, np.pad(true_df['n_TERMINAL_5daysSmoothed'].astype(float), ((0, timesteps.shape[0] - true_df['n_TERMINAL_5daysSmoothed'].shape[0]),) ,mode='constant',constant_values=(np.nan,)), label='true-smoothed', marker='d', color='k')
+            # plt.plot(timesteps[num_training_timesteps:], true_df['n_TERMINAL'][num_training_timesteps:], label='true', marker='o', color='brown')
         else:
-            plt.plot(timesteps, true_df[column], label='true', marker='d', color='k')
+            plt.plot(timesteps, np.pad(true_df[column].astype(float), ((0, timesteps.shape[0] - true_df['n_TERMINAL_5daysSmoothed'].shape[0]),) ,mode='constant',constant_values=(np.nan,)), label='true', marker='d', color='k')
         
         plt.plot(timesteps, compute_true_summary_statistics(pred_df, expected_columns, smooth_terminal_counts)[column], color='blue', label='ABC')
         plt.fill_between(timesteps, compute_true_summary_statistics(pred_lower_df, expected_columns, smooth_terminal_counts)[column], compute_true_summary_statistics(pred_upper_df, expected_columns, smooth_terminal_counts)[column], color='blue', alpha=0.15)

@@ -29,14 +29,14 @@ step 3
 # remove the  brackets
 
 
-python -m aced_hmm.summarize_forecasts --input_dir results/US/MA-20201111-20210111-20210211/individual_forecasts \
+python -m aced_hmm.summarize_forecasts --input_dir results/US/MA-20210101-20210524-20210801/individual_forecasts \
                                          --output_dir results/US/MA-20210101-20210524-20210801 \
                                          --output_template summary_after_abc_ \
                                          --input_csv_file_pattern results_after_abc*.csv \
                                          --comma_sep_percentiles 1,2.5,5,10,25,50,75,90,95,97.5,99
 
 
-step 4
+step 4 --> not gonna work since there is no test data
 #abc capitalized
 # config_file to config_path
 

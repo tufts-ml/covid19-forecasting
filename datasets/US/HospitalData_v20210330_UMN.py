@@ -8,7 +8,7 @@ Examples in Jupyter Notebook to plot hospitalization data within MA from '202007
 
 import os
 import pandas as pd #import turicreate as tc
-import turicreate as tc
+# import turicreate as tc
 
 import numpy as np
 from datetime import datetime, timedelta
@@ -128,12 +128,14 @@ class HospitalData(object):
                 writer = csv.writer(f)
                 for line in response.iter_lines():
                     writer.writerow(line.decode('utf-8').split(','))
-            tc_data = tc.SFrame(csv_name)
-            tc_data['date'] = tc_data.apply(lambda x: x['Date'].replace('-',''))
-            tc_data['state'] = tc_data.apply(lambda x: x['StateAbbreviation'])
+            tc_data = pd.read_csv(csv_name) #tc.SFrame(csv_name)
+            tc_data['date'] = tc_data.apply(lambda x: x['Date'].replace('-',''), axis=1)
+            tc_data['state'] = tc_data.apply(lambda x: x['StateAbbreviation'], axis=1)
 
-            tc_data['inIcuCurrently'] = tc_data.apply(lambda x: float('nan') if x['CurrentlyInICU'] == '' else int(float(x['CurrentlyInICU'])))
-            tc_data['onVentilatorCurrently'] = tc_data.apply(lambda x: x['CurrentlyOnVentilator'])
+            # [print(x) for x in tc_data['CurrentlyInICU']]
+
+            tc_data['inIcuCurrently'] = tc_data['CurrentlyInICU'] #tc_data.apply(lambda x: float('nan') if x['CurrentlyInICU'] == '' else int(float(x['CurrentlyInICU'])))
+            tc_data['onVentilatorCurrently'] = tc_data.apply(lambda x: x['CurrentlyOnVentilator'], axis=1)
             # tc_data['deathIncrease'] = tc_data.apply(lambda x: x['TotalDeaths'])
 
 
@@ -145,7 +147,9 @@ class HospitalData(object):
             #     sf = state_deaths_tcdict[s]                
             # tc_data['deathIncrease'] = tc_data.apply(lambda x: x['TotalDeaths'] - \
             #     state_deaths_tcdict[x['state']].filter_by([ datetime.strftime(datetime.strptime(x['date'],'%Y%m%d')-timedelta(days=1),'%Y%m%d') ],'date')['TotalDeaths'] )
-            tc_data.save(csv_name, format='csv') 
+            
+            tc_data.to_csv(csv_name) #tc_data.save(csv_name, format='csv') 
+            
             # return tc_data
             return pd.read_csv(csv_name)
         else:
@@ -181,12 +185,12 @@ class HospitalData(object):
                 writer = csv.writer(f)
                 for line in response.iter_lines():
                     writer.writerow(line.decode('utf-8').split(','))
-            tc_data = tc.SFrame(csv_name)
-            tc_data['date'] = tc_data.apply(lambda x: x['Date'].replace('-',''))
-            tc_data['state'] = tc_data.apply(lambda x: x['StateAbbreviation'])
+            tc_data = pd.read_csv(csv_name) #tc.SFrame(csv_name)
+            tc_data['date'] = tc_data.apply(lambda x: x['Date'].replace('-',''), axis=1)
+            tc_data['state'] = tc_data.apply(lambda x: x['StateAbbreviation'], axis=1)
 
-            tc_data['inIcuCurrently'] = tc_data.apply(lambda x: float('nan') if x['CurrentlyInICU'] == '' else int(float(x['CurrentlyInICU'])))
-            tc_data['onVentilatorCurrently'] = tc_data.apply(lambda x: x['CurrentlyOnVentilator'])
+            tc_data['inIcuCurrently'] = tc_data.apply(lambda x: np.NaN if x['CurrentlyInICU'] == '' else int(float(x['CurrentlyInICU'])), axis=1)
+            tc_data['onVentilatorCurrently'] = tc_data.apply(lambda x: x['CurrentlyOnVentilator'], axis=1)
             # tc_data['deathIncrease'] = tc_data.apply(lambda x: x['TotalDeaths'])
 
 
@@ -198,11 +202,11 @@ class HospitalData(object):
             #     sf = state_deaths_tcdict[s]                
             # tc_data['deathIncrease'] = tc_data.apply(lambda x: x['TotalDeaths'] - \
             #     state_deaths_tcdict[x['state']].filter_by([ datetime.strftime(datetime.strptime(x['date'],'%Y%m%d')-timedelta(days=1),'%Y%m%d') ],'date')['TotalDeaths'] )
-            tc_data.save(csv_name, format='csv') 
+            tc_data.to_csv(csv_name) #tc_data.save(csv_name, format='csv') 
             return tc_data
         else:
 #             print('get_covidtracking_data',tc.SFrame(csv_name))
-            return tc.SFrame(csv_name)
+            return pd.read_csv(csv_name) #tc.SFrame(csv_name)
 
 
     def join_HHS_covidtracking_data(self, hhs_data, ctrack_data):
