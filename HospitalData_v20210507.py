@@ -18,6 +18,8 @@ import requests
 from bs4 import BeautifulSoup
 import urllib
 
+DATA_FOLDER = 'data/'
+
 class HospitalData(object):
     ''' Represents a Turicreate SFrame of csv data extracted from HHS (+ covidtracking.com) hospitalization data
     https://healthdata.gov/dataset/covid-19-reported-patient-impact-and-hospital-capacity-state-timeseries
@@ -57,7 +59,7 @@ class HospitalData(object):
         '''
         self.data = tc.SFrame([])
         self.filtered_data = tc.SFrame([]) 
-        self.csv_filename = csv_filename
+        self.csv_filename = DATA_FOLDER + csv_filename
         self._us_state = us_state # protected attrib
         self._start_date = start_date # protected attrib
         self._end_date = end_date # protected attrib
@@ -68,7 +70,7 @@ class HospitalData(object):
 
     def get_HHS_data(self):
         ## download csv from hhs website to the current directory of this HospitalData.py file
-        csv_name = 'HHS_data.csv'
+        csv_name = DATA_FOLDER+'HHS_data.csv'
         today = datetime.now().date()
 
         if not Path(csv_name).exists()  or datetime.fromtimestamp(os.path.getctime(csv_name)).date() != today  :
@@ -95,7 +97,7 @@ class HospitalData(object):
             return tc_data
     def get_UMN_data(self):
         ## download csv from covidtracking website to the current directory of this HospitalData.py file
-        csv_name = 'UMN_data.csv'
+        csv_name = DATA_FOLDER + 'UMN_data.csv'
         today = datetime.now().date()
         
         if not Path(csv_name).exists()  or datetime.fromtimestamp(os.path.getctime(csv_name)).date() != today  :
@@ -167,12 +169,6 @@ class HospitalData(object):
         filtered_data = self.data.filter_by([1],'selected_row').sort(['date'],ascending=True)
 
         TotalDeaths = filtered_data['TotalDeaths'].to_numpy()
-
-        # print(self.start_date, self.end_date)
-        # print(filtered_data, 'filtered data ')
-        # print(filtered_data['TotalDeaths'].to_numpy(), 'totalDeaths numpy ')
-        # print(filtered_data['TotalDeaths'][0], 'first then everything else below')
-        # print(filtered_data['TotalDeaths'][:-1].to_numpy())
         TotalDeaths_1 = np.append(filtered_data['TotalDeaths'][0],filtered_data['TotalDeaths'][:-1].to_numpy())
         
         #calculate deathIncrease from (daily) TotalDeaths
@@ -297,7 +293,7 @@ class HospitalData(object):
 #             print((self.population_data_obj.dates_to_forecast), 'dates to forecast DEBUGGG')
         pmf_SFrame = tc.SFrame({'timestep':list(range(len(presenting_per_day))),'num_InGeneralWard':presenting_per_day})
         csv_filename = str(Path(__file__).resolve().parents[0])+ '/'+self.us_state+'_'+self.start_date+'_'+self.end_date +'_'+'pmf_num_per_timestep_InGeneralWard.csv' 
-        pmf_SFrame.save(csv_filename, format='csv')
+        pmf_SFrame.save(DATA_FOLDER+csv_filename, format='csv')
         return csv_filename
 
     # fcn called within ParamsGenerator class

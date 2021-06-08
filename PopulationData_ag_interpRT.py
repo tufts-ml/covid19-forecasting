@@ -32,6 +32,10 @@ import urllib
 
 from autograd.scipy.special import expit as sigmoid
 from autograd.scipy.special import logit as sigmoid_inv
+
+RESULTS_FOLDER = 'results/'
+DATA_FOLDER = 'data/'
+
 softplus = lambda x: np.log(1+np.exp(x))
 # plt.plot(range(-10,10,1),softplus(range(-10,10,1)))
 
@@ -142,7 +146,7 @@ class PopulationData(object):
         self.forecast = forecast
 
     def load_csv_if_exists(self):
-        csv_name = 'covidestim.csv'
+        csv_name = DATA_FOLDER + 'covidestim.csv'
         today = datetime.now().date()        
         if not Path(csv_name).exists() or datetime.fromtimestamp(os.path.getctime(csv_name)).date() != today  :
             url = 'https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv'
@@ -261,7 +265,7 @@ class PopulationData(object):
 
         if save_admissions:
             print('SAVE ADMISSIONS')
-            tc.SFrame({'date':dates_to_forecast,'n_admitted_InGeneralWard':[int(adm) for adm in flow_severe_to_hosp_list_return]}).save('forecasted_admissions.csv', format='csv')
+            tc.SFrame({'date':dates_to_forecast,'n_admitted_InGeneralWard':[int(adm) for adm in flow_severe_to_hosp_list_return]}).save(RESULTS_FOLDER+'forecasted_admissions.csv', format='csv')
         return tc.SFrame({'date':dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'severe':flow_symp_to_severe_list_return, 'hosp':flow_severe_to_hosp_list_return})
     
 
