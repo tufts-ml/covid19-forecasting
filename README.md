@@ -2,6 +2,27 @@
 
 Our proposed mechanistic model can be used to forecast how populations of susceptible people will become hospital admissable after declining in health through stages of infected, symptomatic, ailing, then hospital admissible. 
 
+# Modeling
+
+![Image of Model](/supplement/PopulationModelDiagram.png)
+
+We have developed a deterministic "semi-Markov" model to simulate populations of susceptible people progressing through the stages of being infected (I), symptomatic (S), ailing (A), and hospital-admissible (H). When entering the infected stage, individual has . TODO OVERLEAF description here
+
+At each timestep, a patient can be described by:
+* a binary health state ('Recovering' or 'Declining')
+* an ordinal location state (e.g. 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
+* the time left before transition to the next location state
+
+These sojourn parameters and transition parameters are readily estimated from local data or the literature (e.g. our prior distributions for these parameters are inspired by previously published works).
+
+We take an initial population, and run the model forward for a desired number of days.
+
+TODO TODO
+
+By reading parameters in from a plain text file [example](./workflows/example_simple/params.json), the model transparently facilitates communication of assumptions and invites modifications.
+
+
+
 Using this model, we can:
 
 * **fit parameters** to aggregated daily count time-series from a specific hospital site or region
@@ -14,9 +35,32 @@ The model and its fitting and forecasting procedures satisfy two desired propert
   * param1
   * param2
 
+
+# Gradient Descent
+
+We provide here an example python notebook, together with an overview of the necessary commands, to optimize the model parameters such that true hospital-admissions counts are well fitted. To get started, we recommend running the example notebook as is. The notebook will guide you through:
+
+* optimize the parameters such that the retrospectively forecast hospital-admission numbers matches hospital-admission numbers observed by the state of MA (this is done via gradient descent) 
+* plotting the prior distributions of the parameters
+* plotting the results of forecasting with optimized point-estimates of the learnable parameters
+
+TODO 
+
+In the results folder, we also provide a set of parameters (.pickle) that has already been fitted to 4 US states.
+
+
+
+
+
 we fit these parameters until our model yields retrospective hospital-admission numbers that matches ground-truth data sources of HHS.gov.
 
 * To be **portable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect either regional or wholistic datasets, our population model will just use the daily sums of those numbers.
+
+## Data collection
+
+We provide the datasets we used in our experiments, as well as code to automatically collect and format US state level data from HHS and from the Covid Tracking Project.  
+Code and README are provided in the folder datasets/US.
+
 
 See our model derviation manuscript:
 
@@ -68,36 +112,7 @@ pip install -r requirements.txt
 ```
 
 
-# Modeling
 
-![Image of Model](/supplement/PopulationModelDiagram.png)
-
-We have developed a deterministic "semi-Markov" model to simulate populations of susceptible people progressing through the stages of being infected (I), symptomatic (S), ailing (A), and hospital-admissible (H). When entering the infected stage, individual has . TODO OVERLEAF description here
-
-At each timestep, a patient can be described by:
-* a binary health state ('Recovering' or 'Declining')
-* an ordinal location state (e.g. 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
-* the time left before transition to the next location state
-
-These sojourn parameters and transition parameters are readily estimated from local data or the literature (e.g. our prior distributions for these parameters are inspired by previously published works).
-
-We take an initial population, and run the model forward for a desired number of days.
-
-TODO TODO
-
-By reading parameters in from a plain text file [example](./workflows/example_simple/params.json), the model transparently facilitates communication of assumptions and invites modifications.
-
-# Gradient Descent
-
-We provide here an example python notebook, together with an overview of the necessary commands, to optimize the model parameters such that true hospital-admissions counts are well fitted. To get started, we recommend running the example notebook as is. The notebook will guide you through:
-
-* optimize the parameters such that the retrospectively forecast hospital-admission numbers matches hospital-admission numbers observed by the state of MA (this is done via gradient descent) 
-* plotting the prior distributions of the parameters
-* plotting the results of forecasting with optimized point-estimates of the learnable parameters
-
-TODO 
-
-In the results folder, we also provide a set of parameters (.pickle) that has already been fitted to 4 US states.
 
 ## Setup
 
@@ -112,10 +127,7 @@ Requirements:
 - A csv file containing admissions per timestep. These admissions an be at any state of the hospital  
 - A csv file containing the true hospital census counts for training and testing
 
-## Data collection
 
-We provide the datasets we used in our experiments, as well as code to automatically collect and format US state level data from HHS and from the Covid Tracking Project.  
-Code and README are provided in the folder datasets/US.
 
 
 
