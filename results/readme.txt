@@ -1,0 +1,1 @@
+This folder contains the resulting figures of a trained population model
