@@ -24,11 +24,11 @@ Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_20
 
 Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
 
-For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/TODO)
+For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19)
 
 ### Contact:
 
-For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/TODO/issues)
+For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19/issues)
 
 For general questions, please email [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
 
@@ -70,7 +70,7 @@ pip install -r requirements.txt
 
 # Modeling
 
-![Image of Model](https://github.com/tufts-ml/TODO/images/yaktocat.png)
+![Image of Model](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19/supplement/PopulationModelDiagram.png)
 
 We have developed a deterministic "semi-Markov" model to simulate populations of susceptible people progressing through the stages of being infected (I), symptomatic (S), ailing (A), and hospital-admissible (H). When entering the infected stage, individual has . TODO OVERLEAF description here
 
