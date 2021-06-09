@@ -15,7 +15,7 @@ For general questions, please email [Prof. Michael C. Hughes](https://www.michae
 
 # Population Model for COVID-19 susceptible people
 
-Our proposed mechanistic model can be used to forecast how populations of susceptible people will become hospital admissable after declining in health through stages of infected, symptomatic, ailing, then hospital admissible. 
+Our proposed mechanistic model can be used to forecast how populations of susceptible people will become hospital admissable after declining in health through stages of infected, symptomatic, ailing, then hospital admissible ("hospitalized"). 
 
 # Modeling
 
@@ -23,22 +23,9 @@ Our proposed mechanistic model can be used to forecast how populations of suscep
 
 Figure 1: Diagram of the proposed Markovian model for a COVID-19 patient’s trajectory through the hospital. Rectangles indicate possible states, defined by the patient’s current pre-hospitalization stages, Defenseless D, Infected I, Symptomatic S, Ailing A, Hospital-admissible H, and recovering R. Defenseless population are individuals who are susceptible COVID-19. Rt is the viral reproductive constant which determines how fast the virus spreads. After a person is infected and joins I-stage population, a fraction of the population (denoted by pS) progresses forward to the Symptomatic S stage, while the remaining 1 − pS fraction exits the progression model and recovers from COVID-19 (denoted by the R stage). This concept of a 2 group split (forward-progressing group, and recovering group) also applies for the remaining transitions S → A and A → H, with the corresponding parameters pA and pH . When an individual is in stage I, they are likely to stay in stage I for some ’sojourn duration (days)’ specified by a sojourn probability mass function (PMF). This sojourn concept also holds true for the symptomatic population (stage S), with a separate sojourn PMF. All state transitions signified with blue arrows can be considered as a 1 time-step (daily) transitions. On the contrary, red arrows indicate transitions take X time-step(s)/day(s), where X is specified by the sojourn PMFs.
 
-At each timestep, a patient can be described by:
-* a binary health state ('Recovering' or 'Declining')
-* an ordinal location state (e.g. 'InGeneralWard', 'OffVentInICU', 'OnVentInICU')
-* the time left before transition to the next location state
+These sojourn PMF and transition parameters are readily estimated from local data or the literature (e.g. our prior distributions for these parameters are inspired by previously published works).
 
-These sojourn parameters and transition parameters are readily estimated from local data or the literature (e.g. our prior distributions for these parameters are inspired by previously published works).
-
-We take an initial population, and run the model forward for a desired number of days.
-
-TODO TODO
-
-By reading parameters in from a plain text file [example](./workflows/example_simple/params.json), the model transparently facilitates communication of assumptions and invites modifications.
-
-
-
-Using this model, we can:
+Using this model in conjunction with gradient descent, we can:
 
 * **fit parameters** to aggregated daily count time-series from a specific hospital site or region
 * **forecast** future daily counts to help administrative officials understand future demand for resources
@@ -46,10 +33,7 @@ Using this model, we can:
 
 The model and its fitting and forecasting procedures satisfy two desired properties:
 
-* We focus on **point-estimate** modeling using a gradient descent approach. The framework of our object loss is a Maximum-a-priori problem. After defining a set of prior distributions on the parameters:
-  * param1
-  * param2
-
+* We focus on **point-estimate** modeling using a gradient descent approach. We frame the objective loss within a Maximum-a-priori frame work, where we are trying to fit predicted hospital-admissible-numbers to ground-truth hospital-admissible-numbers. 
 
 # Gradient Descent
 
