@@ -70,8 +70,7 @@ pip install -r requirements.txt
 
 # Modeling
 
-![Image of Model]
-(/supplement/PopulationModelDiagram.png)
+![Image of Model](/supplement/PopulationModelDiagram.png)
 
 We have developed a deterministic "semi-Markov" model to simulate populations of susceptible people progressing through the stages of being infected (I), symptomatic (S), ailing (A), and hospital-admissible (H). When entering the infected stage, individual has . TODO OVERLEAF description here
 
