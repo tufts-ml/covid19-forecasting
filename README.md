@@ -1,3 +1,18 @@
+
+See our model derviation manuscript:
+
+Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
+
+Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
+
+For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19)
+
+### Contact:
+
+For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19/issues)
+
+For general questions, please email [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
+
 # Population Model for COVID-19 susceptible people
 
 Our proposed mechanistic model can be used to forecast how populations of susceptible people will become hospital admissable after declining in health through stages of infected, symptomatic, ailing, then hospital admissible. 
@@ -62,19 +77,6 @@ We provide the datasets we used in our experiments, as well as code to automatic
 Code and README are provided in the folder datasets/US.
 
 
-See our model derviation manuscript:
-
-Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
-
-Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
-
-For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19)
-
-### Contact:
-
-For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19/issues)
-
-For general questions, please email [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
 
 
 # Usage
