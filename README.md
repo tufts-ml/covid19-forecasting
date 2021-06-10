@@ -53,10 +53,10 @@ In the results folder, we also provide a set of parameters (.pickle) that has al
 ## Data collection
 
 
-To be **portable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect either regional or wholistic datasets, our population model will just use the daily sums of those numbers.
+To have our model **transferable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect regional datasets, our population model will just use the counts from daily sums-across-regions.
 
 In the ![Data folder](/data), We provide the datasets we used in our experiments, which our code automatically collects and formats from these data sources:
-* [Health and Human Services (HHS)](https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD) - provides us with ground-truth hospital-admissions numbers 
+* [Health and Human Services (HHS)](https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD) - provides us with ground-truth hospital-admissions (H)
 * [CovidEstim.org](https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv) - provides us with:
   * reproductive constant (Rt)
   * Initialization values for Infected (I)
@@ -65,15 +65,12 @@ In the ![Data folder](/data), We provide the datasets we used in our experiments
 
 Please note that these data sources may become deprecated/outdated. In the case of data-source-deprecation, our code base will require new external data sources, so please notify [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
 
-Code and README are provided in the folder datasets/US.
-
-
 
 # Usage
 
 ### Getting Started
 
-Here's a very simple example, that will run our probabilistic progression model (with dummy initial conditions and dummy parameters) to forecast ahead for 120 days. (Requires you have already [installed this project's conda environment](#installation)
+Here's a very simple example, that uses a model pre-fitted (to the training period of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021).  [installed this project's conda environment](#installation)
 
 ```console
 $ source env/bin/activate
@@ -95,31 +92,31 @@ TODO See an example output in (example_output/](.example_output/)
 #### 1. Install python virtual env
 
 Follow the instructions here: https://docs.python.org/3/library/venv.html
+```
+python -m venv c:\path\to\myenv
+```
 
-#### 2. Install requirements.txt into environment via pip
+#### 2. Install requirements.txt into virtual environment via pip
 
 Use the project's included requirements.txt file to specify all packages needed
 ```
+cd c:\path\to\myenv
 pip install -r requirements.txt
 ```
 
 
-## Setup
+# Running the ![Python Notebook Demonstrating Gradient Descent](/PopulationModel-train-MA.ipynb)
 
-Requirements:  
-- A json file containing the prior over each set of parameters  
-- A json file containing the config information necessary for the hospital model to run a simulation. This includes:  
-    - Initial counts at each state of the hospital  
-    - Number of timesteps to simulate (training + testing)  
-    - Number of *training* timesteps only  
-    - A source to draw admissions from, usually a pointer to a file containing admissions per timestep  
-    - Parameters of the model. Values are just placeholders, with the exception of *proba_Die_after_Declining_OnVentInICU* which must be set to 1.0 and never changed  
-- A csv file containing admissions per timestep. These admissions an be at any state of the hospital  
-- A csv file containing the true hospital census counts for training and testing
+#### 1. Open jupyter notebook on a browser via the following command lines
+```
+cd c:\path\to\myenv
+jupyter notebook
+```
+
+#### 2. Run through each jupyter notebook cell block
 
 
-
-
+# Modifying the Notebook to forecast into the future
 
 ## Step 0: Ensure that the HHS data source of hospital-admission counts is still an active API to date.
 
@@ -161,12 +158,3 @@ We already provide a set of samples from the posterior distribution of 4 US stat
 
 We **strongly** recommend making forecasts using samples from multiple runs of ABC, as opposed to just one.
 
-## Step 3: compute summaries of forecasts
-
-Run the following command:  
-```console
-$ python -m aced_hmm.summarize_forecasts --input_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts] \
-                                         --output_dir [results/US/MA-20201111-20210111-20210211] \
-                                         --output_template [summary_after_abc_] \
-                                         --input_csv_file_pattern [results_after_abc*.csv] \
-                                         --comma_sep_percentiles [1,2.5,5,10,25,50,75,90,95,97.5,99]
