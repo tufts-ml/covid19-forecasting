@@ -70,7 +70,7 @@ Please note that these data sources may become deprecated/outdated. In the case 
 
 ### Getting Started
 
-Here's a very simple [example notebook](/PopulationModel-train-MA.ipynb), that uses a model pre-trained (on the training MA dataset of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021). (Running notebook requires [Installation](#Installation) and [Running Jupyter Notebook](#Running Jupyter Notebook))
+Here's a very simple [example notebook](/PopulationModel-train-MA.ipynb), that uses a model pre-trained (on the training MA dataset of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021). (Running notebook requires [Installation](#Installation) and [Running Jupyter Notebook](#Jupyter-Notebook))
 
 Running this example notebook will write a file [daily_admissions_forecast.csv](/results/daily_admissions_forecast.csv). The CSV should have rows of hospital admissions up to today's date. In addition to all the past dates of hospital-admissions, the last 60 rows of the CSV should contain 60 days of forecasted admissions.
 
@@ -99,7 +99,7 @@ pip install -r requirements.txt
 ```
 
 
-# Running Jupyter Notebook
+# Jupyter-Notebook
 
 #### 1. Open jupyter notebook interface via the following command lines
 ```
