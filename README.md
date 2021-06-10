@@ -5,7 +5,6 @@ Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_20
 
 Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
 
-For questions or concerns about the code, please [report an Issue](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19)
 
 ### Contact:
 
@@ -31,11 +30,12 @@ Using this model in conjunction with gradient descent, we can:
 * **forecast** future daily counts to help administrative officials understand future demand for resources
 * **assess the societal value** of possible interventions (e.g. would decreasing admissions by X% help California avoid a lockdown in late 2020?)
 
-The model and its fitting and forecasting procedures satisfy two desired properties:
-
-* We focus on **point-estimate** modeling using a gradient descent approach. We frame the objective loss within a Maximum-a-priori frame work, where we are trying to fit predicted hospital-admissible-numbers to ground-truth hospital-admissible-numbers. 
 
 # Gradient Descent
+
+* We focus on **point-estimate** modeling using a gradient descent approach. We frame the objective loss within a Maximum-a-priori framework.  Our objective is to best fit predicted hospital-admissible-numbers to ground-truth hospital-admissible-numbers while keeping the learnable parameters regularized via pre-defined prior distributions.
+
+![Python Notebook Demonstrating Gradient Descent](/PopulationModel-train-MA.ipynb)
 
 We provide here an example python notebook, together with an overview of the necessary commands, to optimize the model parameters such that true hospital-admissions counts are well fitted. To get started, we recommend running the example notebook as is. The notebook will guide you through:
 
@@ -46,8 +46,6 @@ We provide here an example python notebook, together with an overview of the nec
 TODO 
 
 In the results folder, we also provide a set of parameters (.pickle) that has already been fitted to 4 US states.
-
-
 
 
 
