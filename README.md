@@ -53,11 +53,15 @@ In the results folder, we also provide a set of parameters (.pickle) that has al
 ## Data collection
 
 
-* To be **portable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect either regional or wholistic datasets, our population model will just use the daily sums of those numbers.
+To be **portable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect either regional or wholistic datasets, our population model will just use the daily sums of those numbers.
 
 In the ![Data folder](/data), We provide the datasets we used in our experiments, which our code automatically collects and formats from these data sources:
-* HHS
-* UMN
+* [Health and Human Services (HHS)](https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD) - provides us with ground-truth hospital-admissions numbers 
+* [CovidEstim.org](https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv) - provides us with:
+  * reproductive constant (Rt)
+  * Initialization values for Infected (I)
+  * Initialization values for Symptomatic (S)
+  * Initialization values for Ailing (A)
 
 Please note that these data sources may become deprecated/outdated. In the case of data-source-deprecation, our code base will require new external data sources, so please notify [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
 
