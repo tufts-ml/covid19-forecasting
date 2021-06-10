@@ -20,30 +20,29 @@ Our proposed mechanistic model can be used to forecast how populations of suscep
 
 ![Image of Model](/supplement/PopulationModelDiagram.png)
 
-Figure 1: Diagram of the proposed Markovian model for a COVID-19 patient’s trajectory through the hospital. Rectangles indicate possible states, defined by the patient’s current pre-hospitalization stages, Defenseless D, Infected I, Symptomatic S, Ailing A, Hospital-admissible H, and recovering R. Defenseless population are individuals who are susceptible COVID-19. Rt is the viral reproductive constant which determines how fast the virus spreads. After a person is infected and joins I-stage population, a fraction of the population (denoted by pS) progresses forward to the Symptomatic S stage, while the remaining 1 − pS fraction exits the progression model and recovers from COVID-19 (denoted by the R stage). This concept of a 2 group split (forward-progressing group, and recovering group) also applies for the remaining transitions S → A and A → H, with the corresponding parameters pA and pH . When an individual is in stage I, they are likely to stay in stage I for some ’sojourn duration (days)’ specified by a sojourn probability mass function (PMF). This sojourn concept also holds true for the symptomatic population (stage S), with a separate sojourn PMF. All state transitions signified with blue arrows can be considered as a 1 time-step (daily) transitions. On the contrary, red arrows indicate transitions take X time-step(s)/day(s), where X is specified by the sojourn PMFs.
+Figure 1: Diagram of the proposed Markovian model for a COVID-19 patient’s trajectory through the hospital. Rectangles indicate possible states, defined by the patient’s current pre-hospitalization stages, Defenseless D, Infected I, Symptomatic S, Ailing A, Hospital-admissible H, and recovering R. Defenseless population are individuals who are susceptible COVID-19. Rt is the viral reproductive constant which determines how fast the virus spreads. After a person is infected and joins I-stage population, a fraction of the population (denoted by pS) progresses forward to the Symptomatic S stage, while the remaining 1 − pS fraction exits the progression model and recovers from COVID-19 (denoted by the R stage). This concept of a 2 group split (forward-progressing group, and recovering group) also applies for the remaining transitions S → A and A → H, with the corresponding parameters pA and pH . When an individual is in stage I, they are likely to stay in stage I for some ’sojourn duration (days)’ specified by a sojourn probability mass function (PMF). This sojourn concept also holds true for the symptomatic population (stage S), with a separate sojourn PMF. All state transitions signified with blue arrows can be considered as a 1 time-step (daily) transitions. On the contrary, red arrows indicate transitions take X time-step(s), where X is specified by the sojourn PMFs.
 
 These sojourn PMF and transition parameters are readily estimated from local data or the literature (e.g. our prior distributions for these parameters are inspired by previously published works).
 
 Using this model in conjunction with gradient descent, we can:
 
-* **fit parameters** to aggregated daily count time-series from a specific hospital site or region
-* **forecast** future daily counts to help administrative officials understand future demand for resources
+* **fit sojourn parameters and transition parameters** such that the predicted hospital-admission numbers matches ground-truth hospital-admission numbers
+* **forecast** future daily hospital-admission counts to help administrative officials understand future demand for resources
 * **assess the societal value** of possible interventions (e.g. would decreasing admissions by X% help California avoid a lockdown in late 2020?)
 
 
 # Gradient Descent
 
-We focus on **point-estimate** modeling using a gradient descent approach. We frame the objective loss within a Maximum-a-priori framework.  Our objective is to best fit predicted hospital-admissible-numbers to ground-truth hospital-admissible-numbers while keeping the learnable parameters regularized via pre-defined prior distributions.
+We focus on **point-estimate** optimization using a gradient descent approach. We frame the objective loss within a Maximum-a-priori framework.  Our objective is to best fit predicted hospital-admissible-numbers to ground-truth hospital-admissible-numbers while keeping the learnable parameters regularized via pre-defined prior distributions for the sojourn parameters and the transition parameters.
 
 ![Python Notebook Demonstrating Gradient Descent](/PopulationModel-train-MA.ipynb)
 
 We provide here an example python notebook, together with an overview of the necessary commands, to optimize the model parameters such that true hospital-admissions counts are well fitted. To get started, we recommend running the example notebook as is. The notebook will guide you through:
 
 * plotting the prior distributions of the learnable parameters.
-* optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches hospital-admission numbers observed by the state of Massachusetts (MA). Model observes MA data for the training period of 01-01-2021 to 04-01-2021, and tries to forecast hospitale-admissible number for 04-01-2021 to 06-01-2021.
-* plotting the results of forecasting with optimized point-estimates of the learnable parameters
-
-![Results folder](/results)
+* optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches ground-truth hospital-admission numbers observed by the state of Massachusetts (MA). In this ![Example notebook](/PopulationModel-train-MA.ipynb), our model sees training data (of MA) for the training period of 01-01-2021 to 04-01-2021, and tries to tweak the learnable parameters to best fit that training period. 
+* Forecasting hospital-admissible numbers for the testing period of 04-01-2021 to 06-01-2021, given the optimized learnable parameters.
+* plotting the results of forecasting with optimized point-estimates of the learnable parameters, which are saved into ![Results folder](/results)
 
 In the results folder, we also provide a set of parameters (.pickle) that has already been fitted to 4 US states. TODO
 
@@ -53,11 +52,12 @@ In the results folder, we also provide a set of parameters (.pickle) that has al
 
 ## Data collection
 
-![Data folder](/results)
 
 * To be **portable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect either regional or wholistic datasets, our population model will just use the daily sums of those numbers.
 
-We provide the datasets we used in our experiments, as well as code to automatically collect and format US state level data from HHS and from the UMN.  
+In the ![Data folder](/data), We provide the datasets we used in our experiments, which our code automatically collects and formats from these data sources:
+* HHS
+* UMN
 
 Please note that these data sources may become deprecated/outdated. In the case of data-source-deprecation, our code base will require new external data sources, so please notify [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
 
