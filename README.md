@@ -33,31 +33,35 @@ Using this model in conjunction with gradient descent, we can:
 
 # Gradient Descent
 
-* We focus on **point-estimate** modeling using a gradient descent approach. We frame the objective loss within a Maximum-a-priori framework.  Our objective is to best fit predicted hospital-admissible-numbers to ground-truth hospital-admissible-numbers while keeping the learnable parameters regularized via pre-defined prior distributions.
+We focus on **point-estimate** modeling using a gradient descent approach. We frame the objective loss within a Maximum-a-priori framework.  Our objective is to best fit predicted hospital-admissible-numbers to ground-truth hospital-admissible-numbers while keeping the learnable parameters regularized via pre-defined prior distributions.
 
 ![Python Notebook Demonstrating Gradient Descent](/PopulationModel-train-MA.ipynb)
 
 We provide here an example python notebook, together with an overview of the necessary commands, to optimize the model parameters such that true hospital-admissions counts are well fitted. To get started, we recommend running the example notebook as is. The notebook will guide you through:
 
-* optimize the parameters such that the retrospectively forecast hospital-admission numbers matches hospital-admission numbers observed by the state of MA (this is done via gradient descent) 
-* plotting the prior distributions of the parameters
+* plotting the prior distributions of the learnable parameters.
+* optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches hospital-admission numbers observed by the state of Massachusetts (MA). Model observes MA data for the training period of 01-01-2021 to 04-01-2021, and tries to forecast hospitale-admissible number for 04-01-2021 to 06-01-2021.
 * plotting the results of forecasting with optimized point-estimates of the learnable parameters
 
-TODO 
+![Results folder](/results)
 
-In the results folder, we also provide a set of parameters (.pickle) that has already been fitted to 4 US states.
+In the results folder, we also provide a set of parameters (.pickle) that has already been fitted to 4 US states. TODO
 
 
 
-we fit these parameters until our model yields retrospective hospital-admission numbers that matches ground-truth data sources of HHS.gov.
 
-* To be **portable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect either regional or wholistic datasets, our population model will just use the daily sums of those numbers.
 
 ## Data collection
 
-We provide the datasets we used in our experiments, as well as code to automatically collect and format US state level data from HHS and from the Covid Tracking Project.  
-Code and README are provided in the folder datasets/US.
+![Data folder](/results)
 
+* To be **portable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect either regional or wholistic datasets, our population model will just use the daily sums of those numbers.
+
+We provide the datasets we used in our experiments, as well as code to automatically collect and format US state level data from HHS and from the UMN.  
+
+Please note that these data sources may become deprecated/outdated. In the case of data-source-deprecation, our code base will require new external data sources, so please notify [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
+
+Code and README are provided in the folder datasets/US.
 
 
 
@@ -94,8 +98,6 @@ Use the project's included requirements.txt file to specify all packages needed
 ```
 pip install -r requirements.txt
 ```
-
-
 
 
 ## Setup
