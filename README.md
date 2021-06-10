@@ -14,7 +14,7 @@ For general questions, please email [Prof. Michael C. Hughes](https://www.michae
 
 # Population Model for COVID-19 susceptible people
 
-Our proposed mechanistic model can be used to forecast how populations of susceptible people will become hospital admissable after declining in health through stages of infected, symptomatic, ailing, then hospital admissible ("hospitalized"). 
+Our proposed mechanistic model can be used to forecast how populations of susceptible/defenseless people will become hospital admissable after declining in health through stages of infected, symptomatic, ailing, then hospital admissible ("hospitalized"). 
 
 # Modeling
 
@@ -70,33 +70,27 @@ Please note that these data sources may become deprecated/outdated. In the case 
 
 ### Getting Started
 
-Here's a very simple example, that uses a model pre-fitted (to the training period of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021).  [installed this project's conda environment](#installation)
+Here's a very simple [example notebook](/PopulationModel-train-MA.ipynb), that uses a model pre-trained (on the training MA dataset of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021). (Running notebook requires [Installation](#Installation) and [Running Jupyter Notebook](#Running Jupyter Notebook))
 
-```console
-$ source env/bin/activate
-$ python TODO run forecast into future 30 days
-```
+Running this example notebook will write a file [daily_admissions_forecast.csv](/results/daily_admissions_forecast.csv). The CSV should have rows of hospital admissions up to today's date. In addition to all the past dates of hospital-admissions, the last 60 rows of the CSV should contain 60 days of forecasted admissions.
 
-**Expected output:**
-```console
-Forecasting into future by 30 days
-
-```
-
-TODO This will write a file daily_admissions_forefcast.csv, The CSV should have rows of hospital admissions up to today's date. In addition to all the past dates of hospital-admissions, the last 30 rows of the CSV should contain 30 days of forecasted admissions.
-
-TODO See an example output in (example_output/](.example_output/)
 
 # Installation
 
-#### 1. Install python virtual env
+#### 1. Creating a python virtual environment folder
 
 Follow the instructions here: https://docs.python.org/3/library/venv.html
 ```
 python -m venv c:\path\to\myenv
 ```
 
-#### 2. Install requirements.txt into virtual environment via pip
+#### 2. Activate the virtual environment
+```
+cd c:\path\to\myenv
+source myenv\bin\activate
+```
+
+#### 3. Install requirements.txt into virtual environment via pip
 
 Use the project's included requirements.txt file to specify all packages needed
 ```
@@ -105,9 +99,9 @@ pip install -r requirements.txt
 ```
 
 
-# Running the ![Python Notebook Demonstrating Gradient Descent](/PopulationModel-train-MA.ipynb)
+# Running Jupyter Notebook
 
-#### 1. Open jupyter notebook on a browser via the following command lines
+#### 1. Open jupyter notebook interface via the following command lines
 ```
 cd c:\path\to\myenv
 jupyter notebook
