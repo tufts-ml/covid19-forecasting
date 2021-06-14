@@ -2,7 +2,7 @@
 *.xlsx
 *.html
 *.pdf
-*.csv
+
 
 .slurm-logs/
 .snakemake/

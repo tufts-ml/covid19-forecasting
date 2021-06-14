@@ -112,7 +112,10 @@ jupyter notebook
 
 # Modifying the ![Example notebook](/PopulationModel-train-MA.ipynb) to forecast into the future
 
-## PRE-REQUISITE: Ensure that the HHS data source of hospital-admission counts is still an active API to date. Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe. [More details about our data source](#data-collection)
+## PRE-REQUISITE: 
+* Ensure that the HHS data source of hospital-admission counts is still an active API to date. 
+* Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe. 
+[More details about our data source](#data-collection)
 
 
 ## Step 0: Define Training period to fit to hospital-admissions counts observed up to today
@@ -146,4 +149,7 @@ pop_model.warmup_data.end_date = '20210610' <- set this to today's date
 pop_model.forecast_duration=60 <- set this to the number of days you want to forecast
 ```
 
+![Results folder](/results) should contain a daily_admissions_forecast.csv file of your most recent forecast.
 
+For those of you interested in using this forecast in conjunction with the ACED HMM model, 
+(The forecasted entries of this CSV can be copied and pasted into the end of daily_admissions.csv file)

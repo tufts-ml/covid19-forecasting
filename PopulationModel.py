@@ -263,7 +263,7 @@ class PopulationModel(object):
                 if self.iter%self.n_steps_between_print == 0:
                     print('----------------------Iter ',self.iter,'----------------------')
                     print(self.loss_per_iter[self.iter], 'loss at iteration ')
-                    print(self.gradients_per_iter['prob_sympt_s'][self.iter], 'symptomatic gradient at iteration ')
+                    # print(self.gradients_per_iter['prob_sympt_s'][self.iter], 'symptomatic gradient at iteration ')
             
             return new_params
 
