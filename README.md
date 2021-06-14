@@ -148,13 +148,13 @@ Before moving on to the next step, confirm that the training loss has converged 
 
 
 ## Step 2 (Skip straight to Forecasting Beyond Today): 
-Set the warmup_data to include data from lookback_date to today's date
+Set the warmup_data to include data from lookback_date until today's date
 ```
 pop_model.warmup_data.end_date = '20210610' <- set this to today's date
 pop_model.forecast_duration=60 <- set this to the number of days you want to forecast
 ```
 
-Run following cell blocks in Step 2
+Run all cell blocks following 'Forecasting Beyond Today' in Step 2
 
 ![Results folder](/results) should contain a daily_admissions_forecast.csv file of your most recent forecast.
 
