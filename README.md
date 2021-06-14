@@ -110,7 +110,7 @@ jupyter notebook
 #### 2. Within the interface, Run each jupyter notebook code block
 
 
-# Modifying the Notebook to forecast into the future
+# Modifying the ![Example notebook](/PopulationModel-train-MA.ipynb) to forecast into the future
 
 ## PRE-REQUISITE: Ensure that the HHS data source of hospital-admission counts is still an active API to date. Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe.
 
@@ -120,6 +120,14 @@ jupyter notebook
 training_end_date = '20210401' <- fill this with TODAY's date or a recent date
 training_start_date = '20210301' <- fill this with a date that is about 2 months ago
 ```
+
+Ensure that the "covidestime.csv" file is being used and not the outdated "covidestime_including_MA.csv"
+```
+pd_warmup_data = PopulationData(data_folder+"covidestim.csv", state_name, 
+                                start_date=lookback_date, end_date=training_start_date);
+```
+
+
 
 ## Step 1: Tweak the hyper parameters of the .fit() method
 ```
