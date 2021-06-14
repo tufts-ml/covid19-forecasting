@@ -65,10 +65,31 @@ class PopulationModel(object):
     ----------
     warmup_data: PopulationData object
         contains the covidestim.org SFrame dataset to help initialize the I,S,A,H values for the model at t=0 (i.e warmup_data.end_date
+    training_data: HospitalData object
+        contains the HHS SFrame dataset that has ground-truth daily hospital-admitted patients 
     forecast_duration: int
         during forecasting (i.e not training) the model will predict forecast_duration days beyond t=0, where t=0 is the  warmup_data.end_date
+    params: dict
+        {trainable-parameter1: value1,trainable-parameter2: value2} each of these trainable-parameters' values are going to be updated via gradient descent
+    priors: dict
+        {trainable-parameter1: [a1,b1],trainable-parameter2: [a2,b2]} each of these trainable-parameters come from some prior-distribution(a,b), where a,b are the hyperparameters of the prior distribution
+    
 
+    training_mode: bool
+        boolean that should be TRUE during training, and should be FALSE during forecasting
+    plots: bool
+        boolean that dictates of plots are made during training 
+    iter: int
+        current iteration of the gradient descent
+    n_steps_between_print:
+        how many iterations before printing information about gradient descent
+    loss_per_iter: list
+        training losses stored within a list. list of length equal to the number of training iterations. 
+    gradients_per_iter: list
+        gradients stored within a list. list of length equal to the number of training iterations. 
+    
         '''
+        
     def __init__(self, warmup_data_obj, forecast_duration = 60, params={}, priors={}): 
         self.warmup_data = copy.deepcopy(warmup_data_obj) # Population Data obj
         self.forecast_duration = forecast_duration
@@ -176,7 +197,19 @@ class PopulationModel(object):
         else:
             for key, value in priors.items():
                 self.priors[key] = value
-        
+    
+    def get_dates_to_forecast(self):
+        # print(self.warmup_data.filtered_data['date'], 'final warm up date')
+        most_recent_estimated_date = str(self.warmup_data.filtered_data['date'][-1])
+        dates_to_forecast = [int(most_recent_estimated_date)]
+        if self.training_mode:
+            final_date = datetime.strptime(self.training_data.end_date, "%Y%m%d")
+        else:
+            final_date = datetime.strptime(self.warmup_data.end_date, "%Y%m%d")+timedelta(days=self.forecast_duration)
+        for t in range((final_date - datetime.strptime(most_recent_estimated_date, "%Y%m%d")).days ):
+            dates_to_forecast+=[int( (datetime.strptime(str(dates_to_forecast[-1]), "%Y%m%d")+timedelta(days=1)).strftime("%Y%m%d") )]
+
+        return dates_to_forecast
 
 ############ FUNCTIONS FOR GRADIENT DESCENT TRAINING    ############
     def fit(self,training_data_obj, init_params = {},\
@@ -237,6 +270,14 @@ class PopulationModel(object):
         # run gradient descent
         new_params = gradient_descent()
 
+        import pickle
+        filename = RESULTS_FOLDER + self.training_data.us_state + '_population_params_trained_on_'+str(self.training_data.start_date)+'_'+str(self.training_data.end_date)
+
+        with open(filename+'.pickle', 'wb') as handle:
+            pickle.dump(new_params, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print('*** optimized parameters saved to '+ filename)
+
+
     def get_loss_given_truthdict_and_params(self, params, truth_dict, lambda_reg):
         pred_dict = self.get_forecasted_data(params)
         log_loss = 0
@@ -283,15 +324,4 @@ class PopulationModel(object):
         grad_of_loss = autograd.grad(self.get_loss_given_truthdict_and_params)
         return grad_of_loss(params,truth_dict,lambda_reg)
 
-    def get_dates_to_forecast(self):
-        # print(self.warmup_data.filtered_data['date'], 'final warm up date')
-        most_recent_estimated_date = str(self.warmup_data.filtered_data['date'][-1])
-        dates_to_forecast = [int(most_recent_estimated_date)]
-        if self.training_mode:
-            final_date = datetime.strptime(self.training_data.end_date, "%Y%m%d")
-        else:
-            final_date = datetime.strptime(self.warmup_data.end_date, "%Y%m%d")+timedelta(days=self.forecast_duration)
-        for t in range((final_date - datetime.strptime(most_recent_estimated_date, "%Y%m%d")).days ):
-            dates_to_forecast+=[int( (datetime.strptime(str(dates_to_forecast[-1]), "%Y%m%d")+timedelta(days=1)).strftime("%Y%m%d") )]
 
-        return dates_to_forecast

@@ -40,7 +40,7 @@ We focus on **point-estimate** optimization using a gradient descent approach. W
 We provide here an example python notebook, together with an overview of the necessary commands, to optimize the model parameters such that true hospital-admissions counts are well fitted. To get started, we recommend running the example notebook as is. The notebook will guide you through:
 
 * plotting the prior distributions of the learnable parameters.
-* optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches ground-truth hospital-admission numbers observed by the state of Massachusetts (MA). In this ![Example notebook](/PopulationModel-train-MA.ipynb), our model sees training data (of MA) for the training period of 01-01-2021 to 04-01-2021, and tries to tweak the learnable parameters to best fit that training period. 
+* optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches ground-truth hospital-admission numbers observed by the state of Massachusetts (MA). In this ![Example notebook](/PopulationModel-train-MA.ipynb), our model sees training data (of MA) for the training period of 03-01-2021 to 04-01-2021, and tries to optimize the learnable parameters to best fit that training period. 
 * Forecasting hospital-admissible numbers for the testing period of 04-01-2021 to 06-01-2021, given the optimized learnable parameters.
 * plotting the results of forecasting with optimized point-estimates of the learnable parameters, which are saved into ![Results folder](/results)
 
@@ -61,7 +61,7 @@ In the ![Data folder](/data), We provide the datasets we used in our experiments
   * reproductive constant (Rt)
   * Initialization values for Infected (I)
   * Initialization values for Symptomatic (S)
-  * Initialization values for Ailing (A)
+  * Initialization values for Ailing/Severe (A)
 
 Please note that these data sources may become deprecated/outdated. In the case of data-source-deprecation, our code base will require new external data sources, so please notify [Prof. Michael C. Hughes](https://www.michaelchughes.com) - mike (AT) michaelchughes.com
 
@@ -70,7 +70,7 @@ Please note that these data sources may become deprecated/outdated. In the case 
 
 ### Getting Started
 
-Here's a very simple [example notebook](/PopulationModel-train-MA.ipynb), that uses a model (trained on the training MA dataset of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021). (Running notebook requires [Installations](#Installation) and [Jupyter Notebook](#Jupyter-Notebook))
+Here's a very simple [example notebook](/PopulationModel-train-MA.ipynb), that uses a model (trained on the training MA dataset of 03-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021). (Running notebook requires [Installations](#Installation) and [Jupyter Notebook](#Jupyter-Notebook))
 
 Running this example notebook will write a file [daily_admissions_forecast.csv](/results/daily_admissions_forecast.csv). The CSV should have rows of ground-truth hospital-admissions up to 04-01-2021. In addition to all the training dataset's dates of hospital-admissions, the last 60 rows of the CSV should contain 60 days of forecasted admissions.
 
@@ -122,7 +122,7 @@ training_end_date = '20210401' <- fill this with TODAY's date or a recent date
 training_start_date = '20210301' <- fill this with a date that is about 2 months ago
 ```
 
-Ensure that the "covidestim.csv" file is being used and not the outdated "covidestim_including_MA.csv"
+Ensure that the "covidestim.csv" file is being used and not the outdated "covidestim_old_version.csv"
 ```
 pd_warmup_data = PopulationData(data_folder+"covidestim.csv", state_name, 
                                 start_date=lookback_date, end_date=training_start_date);
