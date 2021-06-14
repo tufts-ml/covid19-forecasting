@@ -138,8 +138,8 @@ class PopulationModel(object):
             return {'date':dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'ailing':flow_symp_to_ailing_list_return, 'hospitalized':flow_ailing_to_hosp_list_return}
 
         if save_admissions:
-            print('\n','***forecasted hospital-admissible numbers saved to ', RESULTS_FOLDER+'forecasted_admissions.csv')
-            tc.SFrame({'date':dates_to_forecast,'n_admitted_InGeneralWard':[int(adm) for adm in flow_ailing_to_hosp_list_return]}).save(RESULTS_FOLDER+'forecasted_admissions.csv', format='csv')
+            print('\n','***forecasted hospital-admissible numbers saved to ', RESULTS_FOLDER+'daily_admissions_forecast.csv')
+            tc.SFrame({'date':dates_to_forecast,'n_admitted_InGeneralWard':[int(adm) for adm in flow_ailing_to_hosp_list_return]}).save(RESULTS_FOLDER+'daily_admissions_forecast.csv', format='csv')
         return tc.SFrame({'date':dates_to_forecast,'Rt':Rt_list[1:],'infections':flow_sus_to_inf_list_return, 'symptomatic':flow_inf_to_symp_list_return, 'ailing':flow_symp_to_ailing_list_return, 'hospitalized':flow_ailing_to_hosp_list_return})
     
     def set_params(self,params):
@@ -147,20 +147,17 @@ class PopulationModel(object):
         #(Note that we are using the transformed (via softplus and sigmoid) values 
         #of default values because we want to constrain these learnable parameters 
         #certain acceptable ranges. i.e transition probabilities are only within the range of 0 to 1 (enforced by sigmoid))
-            # self.params = {'T_serial':5.8, 'Rt_shift':0.2, 'days_of_imposed_restrictions':[],'days_of_relaxed_restrictions':[],\
-            # 'prob_sympt_s':sigmoid_inv(0.65),'prob_ailing_s':sigmoid_inv(0.05),'prob_hosp_s':sigmoid_inv(0.75), \
-            # 'prob_soujourn_inf_alpha_s':softplus_inv(3.41), 'prob_soujourn_inf_beta_s':softplus_inv(0.605), \
-            # 'prob_soujourn_symp_alpha_s':softplus_inv(1.62), 'prob_soujourn_symp_beta_s':softplus_inv(0.218)}
-
-
             self.params = {'T_serial':5.8, 'Rt_shift':0.2, 'days_of_imposed_restrictions':[],'days_of_relaxed_restrictions':[],\
-            'prob_sympt_s':sigmoid_inv(0.65),'prob_ailing_s':sigmoid_inv(0.05),'prob_hosp_s':sigmoid_inv(0.45), \
+            'prob_sympt_s':sigmoid_inv(0.65),'prob_ailing_s':sigmoid_inv(0.05),'prob_hosp_s':sigmoid_inv(0.75), \
             'prob_soujourn_inf_alpha_s':softplus_inv(3.41), 'prob_soujourn_inf_beta_s':softplus_inv(0.605), \
             'prob_soujourn_symp_alpha_s':softplus_inv(1.62), 'prob_soujourn_symp_beta_s':softplus_inv(0.218)}
 
         else:
             for key, value in params.items():
-                self.params[key] = value
+                if key in ['prob_sympt_s','prob_ailing_s','prob_hosp_s']:
+                    self.params[key] = sigmoid_inv(value)
+                elif key in ['prob_soujourn_inf_alpha_s', 'prob_soujourn_inf_beta_s', 'prob_soujourn_symp_alpha_s', 'prob_soujourn_symp_beta_s']:
+                    self.params[key] = softplus_inv(value)
 
     def set_priors(self,priors):
         
@@ -168,6 +165,7 @@ class PopulationModel(object):
         #(Note 'prob_sympt_s':[5.5,2],'prob_ailing_s':[2,5],'prob_hosp_s':[2,4] each has the [a,b] hyperparameters of beta.logpdf 
         # 'prob_soujourn_inf_alpha_s':[4.693986464958364, 1.0832804882575846] and other sojourns has the [a,b] hyperparameters of log_gamma_pdf
 
+            #Unlke the learnable parameters,  these prior hyper paramters are set in the untransformed space (i.e no use of sigmoid and softplus)
             self.priors = {'T_serial':None, 'Rt_shift':None, 'days_of_imposed_restrictions':None,'days_of_relaxed_restrictions':None,\
             'prob_sympt_s':[5.5,2],'prob_ailing_s':[2,5],'prob_hosp_s':[2,4], \
             'prob_soujourn_inf_alpha_s':[4.693986464958364, 1.0832804882575846],\
@@ -182,7 +180,7 @@ class PopulationModel(object):
 
 ############ FUNCTIONS FOR GRADIENT DESCENT TRAINING    ############
     def fit(self,training_data_obj, init_params = {},\
-     n_iters = 100, step_size_txn=0.001, step_size_soj=0.001, n_steps_between_print=5, lambda_reg = 1, epsilon_stop=5e-10, plots=False):
+     n_iters = 100, step_size_txn=0.001, step_size_soj=0.001, n_steps_between_print=5, lambda_reg = 1, plots=False):
         self.training_mode = True
         self.plots = plots
         self.n_steps_between_print=n_steps_between_print

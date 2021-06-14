@@ -1,7 +1,7 @@
 
 See our model derviation manuscript:
 
-Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
+Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://TODO</a>
 
 Jump to: [Model Details](#modeling) - [Usage](#usage) - [Installation](#installation)
 
@@ -112,11 +112,29 @@ jupyter notebook
 
 # Modifying the Notebook to forecast into the future
 
-## Step 0: Ensure that the HHS data source of hospital-admission counts is still an active API to date.
+## PRE-REQUISITE: Ensure that the HHS data source of hospital-admission counts is still an active API to date. Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe.
 
 
+## Step 0: Define Training period to fit to hospital-admissions counts observed up to today
+```
+training_end_date = '20210401' <- fill this with TODAY's date or a recent date
+training_start_date = '20210301' <- fill this with a date that is about 2 months ago
+```
 
-## Step 1: Train and Fit the model to hospital-admissions counts observed up to today
+## Step 1: Tweak the hyper parameters of the .fit() method
+```
+pop_model.fit(training_data_obj, 
+              n_iters=32, step_size_txn=5e-5, step_size_soj=9e-4, n_steps_between_print=5, lambda_reg=1e-3, plots=True)
+```
+Confirm that the training loss has converged and all the parameters' gradients is approaching 0 in the final iterations of .fit()
+
+## Step 2 Forecasting Beyond Today: 
+
+```
+pop_model.warmup_data.end_date = '20210610' <- set this to today's date
+pop_model.forecast_duration=60 <- set this to the number of days you want to forecast
+```
+
 
 Run the following command:  
 ```console
