@@ -40,7 +40,7 @@ We focus on **point-estimate** optimization using a gradient descent approach. W
 We provide here an example python notebook, together with an overview of the necessary commands, to optimize the model parameters such that true hospital-admissions counts are well fitted. To get started, we recommend running the example notebook as is. The notebook will guide you through:
 
 * plotting the prior distributions of the learnable parameters.
-* optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches ground-truth hospital-admission numbers observed by the state of Massachusetts (MA). In this ![Example notebook](/PopulationModel-train-MA.ipynb), our model sees training data (of MA) for the training period of 03-01-2021 to 04-01-2021, and tries to optimize the learnable parameters to best fit that training period. 
+* optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches ground-truth hospital-admission numbers observed by the state of Massachusetts (MA). In this notebook, our model sees training data (of MA) for the training period of 03-01-2021 to 04-01-2021, and tries to optimize the learnable parameters to best fit that training period. 
 * Forecasting hospital-admissible numbers for the testing period of 04-01-2021 to 06-01-2021, given the optimized learnable parameters.
 * plotting the results of forecasting with optimized point-estimates of the learnable parameters, which are saved into ![Results folder](/results)
 
