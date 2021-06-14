@@ -41,7 +41,7 @@ class HospitalData(object):
         YYYYMMDD str format of the end date of interest when using methods get_GeneralWard_counts(), get_OnVentICU_counts(), get_OffVentICU_counts()
     '''
 
-    def __init__(self, csv_filename, us_state, start_date, end_date, population_data_obj = None):
+    def __init__(self, csv_filename, us_state, start_date, end_date):
         ''' Construct a HospitalData from provided input
         Args
         ----
@@ -63,7 +63,6 @@ class HospitalData(object):
         self._us_state = us_state # protected attrib
         self._start_date = start_date # protected attrib
         self._end_date = end_date # protected attrib
-        self.population_data_obj = population_data_obj
 
 
         self.load_csv_if_exists()
@@ -82,12 +81,12 @@ class HospitalData(object):
                 writer = csv.writer(f)
                 for line in response.iter_lines():
                     writer.writerow(line.decode('utf-8').split(','))
-            tc_data = tc.SFrame(csv_name)
+            tc_data = tc.SFrame.read_csv(csv_name, verbose=False)
             tc_data['date'] = tc_data.apply(lambda x: x['date'].replace('/',''))
 
             return tc_data
         else: 
-            tc_data = tc.SFrame(csv_name)
+            tc_data = tc.SFrame.read_csv(csv_name, verbose=False)
             tc_data['date'] = tc_data.apply(lambda x: x['date'].replace('/',''))
             return tc_data
     
@@ -118,10 +117,10 @@ class HospitalData(object):
         # returns admission counts within [self.start_date, self.end_date] of the self.us_state specified
         prev_admission = (self.filtered_data.apply(lambda x: float('nan') if (None in [x['previous_day_admission_adult_covid_confirmed']]) \
             else x['previous_day_admission_adult_covid_confirmed'])).to_numpy()
-#         print(self.end_date)
+
+        #shift previous day admission to current day admission
         end_date_plus_1 = datetime.strftime(datetime.strptime(self.end_date,'%Y%m%d')+timedelta(days=1),'%Y%m%d')
-        end_date_plus_1_entry = self.data.filter_by([int(end_date_plus_1)],'date').filter_by([self.us_state],'state')
-        print(end_date_plus_1_entry)
+        end_date_plus_1_entry = self.data.filter_by([str(end_date_plus_1)],'date').filter_by([self.us_state],'state')
         current_admission = np.append(prev_admission[1:],end_date_plus_1_entry['previous_day_admission_adult_covid_confirmed'])
         return current_admission
 
@@ -157,4 +156,4 @@ class HospitalData(object):
         self.filtered_data = self.get_filtered_data()
 
         
-# h = HospitalData('HHS4.csv', 'MA', '20201001', '20201101', population_data_obj = None)
+# h = HospitalData('HHS4.csv', 'MA', '20201001', '20201101')

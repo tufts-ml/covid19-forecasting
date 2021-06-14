@@ -3,7 +3,7 @@ See our model derviation manuscript:
 
 Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf</a>
 
-Jump to: [Usage](#usage) - [Modeling](#modeling) - [Installation](#installation) - [ABC](#ABC)
+Jump to: [Model Details](#modeling) - [Usage](#usage) - [Installation](#installation)
 
 
 ### Contact:
@@ -70,9 +70,9 @@ Please note that these data sources may become deprecated/outdated. In the case 
 
 ### Getting Started
 
-Here's a very simple [example notebook](/PopulationModel-train-MA.ipynb), that uses a model pre-trained (on the training MA dataset of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021). (Running notebook requires [Installation](#Installation) and [Running Jupyter Notebook](#Jupyter-Notebook))
+Here's a very simple [example notebook](/PopulationModel-train-MA.ipynb), that uses a model (trained on the training MA dataset of 01-01-2021 to 04-01-2021) to retrospectively forecast the next 2 months of MA hospital-admissions (04-01-2021 to 06-01-2021). (Running notebook requires [Installations](#Installation) and [Jupyter Notebook](#Jupyter-Notebook))
 
-Running this example notebook will write a file [daily_admissions_forecast.csv](/results/daily_admissions_forecast.csv). The CSV should have rows of hospital admissions up to today's date. In addition to all the past dates of hospital-admissions, the last 60 rows of the CSV should contain 60 days of forecasted admissions.
+Running this example notebook will write a file [daily_admissions_forecast.csv](/results/daily_admissions_forecast.csv). The CSV should have rows of ground-truth hospital-admissions up to 04-01-2021. In addition to all the training dataset's dates of hospital-admissions, the last 60 rows of the CSV should contain 60 days of forecasted admissions.
 
 
 # Installation
@@ -90,7 +90,7 @@ cd c:\path\to\myenv
 source myenv\bin\activate
 ```
 
-#### 3. Install requirements.txt into virtual environment via pip
+#### 3. Install packages from requirements.txt into virtual environment via pip
 
 Use the project's included requirements.txt file to specify all packages needed
 ```
@@ -101,13 +101,13 @@ pip install -r requirements.txt
 
 # Jupyter-Notebook
 
-#### 1. Open jupyter notebook interface via the following command lines
+#### 1. Open jupyter notebook interface
 ```
 cd c:\path\to\myenv
 jupyter notebook
 ```
 
-#### 2. Run through each jupyter notebook cell block
+#### 2. Within the interface, Run each jupyter notebook code block
 
 
 # Modifying the Notebook to forecast into the future
