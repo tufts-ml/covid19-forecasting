@@ -122,7 +122,7 @@ jupyter notebook
 ## Step 0: Define Training period to fit to hospital-admissions counts observed up to today
 Set the training period to the past 2 months
 ```
-training_end_date = '20210401' <- fill this with TODAY's date or a recent date
+training_end_date = '20210401' <- fill this with TODAY's date or a recent date observed by HHS and Covidestim.org
 training_start_date = '20210301' <- fill this with a date that is about 2 months ago
 ```
 
