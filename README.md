@@ -112,7 +112,7 @@ jupyter notebook
 
 # Modifying the ![Example notebook](/PopulationModel-train-MA.ipynb) to forecast into the future
 
-## PRE-REQUISITE: Ensure that the HHS data source of hospital-admission counts is still an active API to date. Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe. [More details about our data source](##Data-collection)
+## PRE-REQUISITE: Ensure that the HHS data source of hospital-admission counts is still an active API to date. Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe. [More details about our data source](#data-collection)
 
 
 ## Step 0: Define Training period to fit to hospital-admissions counts observed up to today
