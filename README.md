@@ -134,7 +134,7 @@ pd_warmup_data = PopulationData(data_folder+"covidestim.csv", state_name,
 
 
 ## Step 1: Tweak the hyper parameters of the .fit() method
-n_iters, step_size_txn, step_size_soj, lambda_reg needs to be tweaked depending on the USA state being fitted to. As a rule of thumb, the step_size_soj should be 1 order of magnitude larger than step_size_txn.  
+n_iters, step_size_txn, step_size_soj, lambda_reg needs to be tweaked depending on the USA state being fitted to. As a rule of thumb for the 2 learning_rates ('step_size'), the step_size_soj should be 1 order of magnitude larger than step_size_txn.  
 
 ```
 pop_model.fit(training_data_obj, 
