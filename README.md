@@ -132,7 +132,7 @@ pd_warmup_data = PopulationData(data_folder+"covidestim.csv", state_name,
                                 start_date=lookback_date, end_date=training_start_date);
 ```
 
-
+Run all cell blocks in Step 0
 
 ## Step 1: Tweak the hyper parameters of the .fit() method
 n_iters, step_size_txn, step_size_soj, lambda_reg needs to be tweaked depending on the USA state being fitted to. As a rule of thumb for the 2 learning_rates ('step_size'), the step_size_soj should be 1 order of magnitude larger than step_size_txn.  
@@ -141,7 +141,11 @@ n_iters, step_size_txn, step_size_soj, lambda_reg needs to be tweaked depending 
 pop_model.fit(training_data_obj, 
               n_iters=32, step_size_txn=5e-5, step_size_soj=9e-4, n_steps_between_print=5, lambda_reg=1e-3, plots=True) <- change these hyper parameters accordingly
 ```
+
+Run all cell blocks in Step 1
+
 Before moving on to the next step, confirm that the training loss has converged and all the parameters' gradients is approaching 0 in the final iterations of .fit()
+
 
 ## Step 2 (Skip straight to Forecasting Beyond Today): 
 Set the warmup_data to include data from lookback_date to today's date
@@ -149,6 +153,8 @@ Set the warmup_data to include data from lookback_date to today's date
 pop_model.warmup_data.end_date = '20210610' <- set this to today's date
 pop_model.forecast_duration=60 <- set this to the number of days you want to forecast
 ```
+
+Run following cell blocks in Step 2
 
 ![Results folder](/results) should contain a daily_admissions_forecast.csv file of your most recent forecast.
 
