@@ -116,12 +116,13 @@ jupyter notebook
 
 
 ## Step 0: Define Training period to fit to hospital-admissions counts observed up to today
+Set the training period to the past 2 months
 ```
 training_end_date = '20210401' <- fill this with TODAY's date or a recent date
 training_start_date = '20210301' <- fill this with a date that is about 2 months ago
 ```
 
-Ensure that the "covidestime.csv" file is being used and not the outdated "covidestime_including_MA.csv"
+Ensure that the "covidestim.csv" file is being used and not the outdated "covidestim_including_MA.csv"
 ```
 pd_warmup_data = PopulationData(data_folder+"covidestim.csv", state_name, 
                                 start_date=lookback_date, end_date=training_start_date);
@@ -130,14 +131,16 @@ pd_warmup_data = PopulationData(data_folder+"covidestim.csv", state_name,
 
 
 ## Step 1: Tweak the hyper parameters of the .fit() method
+n_iters, step_size_txn, step_size_soj, lambda_reg needs to be tweaked depending on the USA state being fitted to. As a rule of thumb, the step_size_soj should be 1 order of magnitude larger than step_size_txn.  
+
 ```
 pop_model.fit(training_data_obj, 
-              n_iters=32, step_size_txn=5e-5, step_size_soj=9e-4, n_steps_between_print=5, lambda_reg=1e-3, plots=True)
+              n_iters=32, step_size_txn=5e-5, step_size_soj=9e-4, n_steps_between_print=5, lambda_reg=1e-3, plots=True) <- change these hyper parameters accordingly
 ```
-Confirm that the training loss has converged and all the parameters' gradients is approaching 0 in the final iterations of .fit()
+Before moving on to the next step, confirm that the training loss has converged and all the parameters' gradients is approaching 0 in the final iterations of .fit()
 
 ## Step 2 Forecasting Beyond Today: 
-
+Set the warmup_data to include data from lookback_date to today's date
 ```
 pop_model.warmup_data.end_date = '20210610' <- set this to today's date
 pop_model.forecast_duration=60 <- set this to the number of days you want to forecast
