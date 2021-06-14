@@ -136,37 +136,3 @@ pop_model.forecast_duration=60 <- set this to the number of days you want to for
 ```
 
 
-Run the following command:  
-```console
-$ python -m aced_hmm.fit_posterior_with_abc
-```
-
-See the source code at aced_hmm/fit_posterior_with_abc.py for an explanation of the arguments.
-
-Output:  TODO
-- a pickle file that has the most optimized parameters
-- CSV file that predicts for hospital admissions from the start_date to end_date
-
-## Step 2: run forecasts (training + testing)
-
-Run the following command:  
-```console
-$ python -m aced_hmm.run_forecast --func_name [python] \
-                                  --config_path [results/US/MA-20201111-20210111-20210211/config_after_abc.json] \
-                                  --output_dir [results/US/MA-20201111-20210111-20210211/individual_forecasts] \
-                                  --output_file [results_after_abc-{{random_seed}}.csv] \
-                                  --approximate [5] \
-                                  --random_seed [1001] \
-                                  --num_seeds [None]
-```
-
-Arguments:  
-- *config_path* is the config file for the model. It must contain a pointer to a JSON file containing model parameters with which to forecast. These parameters can be provided either as single float values, in which case forecasts are made with fixed parameters and changing random seeds, or as parallel lists of float values (i.e. samples), in which case forecasts are made with unique pairs of samples and random seeds.
-- *approximate* number of patients modeled jointly. Higher approximation means less granularity in forecast, but much higher speedup. We recommend the use of higher approximations for higher admissions regimes, where the speedup is much needed and the granularity can be lower without reducing the quality of the forecasts.  
-- *output_file*: must include '-{{random_seed}}' at the end of your desired output file to allow the scripts to generate and then identify the individual forecasts. The script will generate *num_seeds* csv files, each containing one forecast.  
-- *num_seeds*: if None, it defaults to 1 if forecasting with fixed parameters, and to number of samples if forecasting from samples.
-
-We already provide a set of samples from the posterior distribution of 4 US states, trained from Nov 11th to Jan 11th, and of 2 UK hospitals, trained from Nov 3rd to Jan 3rd. To make forecasts with the MA posterior, simply set *config_path* to 'results/US/MA-20201111-20210111-20210211/PRETRAINED_config_after_abc.json'.
-
-We **strongly** recommend making forecasts using samples from multiple runs of ABC, as opposed to just one.
-
