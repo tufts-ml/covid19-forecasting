@@ -44,11 +44,6 @@ We provide here an example python notebook, together with an overview of the nec
 * Forecasting hospital-admissible numbers for the testing period of 04-01-2021 to 06-01-2021, given the optimized learnable parameters.
 * plotting the results of forecasting with optimized point-estimates of the learnable parameters, which are saved into ![Results folder](/results)
 
-In the results folder, we also provide a set of parameters (.pickle) that has already been fitted to 4 US states. TODO
-
-
-
-
 
 ## Data-collection
 
