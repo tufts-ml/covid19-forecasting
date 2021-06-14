@@ -42,7 +42,7 @@ We provide here an example python notebook, together with an overview of the nec
 * plotting the prior distributions of the learnable parameters.
 * optimization of the parameters such that the retrospective forecast hospital-admission numbers  matches ground-truth hospital-admission numbers observed by the state of Massachusetts (MA). In this notebook, our model sees training data (of MA) for the training period of 03-01-2021 to 04-01-2021, and tries to optimize the learnable parameters to best fit that training period. 
 * Forecasting hospital-admissible numbers for the testing period of 04-01-2021 to 06-01-2021, given the optimized learnable parameters.
-* plotting the results of forecasting with optimized point-estimates of the learnable parameters, which are saved into ![Results folder](/results)
+* plotting the results of forecasting with optimized point-estimates of the learnable parameters, which are saved (as .pickle) into ![Results folder](/results)
 
 
 ## Data-collection
