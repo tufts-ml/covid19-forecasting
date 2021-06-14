@@ -113,6 +113,7 @@ jupyter notebook
 # Modifying the ![Example notebook](/PopulationModel-train-MA.ipynb) to forecast into the future
 
 ## PRE-REQUISITE: 
+* Ensure that you understand the ![example notebook](/PopulationModel-train-MA.ipynb) "AS IS" before any modifications.
 * Ensure that the HHS data source of hospital-admission counts is still an active API to date. 
 * Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe. 
 [More details about our data source](#data-collection)
