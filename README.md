@@ -50,7 +50,7 @@ In the results folder, we also provide a set of parameters (.pickle) that has al
 
 
 
-## Data collection
+## Data-collection
 
 
 To have our model **transferable** to health systems around the world, we assume access only to aggregated daily counts of hospital-admissions data. So a country or state may collect regional datasets, our population model will just use the counts from daily sums-across-regions.
@@ -112,7 +112,7 @@ jupyter notebook
 
 # Modifying the ![Example notebook](/PopulationModel-train-MA.ipynb) to forecast into the future
 
-## PRE-REQUISITE: Ensure that the HHS data source of hospital-admission counts is still an active API to date. Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe.
+## PRE-REQUISITE: Ensure that the HHS data source of hospital-admission counts is still an active API to date. Ensure that Covidestim.org data source is still active API to recover the field names of Rt, Infections, Symptomatics, Ailing/Severe. [More details about our data source](##Data-collection)
 
 
 ## Step 0: Define Training period to fit to hospital-admissions counts observed up to today
