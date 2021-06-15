@@ -193,7 +193,7 @@ a. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-p
 ```
 b. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) results/US/MA-20210101-20210524-20210801/daily_admissions.csv for modification
 
-c. append (copy-paste) the future entries from ![results/daily_admissions_forecast.csv](/results) into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model)results/US/MA-20210101-20210524-20210801/daily_admissions.csv file
+c. append (copy-paste) the future entries from [Population Model](https://github.com/tufts-ml/covid19-forecasting/tree/pop_cv19)'s ![results/daily_admissions_forecast.csv](/results) into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model)results/US/MA-20210101-20210524-20210801/daily_admissions.csv file
 
 
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 2. Run forecasts (training + testing)
