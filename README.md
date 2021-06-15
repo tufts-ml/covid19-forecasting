@@ -158,7 +158,8 @@ Run all cell blocks following 'Forecasting Beyond Today' in Step 2
 This section is for those of you interested in using this hospital-admissions forecast with the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model).
 
 
-The ![Results folder](/results)'s daily_admissions_forecast.csv should contain future/forecast entries of hospital-admission numbers that can be fed into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model). So to do this you must follow these steps:
+The ![Results folder](/results)'s daily_admissions_forecast.csv should contain future/forecast entries of hospital-admission numbers that can be fed into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model). So to do this you must Clone the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) repo into a separate folder, and then follow these steps:
+
 
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step -1. Generate the data for the future, 
 
