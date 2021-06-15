@@ -181,6 +181,11 @@ python generate_data_US.py --state MA --start_date 20210101 --end_training_date 
 python -m aced_hmm.fit_posterior_with_abc --input_dir datasets/US/MA-20210101-20210524-20210801 --output_dir results/US/MA-20210101-20210524-20210801
 ```
 
+add this 'func_name' flag to run cython (for faster results)
+```
+--func_name cython
+```
+
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 1.5. Integration between Population Model and ACED HMM model.
 
 a. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) results/US/MA-20210101-20210524-20210801/config_after_abc.json which directs 
@@ -208,6 +213,11 @@ python -m aced_hmm.run_forecast --func_name python \
                                   --approximate 5 \
                                   --random_seed 1001 \
                                   --num_seeds None
+```
+
+modify this 'func_name' flag to run cython (for faster results)
+```
+--func_name cython
 ```
 
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 3: compute summaries of forecasts
