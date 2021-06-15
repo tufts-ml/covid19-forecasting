@@ -176,21 +176,21 @@ python generate_data_US.py --state MA --start_date 20210101 --end_training_date 
 
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 1. Run ABC
 ```
-cd datasets/US
 python -m aced_hmm.fit_posterior_with_abc --input_dir datasets/US/MA-20210101-20210524-20210801 --output_dir results/US/MA-20210101-20210524-20210801
 ```
 
 ## Step for integration between Population Model and ACED HMM model.
 
-a. open the results/US/MA-20210101-20210524-20210801/config_after_abc.json
+a. open the results/US/MA-20210101-20210524-20210801/config_after_abc.json which directs 
 ```
 {
   
-  "pmf_num_per_timestep_InGeneralWard": "results/US/MA-20210101-20210524-20210801/daily_admissions.csv", <---THIS FILE NEEDS TO BE MODIFIED******
+  "pmf_num_per_timestep_InGeneralWard": "results/US/MA-20210101-20210524-20210801/daily_admissions.csv", 
+  ^^^THIS FILE NEEDS TO BE MODIFIED^^^
   
 }
 ```
-b. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) results/US/MA-20210101-20210524-20210801/daily_admissions.csv
+b. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) results/US/MA-20210101-20210524-20210801/daily_admissions.csv for modification
 
 c. append (copy-paste) the future entries from ![results/daily_admissions_forecast.csv](/results) into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model)results/US/MA-20210101-20210524-20210801/daily_admissions.csv file
 
