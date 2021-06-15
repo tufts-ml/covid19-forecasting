@@ -172,15 +172,15 @@ python generate_data_US.py --state MA --start_date 20210101 --end_training_date 
 (for the rest of this example, we will refer to 20210524 and 20210801, but the user should recognize to replace the following dates with their desired dates)
 
 
-* [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 0. Install Cython, and conda environments, 
+## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 0. Install Cython, and conda environments, 
 
-* [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 1. Run ABC
+## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 1. Run ABC
 ```
 cd datasets/US
 python -m aced_hmm.fit_posterior_with_abc --input_dir datasets/US/MA-20210101-20210524-20210801 --output_dir results/US/MA-20210101-20210524-20210801
 ```
 
-* Step for integration between Population Model and ACED HMM model.
+## Step for integration between Population Model and ACED HMM model.
 
 a. open the results/US/MA-20210101-20210524-20210801/config_after_abc.json
 ```
@@ -195,7 +195,7 @@ b. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-p
 c. append (copy-paste) the future entries from ![results/daily_admissions_forecast.csv](/results) into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model)results/US/MA-20210101-20210524-20210801/daily_admissions.csv file
 
 
-* [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 2. Run forecasts (training + testing)
+## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 2. Run forecasts (training + testing)
 
 
 ```
@@ -208,7 +208,7 @@ python -m aced_hmm.run_forecast --func_name python \
                                   --num_seeds None
 ```
 
-* [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 3: compute summaries of forecasts
+## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 3: compute summaries of forecasts
 
 ```
 python -m aced_hmm.summarize_forecasts --input_dir results/US/MA-20210101-20210524-20210801/individual_forecasts \
@@ -218,7 +218,7 @@ python -m aced_hmm.summarize_forecasts --input_dir results/US/MA-20210101-202105
                                          --comma_sep_percentiles 1,2.5,5,10,25,50,75,90,95,97.5,99
 ```
 
-* [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 5: visualize posterior and forecasts
+## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 5: visualize posterior and forecasts
 
 ```
 python -m aced_hmm.visualize_forecasts --samples_path results/US/MA-20210101-20210524-20210801/posterior_samples.json \
