@@ -193,7 +193,8 @@ a. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-p
 {
   
   "pmf_num_per_timestep_InGeneralWard": "results/US/MA-20210101-20210524-20210801/daily_admissions.csv", 
-  ^^^THIS FILE NEEDS TO BE MODIFIED^^^
+  
+  ^^^THIS FILE NEEDS TO BE MODIFIED WITH FUTURE ENTRIES^^^
   
 }
 ```
