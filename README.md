@@ -158,7 +158,7 @@ Run all cell blocks following 'Forecasting Beyond Today' in Step 2
 This section is for those of you interested in using this hospital-admissions forecast with the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model).
 
 
-The ![Results folder](/results)'s daily_admissions_forecast.csv should contain future/forecast entries of hospital-admission numbers that can be fed into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model). So to do this you must Clone the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) repo into a separate folder, and then follow these steps:
+The ![Results folder](/results)'s daily_admissions_forecast.csv should contain future/forecast entries of hospital-admission numbers that can be fed into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model). So to do this you must Git-Clone the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) repo into a separate folder, and then follow these steps:
 
 
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step -1. Generate the data for the future, 
@@ -180,7 +180,7 @@ python generate_data_US.py --state MA --start_date 20210101 --end_training_date 
 python -m aced_hmm.fit_posterior_with_abc --input_dir datasets/US/MA-20210101-20210524-20210801 --output_dir results/US/MA-20210101-20210524-20210801
 ```
 
-## Step for integration between Population Model and ACED HMM model.
+## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 1.5. Integration between Population Model and ACED HMM model.
 
 a. open the results/US/MA-20210101-20210524-20210801/config_after_abc.json which directs 
 ```
