@@ -166,10 +166,10 @@ The ![Results folder](/results)'s daily_admissions_forecast.csv should contain f
 cd datasets/US
 python generate_data_US.py --state MA --start_date 20210101 --end_training_date 20210524 --end_date 20210801
 ```
---end_date 20210801 # replace this with some date in the near future (1 or 2 months)
---end_training_date 20210524 # replace this with a date 2 months before end_date
+* --end_date 20210801 # replace this with some date in the near future (1 or 2 months)
+* --end_training_date 20210524 # replace this with a date 2 months before end_date
 
-(for the rest of this example, we will refer to 20210524 and 20210801, but the user should recognize to replace the following dates with their desired dates)
+(for the rest of this step-by-step tutorial, we will refer to 20210524 and 20210801, but the user should recognize to replace the following dates with their desired dates)
 
 
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 0. Install Cython, and conda environments, 
