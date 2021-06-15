@@ -182,7 +182,7 @@ python -m aced_hmm.fit_posterior_with_abc --input_dir datasets/US/MA-20210101-20
 
 ## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step 1.5. Integration between Population Model and ACED HMM model.
 
-a. open the results/US/MA-20210101-20210524-20210801/config_after_abc.json which directs 
+a. open the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) results/US/MA-20210101-20210524-20210801/config_after_abc.json which directs 
 ```
 {
   
