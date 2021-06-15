@@ -3,7 +3,7 @@ See our model derviation manuscript:
 
 Overleaf link <a href="https://www.michaelchughes.com/papers/VisaniEtAl_arXiv_2021.pdf">https://TODO</a>
 
-Jump to: [Model Details](#modeling) - [Usage](#usage) - [Installation](#installation)
+Jump to: [Model Details](#modeling) - [Usage](#usage) - [Installation](#installation) - [Connecting to ACED-HMM](#Connecting-to-ACED-HMM)
 
 
 ### Contact:
