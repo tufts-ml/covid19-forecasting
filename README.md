@@ -160,7 +160,7 @@ This section is for those of you interested in using this hospital-admissions fo
 
 The ![Results folder](/results)'s daily_admissions_forecast.csv should contain future/forecast entries of hospital-admission numbers that can be fed into the [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model). So to do this you must follow these steps:
 
-* [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step -1. Generate the data for the future, 
+## [ACED HMM model](https://github.com/tufts-ml/aced-hmm-hospitalized-patient-trajectory-model) Step -1. Generate the data for the future, 
 
 ```
 cd datasets/US
