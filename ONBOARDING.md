@@ -8,6 +8,8 @@ Here's some reading you can do to get started
 
 These documents summarize the high-level goals and deliverables for this project.
 
+They are available through the shared "Box.com" folder you've been given access to
+
 - Workplan_v202012.pdf : What we proposed as of December 2020 for the first round of this funded project
 - Workplan_v202107.docx : What we proposed as of July 2021 for "round 2" of this project
 
