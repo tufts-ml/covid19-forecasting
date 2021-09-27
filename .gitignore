@@ -135,5 +135,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# pycharm
+.idea/
+
 # Tensorboard logs in tensorflow model
 tf_model_1p5/logs/
