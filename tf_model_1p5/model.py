@@ -95,26 +95,14 @@ class CovidModel(tf.keras.Model):
         # Tensorflow models are typically a single tensor or a tuple of multiple tensors
         # This function accepts all the input tensors we need (r_t, warmup for AMX, both vaxxed and non-vaxxed)
         # and returns r_t, along with dictionaries keyed on vaccination status for easier use.
-        r_t, warmup_asymp, warmup_mild, warmup_extreme = self._parse_inputs(inputs)
+        r_t, warmup_asymp_split, warmup_mild_total, warmup_extreme_total, pct_vaxxed = self._parse_inputs(inputs)
 
         # We need to know how long the warmup data is and how long to forecast for
         # Take the last dimension one of the warmup data tensors
         # Any will do, so we arbitrariliy pick the vax_status=0 asymptomatic
-        warmup_days_val = warmup_asymp[0].shape[-1]
+        warmup_days_val = warmup_asymp_split[0].shape[-1]
         # take the last dimension of r_t
         forecast_days_val = r_t.shape[-1]
-
-        # It's a little weird to iteratively write to tensors one day at a time
-        # To do this, we'll use TensorArray's, arrays of tensors where each element is a tensor representing
-        # one compartment/vaccine status/ day
-        # This helper function creates a nested dictionary keyed on:
-        #  compartment->
-        #      vaccinestatus->
-        #           TensorArray with one tensor per day from:
-        #               warmup_start to forecast_end for any quantities with warmup data
-        #               forecast_start to forecast_end for the outcome, which does not have warmup data
-        forecasted_fluxes = self._initialize_flux_arrays(warmup_asymp, warmup_mild, warmup_extreme,
-                                                         warmup_days_val, forecast_days_val)
 
         # Our model parameters have several constraints (being between 0-1, being positive)
         # So we need to transform them from the unconstrained space they are modeled in
@@ -129,6 +117,19 @@ class CovidModel(tf.keras.Model):
         #     previously_asymptomatic, previously_mild, previously_extreme: dictionaries of tensor arrays with 1 element for each of the past J days
 
         self._constrain_parameters()
+
+        # It's a little weird to iteratively write to tensors one day at a time
+        # To do this, we'll use TensorArray's, arrays of tensors where each element is a tensor representing
+        # one compartment/vaccine status/ day
+        # This helper function creates a nested dictionary keyed on:
+        #  compartment->
+        #      vaccinestatus->
+        #           TensorArray with one tensor per day from:
+        #               warmup_start to forecast_end for any quantities with warmup data
+        #               forecast_start to forecast_end for the outcome, which does not have warmup data
+        forecasted_fluxes = self._initialize_flux_arrays(warmup_asymp_split, warmup_mild_total, warmup_extreme_total,
+                                                         pct_vaxxed,
+                                                         warmup_days_val, forecast_days_val)
 
         if not debug_disable_prior:
             self._add_prior_loss()
@@ -308,10 +309,10 @@ class CovidModel(tf.keras.Model):
                                                                                                        sigma_bar_G, 0,
                                                                                                        20)
 
-            self.prior_distros[Compartments.mild.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_M, tau_bar_M, 0, 20)
+            self.prior_distros[Compartments.mild.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_M, tau_bar_M, 0, 1000)
             self.prior_distros[Compartments.extreme.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_X, tau_bar_X, 0,
-                                                                                              20)
-            self.prior_distros[Compartments.general_ward.value][vax_status]['nu'] = tfp.distributions.Normal(nu_bar_G, tau_bar_G, 0, 20)
+                                                                                              1000)
+            self.prior_distros[Compartments.general_ward.value][vax_status]['nu'] = tfp.distributions.Normal(nu_bar_G, tau_bar_G, 0, 1000)
 
         return
 
@@ -319,26 +320,25 @@ class CovidModel(tf.keras.Model):
         """Helper function to hide the logic in parsing the big mess of input tensors we get"""
         (r_t,
          warmup_asymp_not_vaxxed, warmup_asymp_vaxxed,
-         warmup_mild_not_vaxxed, warmup_mild_vaxxed,
-         warmup_extreme_not_vaxxed, warmup_extreme_vaxxed) = inputs
-
-        r_t = tf.squeeze(r_t)
+         warmup_mild_total,
+         warmup_extreme_total, pct_vaxxed) = inputs
 
         warmup_asymp = {}
         warmup_asymp[0] = tf.squeeze(warmup_asymp_not_vaxxed)
         warmup_asymp[1] = tf.squeeze(warmup_asymp_vaxxed)
 
-        warmup_mild = {}
-        warmup_mild[0] = tf.squeeze(warmup_mild_not_vaxxed)
-        warmup_mild[1] = tf.squeeze(warmup_mild_vaxxed)
+        r_t = tf.squeeze(r_t)
 
-        warmup_extreme = {}
-        warmup_extreme[0] = tf.squeeze(warmup_extreme_not_vaxxed)
-        warmup_extreme[1] = tf.squeeze(warmup_extreme_vaxxed)
+        warmup_mild_total = tf.squeeze(warmup_mild_total)
+        warmup_extreme_total = tf.squeeze(warmup_extreme_total)
 
-        return r_t, warmup_asymp, warmup_mild, warmup_extreme
+        pct_vaxxed = tf.squeeze(pct_vaxxed)
 
-    def _initialize_flux_arrays(self, warmup_asymp, warmup_mild, warmup_extreme,
+
+        return r_t, warmup_asymp, warmup_mild_total, warmup_extreme_total, pct_vaxxed
+
+    def _initialize_flux_arrays(self, warmup_asymp_split, warmup_mild_total, warmup_extreme_total,
+                                pct_vaxxed,
                                 warmup_days, forecast_days):
         """Helper function to hide the plumbing in creating TensorArrays for every output
 
@@ -352,6 +352,9 @@ class CovidModel(tf.keras.Model):
 
         forecasted_fluxes = {}
 
+        # initialize a tensor array for every compartment/vax status
+        # The AMX will have warmup+forecast days
+        # G will have only forecast days
         for enum_c in self.compartments:
             compartment = enum_c.value
             forecasted_fluxes[compartment] = {}
@@ -369,16 +372,29 @@ class CovidModel(tf.keras.Model):
 
         # Write the warmup data to the array so we don't have to look in two places:
         for day in range(warmup_days):
+
+            mild_denominator = self.rho_M[0]*(1-pct_vaxxed[day]) + self.rho_M[1]*pct_vaxxed[day]
+            extreme_denominator = self.rho_X[0] * (1 - pct_vaxxed[day]) + self.rho_X[1] * pct_vaxxed[day]
+
             for vax_status in range(2):
+
+                if vax_status==0:
+                    pop_in_status = 1-pct_vaxxed[day]
+                else:
+                    pop_in_status = pct_vaxxed[day]
+
+                mild_warmup = self.rho_M[vax_status]*pop_in_status/mild_denominator * warmup_mild_total[day]
+                extreme_warmup = self.rho_X[vax_status] * pop_in_status / extreme_denominator  * warmup_extreme_total[day]
+
                 forecasted_fluxes[Compartments.asymp.value][vax_status] = \
                     forecasted_fluxes[Compartments.asymp.value][vax_status].write(day,
-                                                               warmup_asymp[vax_status][day])
+                                                               warmup_asymp_split[vax_status][day])
                 forecasted_fluxes[Compartments.mild.value][vax_status] = \
                     forecasted_fluxes[Compartments.mild.value][vax_status].write(day,
-                                                              warmup_mild[vax_status][day])
+                                                              mild_warmup)
                 forecasted_fluxes[Compartments.extreme.value][vax_status] = \
                     forecasted_fluxes[Compartments.extreme.value][vax_status].write(day,
-                                                                 warmup_extreme[vax_status][day])
+                                                                 extreme_warmup)
 
         return forecasted_fluxes
 
@@ -476,28 +492,61 @@ class CovidModel(tf.keras.Model):
             self.previously_extreme[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
                                                                  clear_after_read=False, name=f'prev_extreme')
 
-    def _add_prior_loss(self):
+    def _add_prior_loss(self, debug=False):
         """Helper function for adding loss from model prior"""
         # only 1 epsilon
         # Not sure why only this one needs to get squeezed
-        self.add_loss(tf.squeeze(-self.prior_distros[Compartments.asymp.value][0]['epsilon'].log_prob(self.epsilon)))
+        eps_loss = tf.squeeze(-self.prior_distros[Compartments.asymp.value][0]['epsilon'].log_prob(self.epsilon))
+        self.add_loss(eps_loss)
+
         # delta_0 is fixed
-        self.add_loss(-self.prior_distros[Compartments.asymp.value][1]['delta_1'].log_prob(self.delta[1]))
+        delta_loss = -self.prior_distros[Compartments.asymp.value][1]['delta_1'].log_prob(self.delta[1])
+        self.add_loss(delta_loss)
+
+        if debug:
+            print(f'Eps loss{eps_loss}')
+            print(f'Delta loss: {delta_loss}')
 
         for vax_status in range(2):
             # Add losses from param priors
             # Make everything negative because we're minimizing
-            self.add_loss(-self.prior_distros[Compartments.mild.value][vax_status]['rho'].log_prob(self.rho_M[vax_status]))
-            self.add_loss(-self.prior_distros[Compartments.extreme.value][vax_status]['rho'].log_prob(self.rho_X[vax_status]))
-            self.add_loss(-self.prior_distros[Compartments.general_ward.value][vax_status]['rho'].log_prob(self.rho_G[vax_status]))
+            rho_M_loss = -self.prior_distros[Compartments.mild.value][vax_status]['rho'].log_prob(self.rho_M[vax_status])
+            rho_X_loss = -self.prior_distros[Compartments.extreme.value][vax_status]['rho'].log_prob(self.rho_X[vax_status])
+            rho_G_loss = -self.prior_distros[Compartments.general_ward.value][vax_status]['rho'].log_prob(self.rho_G[vax_status])
 
-            self.add_loss(-self.prior_distros[Compartments.mild.value][vax_status]['lambda'].log_prob(self.lambda_M[vax_status]))
-            self.add_loss(-self.prior_distros[Compartments.extreme.value][vax_status]['lambda'].log_prob(self.lambda_X[vax_status]))
-            self.add_loss(-self.prior_distros[Compartments.general_ward.value][vax_status]['lambda'].log_prob(self.lambda_G[vax_status]))
 
-            self.add_loss(-self.prior_distros[Compartments.mild.value][vax_status]['nu'].log_prob(self.nu_M[vax_status]))
-            self.add_loss(-self.prior_distros[Compartments.extreme.value][vax_status]['nu'].log_prob(self.nu_X[vax_status]))
-            self.add_loss(-self.prior_distros[Compartments.general_ward.value][vax_status]['nu'].log_prob(self.nu_G[vax_status]))
+            self.add_loss(rho_M_loss)
+            self.add_loss(rho_X_loss)
+            self.add_loss(rho_G_loss)
+
+            lambda_M_loss = -self.prior_distros[Compartments.mild.value][vax_status]['lambda'].log_prob(self.lambda_M[vax_status])
+            lambda_X_loss = -self.prior_distros[Compartments.extreme.value][vax_status]['lambda'].log_prob(self.lambda_X[vax_status])
+            lambda_G_loss = -self.prior_distros[Compartments.general_ward.value][vax_status]['lambda'].log_prob(self.lambda_G[vax_status])
+
+
+            self.add_loss(lambda_M_loss)
+            self.add_loss(lambda_X_loss)
+            self.add_loss(lambda_G_loss)
+
+            nu_M_loss = -self.prior_distros[Compartments.mild.value][vax_status]['nu'].log_prob(self.nu_M[vax_status])
+            nu_X_loss = -self.prior_distros[Compartments.extreme.value][vax_status]['nu'].log_prob(self.nu_X[vax_status])
+            nu_G_loss = -self.prior_distros[Compartments.general_ward.value][vax_status]['nu'].log_prob(self.nu_G[vax_status])
+
+            self.add_loss(nu_M_loss)
+            self.add_loss(nu_X_loss)
+            self.add_loss(nu_G_loss)
+
+            if debug:
+                print(f'Rho M loss {vax_status}: {rho_M_loss}')
+                print(f'Rho X loss {vax_status}: {rho_X_loss}')
+                print(f'Rho G loss {vax_status}: {rho_G_loss}')
+                print(f'lam M loss {vax_status}: {lambda_M_loss}')
+                print(f'lam X loss {vax_status}: {lambda_X_loss}')
+                print(f'lam G loss {vax_status}: {lambda_G_loss}')
+                print(f'nu M loss {vax_status}: {nu_M_loss}')
+                print(f'nu X loss {vax_status}: {nu_X_loss}')
+                print(f'nu G loss {vax_status}: {nu_G_loss}')
+
 
     def _mark_arrays_used(self, forecasted_fluxes):
         """Helper function that supresses noisy error about not using all arrays"""
@@ -559,6 +608,8 @@ class VarLogCallback(tf.keras.callbacks.Callback):
 
 def get_logging_callbacks(log_dir):
     """Get tensorflow callbacks to write tensorboard logs to given log_dir"""
+    file_writer = tf.summary.create_file_writer(log_dir + "/metrics")
+    file_writer.set_as_default()
     logging_callback = VarLogCallback()
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
     return [logging_callback, tensorboard_callback]
