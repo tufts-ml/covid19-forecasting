@@ -308,10 +308,10 @@ class CovidModel(tf.keras.Model):
                                                                                                        sigma_bar_G, 0,
                                                                                                        20)
 
-            self.prior_distros[Compartments.mild.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_M, tau_bar_M, 0, 20)
+            self.prior_distros[Compartments.mild.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_M, tau_bar_M, 0, 1000)
             self.prior_distros[Compartments.extreme.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_X, tau_bar_X, 0,
                                                                                               20)
-            self.prior_distros[Compartments.general_ward.value][vax_status]['nu'] = tfp.distributions.Normal(nu_bar_G, tau_bar_G, 0, 20)
+            self.prior_distros[Compartments.general_ward.value][vax_status]['nu'] = tfp.distributions.Normal(nu_bar_G, tau_bar_G, 0, 1000)
 
         return
 
