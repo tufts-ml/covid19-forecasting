@@ -15,5 +15,5 @@ echo "args:"
 echo $args
 
 
-python standardized_code/run_experiment.py $args
+python  run_experiment.py $args
 
