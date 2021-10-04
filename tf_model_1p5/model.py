@@ -240,22 +240,22 @@ class CovidModel(tf.keras.Model):
             self.model_params[Compartments.mild.value][vax_status]['unconstrained_rho'] = tf.Variable([5], name=f'M_rho_{vax_status}',
                                                                                    trainable=True, dtype=tf.float32,
                                                                                    shape=tf.TensorShape(1))
-            self.model_params[Compartments.mild.value][vax_status]['unconstrained_lambda'] = tf.Variable([lambda_bar_M],
+            self.model_params[Compartments.mild.value][vax_status]['unconstrained_lambda'] = tf.Variable([lambda_bar_M[vax_status]],
                                                                                       name=f'M_lambda_{vax_status}',
                                                                                       trainable=True, dtype=tf.float32,
                                                                                       shape=tf.TensorShape(1))
-            self.model_params[Compartments.mild.value][vax_status]['unconstrained_nu'] = tf.Variable([nu_bar_M], name=f'M_nu_{vax_status}',
+            self.model_params[Compartments.mild.value][vax_status]['unconstrained_nu'] = tf.Variable([nu_bar_M[vax_status]], name=f'M_nu_{vax_status}',
                                                                                   trainable=True, dtype=tf.float32,
                                                                                   shape=tf.TensorShape(1))
             self.model_params[Compartments.extreme.value][vax_status]['unconstrained_rho'] = tf.Variable([-5], name=f'X_rho_{vax_status}',
                                                                                       trainable=True, dtype=tf.float32,
                                                                                       shape=tf.TensorShape(1))
-            self.model_params[Compartments.extreme.value][vax_status]['unconstrained_lambda'] = tf.Variable([lambda_bar_X],
+            self.model_params[Compartments.extreme.value][vax_status]['unconstrained_lambda'] = tf.Variable([lambda_bar_X[vax_status]],
                                                                                          name=f'X_lambda_{vax_status}',
                                                                                          trainable=True,
                                                                                          dtype=tf.float32,
                                                                                          shape=tf.TensorShape(1))
-            self.model_params[Compartments.extreme.value][vax_status]['unconstrained_nu'] = tf.Variable([nu_bar_X],
+            self.model_params[Compartments.extreme.value][vax_status]['unconstrained_nu'] = tf.Variable([nu_bar_X[vax_status]],
                                                                                      name=f'X_nu_{vax_status}',
                                                                                      trainable=True, dtype=tf.float32,
                                                                                      shape=tf.TensorShape(1))
@@ -264,12 +264,12 @@ class CovidModel(tf.keras.Model):
                                                                                            trainable=True,
                                                                                            dtype=tf.float32,
                                                                                            shape=tf.TensorShape(1))
-            self.model_params[Compartments.general_ward.value][vax_status]['unconstrained_lambda'] = tf.Variable([lambda_bar_G],
+            self.model_params[Compartments.general_ward.value][vax_status]['unconstrained_lambda'] = tf.Variable([lambda_bar_G[vax_status]],
                                                                                               name=f'G_lambda_{vax_status}',
                                                                                               trainable=True,
                                                                                               dtype=tf.float32,
                                                                                               shape=tf.TensorShape(1))
-            self.model_params[Compartments.general_ward.value][vax_status]['unconstrained_nu'] = tf.Variable([nu_bar_G],
+            self.model_params[Compartments.general_ward.value][vax_status]['unconstrained_nu'] = tf.Variable([nu_bar_G[vax_status]],
                                                                                           name=f'G_nu_{vax_status}',
                                                                                           trainable=True,
                                                                                           dtype=tf.float32,
@@ -296,23 +296,23 @@ class CovidModel(tf.keras.Model):
 
         # create prior distributions
         for vax_status in [0, 1]:
-            self.prior_distros[Compartments.mild.value][vax_status]['rho'] = tfp.distributions.Beta(alpha_bar_M, beta_bar_M)
-            self.prior_distros[Compartments.extreme.value][vax_status]['rho'] = tfp.distributions.Beta(alpha_bar_X, beta_bar_X)
-            self.prior_distros[Compartments.general_ward.value][vax_status]['rho'] = tfp.distributions.Beta(alpha_bar_G, beta_bar_G)
+            self.prior_distros[Compartments.mild.value][vax_status]['rho'] = tfp.distributions.Beta(alpha_bar_M[vax_status], beta_bar_M[vax_status])
+            self.prior_distros[Compartments.extreme.value][vax_status]['rho'] = tfp.distributions.Beta(alpha_bar_X[vax_status], beta_bar_X[vax_status])
+            self.prior_distros[Compartments.general_ward.value][vax_status]['rho'] = tfp.distributions.Beta(alpha_bar_G[vax_status], beta_bar_G[vax_status])
 
             # We want these to be positive so we use a truncated normal with range 0-100
-            self.prior_distros[Compartments.mild.value][vax_status]['lambda'] = tfp.distributions.TruncatedNormal(lambda_bar_M,
-                                                                                               sigma_bar_M, 0, 20)
-            self.prior_distros[Compartments.extreme.value][vax_status]['lambda'] = tfp.distributions.TruncatedNormal(lambda_bar_X,
-                                                                                                  sigma_bar_X, 0, 20)
-            self.prior_distros[Compartments.general_ward.value][vax_status]['lambda'] = tfp.distributions.TruncatedNormal(lambda_bar_G,
-                                                                                                       sigma_bar_G, 0,
+            self.prior_distros[Compartments.mild.value][vax_status]['lambda'] = tfp.distributions.TruncatedNormal(lambda_bar_M[vax_status],
+                                                                                               sigma_bar_M[vax_status], 0, 20)
+            self.prior_distros[Compartments.extreme.value][vax_status]['lambda'] = tfp.distributions.TruncatedNormal(lambda_bar_X[vax_status],
+                                                                                                  sigma_bar_X[vax_status], 0, 20)
+            self.prior_distros[Compartments.general_ward.value][vax_status]['lambda'] = tfp.distributions.TruncatedNormal(lambda_bar_G[vax_status],
+                                                                                                       sigma_bar_G[vax_status], 0,
                                                                                                        20)
 
-            self.prior_distros[Compartments.mild.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_M, tau_bar_M, 0, 1000)
-            self.prior_distros[Compartments.extreme.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_X, tau_bar_X, 0,
+            self.prior_distros[Compartments.mild.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_M[vax_status], tau_bar_M[vax_status], 0, 1000)
+            self.prior_distros[Compartments.extreme.value][vax_status]['nu'] = tfp.distributions.TruncatedNormal(nu_bar_X[vax_status], tau_bar_X[vax_status], 0,
                                                                                               1000)
-            self.prior_distros[Compartments.general_ward.value][vax_status]['nu'] = tfp.distributions.Normal(nu_bar_G, tau_bar_G, 0, 1000)
+            self.prior_distros[Compartments.general_ward.value][vax_status]['nu'] = tfp.distributions.Normal(nu_bar_G[vax_status], tau_bar_G[vax_status], 0, 1000)
 
         return
 

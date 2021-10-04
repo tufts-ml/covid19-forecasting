@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({'font.size': 20}) # set plot font sizes
 
 import numpy as np
+import pandas as pd
 from scipy.stats import beta, truncnorm
+import tensorflow as tf
 
 from model import Compartments
 
@@ -57,13 +59,14 @@ def plot_beta_prior(title, learned_values, alpha_param, beta_param, ax=None):
         fig = plt.figure(figsize=(15, 8))
         ax = fig.add_subplot(111)
     x = np.linspace(0, 1, 1000)
-    pdf_vals = beta.pdf(x, alpha_param, beta_param)
-    ax.plot(x, pdf_vals,
-            'k-', lw=5, label='beta prior');
-    ax.plot([learned_values[0], learned_values[0]], [0, max(pdf_vals)],
+    pdf_vals_0 = beta.pdf(x, alpha_param[0], beta_param[0])
+    pdf_vals_1 = beta.pdf(x, alpha_param[1], beta_param[1])
+    ax.plot(x, pdf_vals_0 , label='beta prior no vax')
+    ax.plot(x, pdf_vals_1 , label='beta prior  vax')
+    ax.plot([learned_values[0], learned_values[0]], [0, max(pdf_vals_0)],
             label=f'{title} non-vax',
             linestyle='--', linewidth=5)
-    ax.plot([learned_values[1], learned_values[1]], [0, max(pdf_vals)],
+    ax.plot([learned_values[1], learned_values[1]], [0, max(pdf_vals_1)],
             label=f'{title} vax',
             linestyle='--', linewidth=5)
     ax.legend(prop={'size': 10})
@@ -94,6 +97,7 @@ def make_all_plots(df, model,
                    train_preds, test_preds,
                    vax_asymp_risk, vax_mild_risk, vax_extreme_risk,
                    forecasted_fluxes,
+                   loss_fn,
                    save_path=None):
     fig = plt.figure(figsize=(15, 44))
 
@@ -118,6 +122,7 @@ def make_all_plots(df, model,
     ax_pi_G = plt.subplot2grid((8, 3), (7, 2))
 
     all_days = df.loc[warmup_start:test_end].index.values
+    warmup_days = df.loc[warmup_start:warmup_end].index.values
     train_days = df.loc[train_start:train_end].index.values
     test_days = df.loc[test_start:test_end].index.values
     train_test_days = df.loc[train_start:test_end].index.values
@@ -129,6 +134,9 @@ def make_all_plots(df, model,
                  truth=(all_days,
                         df.loc[warmup_start:test_end, 'general_ward'].values),
                  plot_legend=True, plot_ticks=True)
+
+    train_loss_G = loss_fn(tf.convert_to_tensor(df.loc[train_start:train_end, 'general_ward'].values, dtype=tf.float32), train_preds)
+    test_loss_G = loss_fn(tf.convert_to_tensor(df.loc[test_start:test_end, 'general_ward'].values, dtype=tf.float32), test_preds[-len(test_days):])
 
     plot_to_grid(df, warmup_start, warmup_end, train_start, train_end, test_start, test_end, ax_rt, 'Rt',
                  truth=(all_days, df.loc[warmup_start:test_end, 'Rt'].values))
@@ -155,6 +163,16 @@ def make_all_plots(df, model,
     plot_to_grid(df, warmup_start, warmup_end, train_start, train_end, test_start, test_end, ax_a_tot, 'A, Total',
                  truth=(all_days, df.loc[warmup_start:test_end, 'asymp'].values),
                  oos_preds=(all_days, forecasted_fluxes[Compartments.asymp.value][0].stack() + forecasted_fluxes[Compartments.asymp.value][1].stack()))
+
+    train_loss_A = loss_fn( tf.convert_to_tensor(forecasted_fluxes[Compartments.asymp.value][0].stack() +
+                          forecasted_fluxes[Compartments.asymp.value][1].stack(), dtype=tf.float32)[len(warmup_days):len(warmup_days)+len(train_days)],
+                        tf.convert_to_tensor(df.loc[train_start:train_end, 'asymp'].values,dtype=tf.float32))
+
+    test_loss_A = loss_fn(tf.convert_to_tensor(forecasted_fluxes[Compartments.asymp.value][0].stack() +
+                         forecasted_fluxes[Compartments.asymp.value][1].stack(), dtype=tf.float32)[
+                        len(warmup_days) + len(train_days):],
+                        tf.convert_to_tensor(df.loc[test_start:test_end, 'asymp'].values,dtype=tf.float32))
+
     plot_to_grid(df, warmup_start, warmup_end, train_start, train_end, test_start, test_end, ax_a_nonvax, 'A, No vax',
                  truth=(all_days, asymp_no_vax_all_days),
                  oos_preds=(all_days, forecasted_fluxes[Compartments.asymp.value][0].stack()))
@@ -165,6 +183,18 @@ def make_all_plots(df, model,
     plot_to_grid(df, warmup_start, warmup_end, train_start, train_end, test_start, test_end, ax_m_tot, 'M, Total',
                  truth=(all_days, df.loc[warmup_start:test_end, 'mild'].values),
                  oos_preds=(all_days, forecasted_fluxes[Compartments.mild.value][0].stack() + forecasted_fluxes[Compartments.mild.value][1].stack()))
+
+    train_loss_M = loss_fn(tf.convert_to_tensor(forecasted_fluxes[Compartments.mild.value][0].stack() +
+                                                forecasted_fluxes[Compartments.mild.value][1].stack(),
+                                                dtype=tf.float32)[len(warmup_days):len(warmup_days) + len(train_days)],
+                           tf.convert_to_tensor(df.loc[train_start:train_end, 'mild'].values, dtype=tf.float32))
+
+    test_loss_M = loss_fn(tf.convert_to_tensor(forecasted_fluxes[Compartments.mild.value][0].stack() +
+                                               forecasted_fluxes[Compartments.mild.value][1].stack(),
+                                               dtype=tf.float32)[
+                          len(warmup_days) + len(train_days):],
+                          tf.convert_to_tensor(df.loc[test_start:test_end, 'mild'].values, dtype=tf.float32))
+
     plot_to_grid(df, warmup_start, warmup_end, train_start, train_end, test_start, test_end, ax_m_nonvax, 'M, No vax',
                  truth=(all_days, mild_no_vax_all_days),
                  oos_preds=(all_days, forecasted_fluxes[Compartments.mild.value][0].stack()))
@@ -175,6 +205,17 @@ def make_all_plots(df, model,
     plot_to_grid(df, warmup_start, warmup_end, train_start, train_end, test_start, test_end, ax_x_tot, 'X, Total',
                  truth=(all_days, df.loc[warmup_start:test_end, 'extreme'].values),
                  oos_preds=(all_days, forecasted_fluxes[Compartments.extreme.value][0].stack() + forecasted_fluxes[Compartments.extreme.value][1].stack()))
+
+    train_loss_X = loss_fn(tf.convert_to_tensor(forecasted_fluxes[Compartments.extreme.value][0].stack() +
+                                                forecasted_fluxes[Compartments.extreme.value][1].stack(),
+                                                dtype=tf.float32)[len(warmup_days):len(warmup_days) + len(train_days)],
+                           tf.convert_to_tensor(df.loc[train_start:train_end, 'extreme'].values, dtype=tf.float32))
+
+    test_loss_X = loss_fn(tf.convert_to_tensor(forecasted_fluxes[Compartments.extreme.value][0].stack() +
+                                               forecasted_fluxes[Compartments.extreme.value][1].stack(),
+                                               dtype=tf.float32)[
+                          len(warmup_days) + len(train_days):],
+                          tf.convert_to_tensor(df.loc[test_start:test_end, 'extreme'].values, dtype=tf.float32))
     plot_to_grid(df, warmup_start, warmup_end, train_start, train_end, test_start, test_end, ax_x_nonvax, 'X, No vax',
                  truth=(all_days, extreme_no_vax_all_days),
                  oos_preds=(all_days, forecasted_fluxes[Compartments.extreme.value][0].stack()))
@@ -191,6 +232,19 @@ def make_all_plots(df, model,
 
     if save_path is not None:
         plt.savefig(save_path)
+
+    results = pd.DataFrame.from_records([{
+        'train_loss_G': train_loss_G.numpy(),
+        'test_loss_G': test_loss_G.numpy(),
+        'train_loss_A': train_loss_A.numpy(),
+        'test_loss_A': test_loss_A.numpy(),
+        'train_loss_M': train_loss_M.numpy(),
+        'test_loss_M': test_loss_M.numpy(),
+        'train_loss_X': train_loss_X.numpy(),
+        'test_loss_X': test_loss_X.numpy(),
+    }])
+
+    return results
 
 
 
