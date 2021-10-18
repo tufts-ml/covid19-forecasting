@@ -80,22 +80,22 @@ class CovidModel(tf.keras.Model):
         for day in range(forecast_days):
 
             if  day-1 <0:
-                yesterday_asymp = self.warmup_A_samples[day-1]
+                yesterday_asymp = self.warmup_A_samples_constrained[day-1]
             else:
-                yesterday_asymp = forecasted_fluxes[Comp.A.value][Vax.total.value][day].read()
+                yesterday_asymp = forecasted_fluxes[Comp.A.value][Vax.total.value].read(day)
 
-            today_asymp = yesterday_asymp*self.delta_samples*r_t[day] ** (1/self.T_serial_samples)
+            today_asymp = yesterday_asymp*self.delta_samples_constrained*r_t[day] ** (1/self.T_serial_samples_constrained)
 
-            forecasted_fluxes[Comp.M.value][Vax.total.value] = \
-                forecasted_fluxes[Comp.M.value][Vax.total.value].write(day, today_asymp)
+            forecasted_fluxes[Comp.A.value][Vax.total.value] = \
+                forecasted_fluxes[Comp.A.value][Vax.total.value].write(day, today_asymp)
 
 
             for j in range(self.transition_window):
 
                 if day - j - 1 < 0:
-                    j_ago_asymp = self.warmup_A_samples[day-j-1]
+                    j_ago_asymp = self.warmup_A_samples_constrained[day-j-1]
                 else:
-                    j_ago_asymp = forecasted_fluxes[Comp.A.value][Vax.total.value][day-j-1].read()
+                    j_ago_asymp = forecasted_fluxes[Comp.A.value][Vax.total.value].read(day-j-1)
 
                 self.previously_asymptomatic[Vax.total.value] = \
                     self.previously_asymptomatic[Vax.total.value].write(j, j_ago_asymp)
@@ -103,72 +103,16 @@ class CovidModel(tf.keras.Model):
             previously_asymptomatic_tensor = self.previously_asymptomatic[Vax.total.value].stack()
 
             # Today's AMX = sum of last J * rho * pi
-            forecasted_fluxes[Comp.M.value][vax_status] = \
-                forecasted_fluxes[Comp.M.value][vax_status].write(day,
+            forecasted_fluxes[Comp.M.value][Vax.total.value] = \
+                forecasted_fluxes[Comp.M.value][Vax.total.value].write(day,
                                                                              tf.reduce_sum(
                                                                                  previously_asymptomatic_tensor *
-                                                                                 self.rho_M_samples * self.pi_M[
-                                                                                     vax_status],
+                                                                                 self.rho_M_samples_constrained * self.pi_M_samples,
                                                                                  axis=0)
                                                                              )
 
-
         if not debug_disable_prior:
             self._add_prior_loss()
-
-        # forecast from the end of warmup to the end of forecasting
-        for day in range(warmup_days_val, forecast_days_val + warmup_days_val):
-
-            # Start with asymptomatic
-            asymp_t_1_no_vax = forecasted_fluxes[Comp.A.value][0].read(day - 1)
-            asymp_t_1_vax = forecasted_fluxes[Comp.A.value][1].read(day - 1)
-            combined_asymp_covariate = asymp_t_1_no_vax + self.epsilon * asymp_t_1_vax
-
-            for vax_status in range(2):
-
-                forecasted_fluxes[Comp.A.value][vax_status] = forecasted_fluxes[Comp.A.value][
-                    vax_status].write(day,
-                                      tf.squeeze(
-                                          combined_asymp_covariate *
-                                          self.delta[
-                                              vax_status] *
-                                          r_t[
-                                              day - warmup_days_val] ** (
-                                                  1 / self.T_serial))
-                                      )
-
-                # get last J days of AMX
-                for j in range(self.transition_window):
-                    self.previously_asymptomatic[vax_status] = \
-                        self.previously_asymptomatic[vax_status].write(j,
-                                                                       forecasted_fluxes[Comp.A.value][
-                                                                           vax_status].read(day - (j + 1))
-                                                                       )
-
-                    self.previously_mild[vax_status] = \
-                        self.previously_mild[vax_status].write(j,
-                                                               forecasted_fluxes[Comp.M.value][
-                                                                   vax_status].read(day - (j + 1))
-                                                               )
-                    self.previously_extreme[vax_status] = \
-                        self.previously_extreme[vax_status].write(j,
-                                                                  forecasted_fluxes[Compartments.extreme.value][
-                                                                      vax_status].read(day - (j + 1))
-                                                                  )
-
-                previously_asymptomatic_tensor = self.previously_asymptomatic[vax_status].stack()
-                previously_mild_tensor = self.previously_mild[vax_status].stack()
-                previously_extreme_tensor = self.previously_extreme[vax_status].stack()
-
-                # Today's AMX = sum of last J * rho * pi
-                forecasted_fluxes[Comp.M.value][vax_status] = \
-                    forecasted_fluxes[Comp.M.value][vax_status].write(day,
-                                                                                 tf.reduce_sum(
-                                                                                     previously_asymptomatic_tensor *
-                                                                                     self.rho_M_samples *
-                                                                                     self.pi_M_samples,
-                                                                                     axis=0)
-                                                                                 )
 
 
         # Re-combine vaccinated and unvaxxed for our output
@@ -272,40 +216,62 @@ class CovidModel(tf.keras.Model):
                 self.prior_distros[compartment][vax_status] = {}
 
         # Tensorflow doesn't support dictionaries with mixed key types, so we'll give these a compartment and vax status
-        self.prior_distros[Comp.A.value][Vax.total.value]['delta'] = tfp.distributions.Beta(
-            delta[Vax.total.value]['prior']['a'],
-            delta[Vax.total.value]['prior']['b'])
+        # use a transformed distribution that applies a bijector (sigmoid in this case to our delta variable)
+        self.prior_distros[Comp.A.value][Vax.total.value]['delta'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                delta[Vax.total.value]['prior']['a'],
+                delta[Vax.total.value]['prior']['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
 
         # create prior distributions
         for vax_status in [status.value for status  in self.vax_statuses]:
 
 
             # T serial must be positive
-            self.prior_distros[Comp.A.value][vax_status]['T_serial'] = tfp.distributions.TruncatedNormal(
-                T_serial[vax_status]['prior']['loc'],
-                T_serial[vax_status]['prior']['scale'],
-            0, np.inf)
+            self.prior_distros[Comp.A.value][vax_status]['T_serial'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    T_serial[vax_status]['prior']['loc'],
+                    T_serial[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
 
-            self.prior_distros[Comp.M.value][vax_status]['rho_M'] = tfp.distributions.Beta(
-                rho_M[vax_status]['prior']['a'],
-                rho_M[vax_status]['prior']['b'])
+            self.prior_distros[Comp.M.value][vax_status]['rho_M'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.Beta(
+                    rho_M[vax_status]['prior']['a'],
+                    rho_M[vax_status]['prior']['b']),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+            )
 
             #  must be positive
-            self.prior_distros[Comp.M.value][vax_status]['lambda_M'] = tfp.distributions.TruncatedNormal(
-                lambda_M[vax_status]['prior']['loc'],
-                lambda_M[vax_status]['prior']['scale'],
-                0, np.inf)
-            self.prior_distros[Comp.M.value][vax_status]['nu_M'] = tfp.distributions.TruncatedNormal(
-                nu_M[vax_status]['prior']['loc'],
-                nu_M[vax_status]['prior']['scale'],
-                0, np.inf)
+            self.prior_distros[Comp.M.value][vax_status]['lambda_M'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    lambda_M[vax_status]['prior']['loc'],
+                    lambda_M[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
+
+            self.prior_distros[Comp.M.value][vax_status]['nu_M'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    nu_M[vax_status]['prior']['loc'],
+                    nu_M[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
 
             self.prior_distros[Comp.A.value][vax_status]['warmup_A'] = []
             for day in range(self.transition_window):
-                self.prior_distros[Comp.A.value][vax_status]['warmup_A'].append(tfp.distributions.TruncatedNormal(
-                warmup_A_params[vax_status]['prior'][day]['loc'],
-                warmup_A_params[vax_status]['prior'][day]['scale'],
-                0, np.inf))
+                self.prior_distros[Comp.A.value][vax_status]['warmup_A'].append(
+                    tfp.distributions.TransformedDistribution(
+                        tfp.distributions.TruncatedNormal(
+                            tf.cast(warmup_A_params[vax_status]['prior'][day]['loc'],dtype=tf.float32),
+                            tf.cast(warmup_A_params[vax_status]['prior'][day]['scale'],dtype=tf.float32),
+                            0, tf.float32.max),
+                        bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+                    )
+                )
 
 
 
@@ -313,11 +279,11 @@ class CovidModel(tf.keras.Model):
 
 
     def _constrain_parameters(self):
-        """Helper function to hide the plumbing of creating the constrained parameters"""
+        """Helper function to make sure all of our posterior variance parameters are positive"""
 
         self.delta_params = {}
         self.delta_params[Vax.total.value] = {}
-        self.delta_params[Vax.total.value]['loc'] = tf.math.softplus(self.unconstrained_delta[Vax.total.value]['loc'])
+        self.delta_params[Vax.total.value]['loc'] = self.unconstrained_delta[Vax.total.value]['loc']
         self.delta_params[Vax.total.value]['scale'] = tf.math.softplus(self.unconstrained_delta[Vax.total.value]['scale'])
 
         self.T_serial_params = {}
@@ -333,76 +299,90 @@ class CovidModel(tf.keras.Model):
             self.nu_M_params[vax_status] = {}
             self.warmup_A_params[vax_status] = []
             for day in range(self.transition_window):
-                self.warmup_A_params[vax_status][day].append({})
+                self.warmup_A_params[vax_status].append({})
 
 
-            self.T_serial_params[vax_status]['loc'] = tf.math.softplus(self.unconstrained_T_serial[vax_status]['loc'])
+            self.T_serial_params[vax_status]['loc'] = self.unconstrained_T_serial[vax_status]['loc']
             self.T_serial_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_T_serial[vax_status]['scale'])
 
-            self.rho_M_params[vax_status]['loc'] = tf.math.sigmoid(self.unconstrained_rho_M[vax_status]['loc'])
-            self.rho_M[vax_status]['scale'] = tf.math.sigmoid(self.unconstrained_rho_M[vax_status]['scale'])
+            self.rho_M_params[vax_status]['loc'] = self.unconstrained_rho_M[vax_status]['loc']
+            self.rho_M_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_rho_M[vax_status]['scale'])
 
-            self.lambda_M_params[vax_status]['loc'] = tf.math.softplus(self.unconstrained_lambda_M[vax_status]['loc'])
+            self.lambda_M_params[vax_status]['loc'] = self.unconstrained_lambda_M[vax_status]['loc']
             self.lambda_M_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_lambda_M[vax_status]['scale'])
 
-            self.nu_M_params[vax_status]['loc'] = tf.math.softplus(self.unconstrained_nu_M[vax_status]['loc'])
+            self.nu_M_params[vax_status]['loc'] = self.unconstrained_nu_M[vax_status]['loc']
             self.nu_M_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_nu_M[vax_status]['scale'])
 
 
             for day in range(self.transition_window):
                 self.warmup_A_params[vax_status][day]['loc'] = \
-                    tf.math.softplus(self.unconstrained_warmup_A_params[vax_status][day]['loc'])
+                    self.unconstrained_warmup_A_params[vax_status][day]['loc']
                 self.warmup_A_params[vax_status][day]['scale'] = \
                     tf.math.softplus(self.unconstrained_warmup_A_params[vax_status][day]['scale'])
 
         return
 
     def _sample_and_reparameterize(self):
+        """Here we again constrain, and our prior distribution will fix it"""
 
-        delta_noise = tf.random.normal(self.posterior_samples)
+        delta_noise = tf.random.normal((self.posterior_samples,))
         self.delta_probs = tfp.distributions.Normal(0,1).log_prob(delta_noise)
         self.delta_samples = self.delta_params[Vax.total.value]['loc'] + \
                              self.delta_params[Vax.total.value]['scale'] * delta_noise
+        self.delta_samples_constrained = tfp.bijectors.Sigmoid().forward(self.delta_samples)
 
-        T_serial_noise = tf.random.normal(self.posterior_samples)
+        T_serial_noise = tf.random.normal((self.posterior_samples,))
         self.T_serial_probs = tfp.distributions.Normal(0,1).log_prob(T_serial_noise)
         self.T_serial_samples = self.T_serial_params[Vax.total.value]['loc'] + \
                                 self.T_serial_params[Vax.total.value]['scale'] * T_serial_noise
+        self.T_serial_samples_constrained = tfp.bijectors.Softplus().forward(self.T_serial_samples)
 
-        rho_M_noise = tf.random.normal(self.posterior_samples)
+        rho_M_noise = tf.random.normal((self.posterior_samples,))
         self.rho_M_probs = tfp.distributions.Normal(0,1).log_prob(rho_M_noise)
         self.rho_M_samples = self.rho_M_params[Vax.total.value]['loc'] + \
                              self.rho_M_params[Vax.total.value]['scale'] * rho_M_noise
+        self.rho_M_samples_constrained = tfp.bijectors.Sigmoid().forward(self.rho_M_samples)
 
-        lambda_M_noise = tf.random.normal(self.posterior_samples)
+
+        lambda_M_noise = tf.random.normal((self.posterior_samples,))
         self.lambda_M_probs = tfp.distributions.Normal(0,1).log_prob(lambda_M_noise)
         self.lambda_M_samples = self.lambda_M_params[Vax.total.value]['loc'] + \
                                 self.lambda_M_params[Vax.total.value]['scale'] * lambda_M_noise
+        self.lambda_M_samples_constrained = tfp.bijectors.Softplus().forward(self.lambda_M_samples)
 
-        nu_M_noise = tf.random.normal(self.posterior_samples)
+        nu_M_noise = tf.random.normal((self.posterior_samples,))
         self.nu_M_probs = tfp.distributions.Normal(0,1).log_prob(nu_M_noise)
         self.nu_M_samples = self.nu_M_params[Vax.total.value]['loc'] + \
                             self.nu_M_params[Vax.total.value]['scale'] * nu_M_noise
+        self.nu_M_samples_constrained = tfp.bijectors.Softplus().forward(self.nu_M_samples)
 
         self.warmup_A_samples = []
+        self.warmup_A_samples_constrained = []
         self.warmup_A_probs = []
         for day in range(self.transition_window):
-            warmup_A_noise = tf.random.normal(self.posterior_samples)
-            self.warmup_A_probs[day] = tfp.distributions.Normal(0,1).log_prob(warmup_A_noise)
+            warmup_A_noise = tf.random.normal((self.posterior_samples,))
+            self.warmup_A_probs.append(tfp.distributions.Normal(0,1).log_prob(warmup_A_noise))
             self.warmup_A_samples.append(self.warmup_A_params[Vax.total.value][day]['loc'] +
-                                         self.warmup_A_params[Vax.total.value]['scale'] *
+                                         self.warmup_A_params[Vax.total.value][day]['scale'] *
                                          warmup_A_noise)
+            self.warmup_A_samples_constrained.append(tfp.bijectors.Softplus().forward(self.warmup_A_samples[-1]))
 
-        poisson_M_dist_samples = [tfp.distributions.Poisson(rate=lambda_M) for lambda_M in self.lambda_M_samples]
+        poisson_M_dist_samples = [tfp.distributions.Poisson(rate=lambda_M)
+                                  for lambda_M in self.lambda_M_samples_constrained]
 
 
         self.pi_M_samples = tf.TensorArray(tf.float32, size=self.transition_window, clear_after_read=False,
                                            name='pi_M_samples')
 
         for j in range(self.transition_window):
-            poisson_M_samples = tf.tensor([dist.log_prob(j+1) for dist in poisson_M_dist_samples])
-            self.pi_M_samples = self.pi_M_samples.write(j, self.poisson_M[vax_status].log_prob(j + 1) /
-                                                           self.nu_M_samples)
+            poisson_M_samples = np.array([dist.log_prob(j+1) for dist in poisson_M_dist_samples])
+            self.pi_M_samples = self.pi_M_samples.write(j, np.array([dist.log_prob(j + 1) for dist in poisson_M_dist_samples]) /
+                                                           self.nu_M_samples_constrained)
+
+        self.pi_M_samples = self.pi_M_samples.stack()
+        # Softmax so it sums to 1
+        self.pi_M_samples = tf.nn.softmax(self.pi_M_samples)
 
         return
 
@@ -433,32 +413,33 @@ class CovidModel(tf.keras.Model):
         # Flip the signs from our elbo equation because tensorflow minimizes
         delta_prior_prob =    -self.prior_distros[Comp.A.value][Vax.total.value]['delta'].log_prob(self.delta_samples)
         delta_posterior_prob = -self.delta_probs
-        self.add_loss(tf.reduce_mean(delta_prior_prob - delta_posterior_prob))
+
+        self.add_loss(lambda: tf.reduce_mean(delta_prior_prob - delta_posterior_prob))
 
         T_serial_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['T_serial'].log_prob(
             self.T_serial_samples)
         T_serial_posterior_prob = -self.T_serial_probs
-        self.add_loss(tf.reduce_mean(T_serial_prior_prob - T_serial_posterior_prob))
+        self.add_loss(lambda: tf.reduce_mean(T_serial_prior_prob - T_serial_posterior_prob))
 
         rho_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['rho_M'].log_prob(self.rho_M_samples)
         rho_M_posterior_prob = -self.rho_M_probs
-        self.add_loss(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob))
+        self.add_loss(lambda: tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob))
 
         lambda_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['lambda_M'].log_prob(
             self.lambda_M_samples)
         lambda_M_posterior_prob = -self.lambda_M_probs
-        self.add_loss(tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob))
+        self.add_loss(lambda: tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob))
 
         nu_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['nu_M'].log_prob(self.nu_M_samples)
         nu_M_posterior_prob = -self.nu_M_probs
-        self.add_loss(tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob))
+        self.add_loss(lambda: tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob))
 
 
 
         for day in range(self.transition_window):
-            warmup_A_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'].log_prob(self.warmup_A_samples[day])
+            warmup_A_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'][day].log_prob(self.warmup_A_samples[day])
             warmup_A_posterior_prob = -self.nu_M_probs
-            self.add_loss(warmup_A_prior_prob - warmup_A_posterior_prob)
+            self.add_loss(lambda: tf.reduce_mean(warmup_A_prior_prob - warmup_A_posterior_prob))
 
 
         if debug:

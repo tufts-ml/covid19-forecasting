@@ -76,7 +76,7 @@ def run_model(warmup_start=None, warmup_end=None, train_start=None, train_end=No
     model = CovidModel(transition_window, T_serial,
                        alpha_bar_M, beta_bar_M, alpha_bar_X, beta_bar_X, alpha_bar_G, beta_bar_G,
                        lambda_bar_M, sigma_bar_M, lambda_bar_X, sigma_bar_X, lambda_bar_G, sigma_bar_G,
-                       nu_bar_M, tau_bar_M, nu_bar_X, tau_bar_X, nu_bar_X, tau_bar_X)
+                       nu_bar_M, tau_bar_M, nu_bar_X, tau_bar_X, nu_bar_G, tau_bar_G)
 
     # Define optimizer
     optimizer = tf.keras.optimizers.Adam(
