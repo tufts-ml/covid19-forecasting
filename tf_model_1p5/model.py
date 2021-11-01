@@ -78,11 +78,11 @@ class CovidModel(tf.keras.Model):
         #               forecast_start to forecast_end for the outcome, which does not have warmup data
         forecasted_fluxes = self._initialize_flux_arrays(forecast_days)
 
-        print(f'Delta {tf.reduce_mean(self.delta_samples_constrained)}')
-        print(f'T serial {tf.reduce_mean(self.T_serial_samples_constrained)}')
-        print(f'rho_M {tf.reduce_mean(self.rho_M_samples_constrained)}')
-        print(f'lambda M {tf.reduce_mean(self.lambda_M_samples_constrained)}')
-        print(f'pi_M {tf.reduce_mean(self.pi_M_samples, axis=1)}')
+        print(f'Delta {tf.reduce_min(self.delta_samples_constrained)}')
+        print(f'T serial {tf.reduce_min(self.T_serial_samples_constrained)}')
+        print(f'rho_M {tf.reduce_min(self.rho_M_samples_constrained)}')
+        print(f'lambda M {tf.reduce_min(self.lambda_M_samples_constrained)}')
+        print(f'pi_M {tf.reduce_min(self.pi_M_samples, axis=1)}')
 
         for day in range(forecast_days):
 
@@ -118,7 +118,37 @@ class CovidModel(tf.keras.Model):
                                                                              )
 
         if not debug_disable_prior:
-            self._add_prior_loss()
+            #self._add_prior_loss()
+            self._callable_losses.clear()
+            # Flip the signs from our elbo equation because tensorflow minimizes
+            delta_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['delta'].log_prob(self.delta_samples)
+            delta_posterior_prob = -self.delta_probs
+
+            self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(delta_prior_prob - delta_posterior_prob, axis=-1)))
+
+            T_serial_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['T_serial'].log_prob(
+                self.T_serial_samples)
+            T_serial_posterior_prob = -self.T_serial_probs
+            self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(T_serial_prior_prob - T_serial_posterior_prob, axis=-1)))
+
+            rho_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['rho_M'].log_prob(self.rho_M_samples)
+            rho_M_posterior_prob = -self.rho_M_probs
+            self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob, axis=-1)))
+
+            lambda_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['lambda_M'].log_prob(
+                self.lambda_M_samples)
+            lambda_M_posterior_prob = -self.lambda_M_probs
+            self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob, axis=-1)))
+
+            nu_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['nu_M'].log_prob(self.nu_M_samples)
+            nu_M_posterior_prob = -self.nu_M_probs
+            self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob, axis=-1)))
+
+            for day in range(self.transition_window):
+                warmup_A_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'][day].log_prob(
+                    self.warmup_A_samples[day])
+                warmup_A_posterior_prob = -self.nu_M_probs
+                self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(warmup_A_prior_prob - warmup_A_posterior_prob, axis=-1)))
 
 
         # Re-combine vaccinated and unvaxxed for our output
@@ -336,6 +366,8 @@ class CovidModel(tf.keras.Model):
         self.delta_probs = tfp.distributions.Normal(0,1).log_prob(delta_noise)
         self.delta_samples = self.delta_params[Vax.total.value]['loc'] + \
                              self.delta_params[Vax.total.value]['scale'] * delta_noise
+        print(f"delta_loc: {self.delta_params[Vax.total.value]['loc']}")
+        print(f"delta_scale: {self.delta_params[Vax.total.value]['scale']}")
         self.delta_samples_constrained = tfp.bijectors.Sigmoid().forward(self.delta_samples)
 
         T_serial_noise = tf.random.normal((self.posterior_samples,))
@@ -422,32 +454,32 @@ class CovidModel(tf.keras.Model):
         delta_prior_prob =    -self.prior_distros[Comp.A.value][Vax.total.value]['delta'].log_prob(self.delta_samples)
         delta_posterior_prob = -self.delta_probs
 
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(delta_prior_prob - delta_posterior_prob,axis=-1)))
+        self.add_loss(tf.reduce_sum(tf.reduce_mean(delta_prior_prob - delta_posterior_prob,axis=-1)))
 
         T_serial_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['T_serial'].log_prob(
             self.T_serial_samples)
         T_serial_posterior_prob = -self.T_serial_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(T_serial_prior_prob - T_serial_posterior_prob,axis=-1)))
+        self.add_loss(tf.reduce_sum(tf.reduce_mean(T_serial_prior_prob - T_serial_posterior_prob,axis=-1)))
 
         rho_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['rho_M'].log_prob(self.rho_M_samples)
         rho_M_posterior_prob = -self.rho_M_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob,axis=-1)))
+        self.add_loss(tf.reduce_sum(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob,axis=-1)))
 
         lambda_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['lambda_M'].log_prob(
             self.lambda_M_samples)
         lambda_M_posterior_prob = -self.lambda_M_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob,axis=-1)))
+        self.add_loss(tf.reduce_sum(tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob,axis=-1)))
 
         nu_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['nu_M'].log_prob(self.nu_M_samples)
         nu_M_posterior_prob = -self.nu_M_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob,axis=-1)))
+        self.add_loss(tf.reduce_sum(tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob,axis=-1)))
 
 
 
         for day in range(self.transition_window):
             warmup_A_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'][day].log_prob(self.warmup_A_samples[day])
             warmup_A_posterior_prob = -self.nu_M_probs
-            self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(warmup_A_prior_prob - warmup_A_posterior_prob,axis=-1)))
+            self.add_loss(tf.reduce_sum(tf.reduce_mean(warmup_A_prior_prob - warmup_A_posterior_prob,axis=-1)))
 
 
         if debug:
