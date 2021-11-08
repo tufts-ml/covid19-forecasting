@@ -313,7 +313,9 @@ class CovidModel(tf.keras.Model):
         """Here we again constrain, and our prior distribution will fix it"""
 
         T_serial_noise = tf.random.normal((self.posterior_samples,))
-        self.T_serial_probs = tfp.distributions.Normal(0,1).log_prob(T_serial_noise)
+        # correct with log determinant of jacobian
+        self.T_serial_probs = tfp.distributions.Normal(0,1).log_prob(T_serial_noise) - \
+                              tf.math.log(self.T_serial_params[Vax.total.value]['scale'])
         self.T_serial_samples = self.T_serial_params[Vax.total.value]['loc'] + \
                                 self.T_serial_params[Vax.total.value]['scale'] * T_serial_noise
         self.T_serial_samples_constrained = tfp.bijectors.Softplus().forward(self.T_serial_samples)
@@ -326,13 +328,15 @@ class CovidModel(tf.keras.Model):
 
 
         lambda_M_noise = tf.random.normal((self.posterior_samples,))
-        self.lambda_M_probs = tfp.distributions.Normal(0,1).log_prob(lambda_M_noise)
+        self.lambda_M_probs = tfp.distributions.Normal(0,1).log_prob(lambda_M_noise) - \
+                              tf.math.log(self.lambda_M_params[Vax.total.value]['scale'])
         self.lambda_M_samples = self.lambda_M_params[Vax.total.value]['loc'] + \
                                 self.lambda_M_params[Vax.total.value]['scale'] * lambda_M_noise
         self.lambda_M_samples_constrained = tfp.bijectors.Softplus().forward(self.lambda_M_samples)
 
         nu_M_noise = tf.random.normal((self.posterior_samples,))
-        self.nu_M_probs = tfp.distributions.Normal(0,1).log_prob(nu_M_noise)
+        self.nu_M_probs = tfp.distributions.Normal(0,1).log_prob(nu_M_noise) - \
+                          tf.math.log(self.nu_M_params[Vax.total.value]['scale'])
         self.nu_M_samples = self.nu_M_params[Vax.total.value]['loc'] + \
                             self.nu_M_params[Vax.total.value]['scale'] * nu_M_noise
         self.nu_M_samples_constrained = tfp.bijectors.Softplus().forward(self.nu_M_samples)
@@ -342,7 +346,8 @@ class CovidModel(tf.keras.Model):
         self.warmup_A_probs = []
         for day in range(self.transition_window):
             warmup_A_noise = tf.random.normal((self.posterior_samples,))
-            self.warmup_A_probs.append(tfp.distributions.Normal(0,1).log_prob(warmup_A_noise))
+            self.warmup_A_probs.append(tfp.distributions.Normal(0,1).log_prob(warmup_A_noise) -
+                                       tf.math.log(self.warmup_A_params[Vax.total.value][day]['scale']))
             self.warmup_A_samples.append(self.warmup_A_params[Vax.total.value][day]['loc'] +
                                          self.warmup_A_params[Vax.total.value][day]['scale'] *
                                          warmup_A_noise)
@@ -363,7 +368,6 @@ class CovidModel(tf.keras.Model):
         self.pi_M_samples = self.pi_M_samples.stack()
         print(f'Pre-softmax pi_M {self.pi_M_samples}')
         # Softmax so it sums to 1
-        # TODO: Preserve samples
         self.pi_M_samples = tf.nn.softmax(self.pi_M_samples,axis=0)
 
         return
