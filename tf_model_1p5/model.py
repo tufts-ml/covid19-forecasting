@@ -82,7 +82,7 @@ class CovidModel(tf.keras.Model):
         print(f'T serial {tf.reduce_min(self.T_serial_samples_constrained)}')
         print(f'rho_M {tf.reduce_min(self.rho_M_samples_constrained)}')
         print(f'lambda M {tf.reduce_min(self.lambda_M_samples_constrained)}')
-        print(f'pi_M {tf.reduce_min(self.pi_M_samples, axis=1)}')
+        print(f'pi_M {self.pi_M_samples}')
 
         for day in range(forecast_days):
 
@@ -514,7 +514,7 @@ class LogPoissonProb(tf.keras.losses.Loss):
     def call(self, y_true, y_pred):
         log_probs = tf.map_fn(calc_poisson, (tf.squeeze(y_true), y_pred), fn_output_signature=tf.float32)
         # return negative log likielihood
-        return -tf.reduce_sum(tf.reduce_mean(log_probs,axis=1))
+        return -tf.reduce_mean(tf.reduce_mean(log_probs,axis=1))
 
 
 class VarLogCallback(tf.keras.callbacks.Callback):
