@@ -514,7 +514,7 @@ class LogPoissonProb(tf.keras.losses.Loss):
     def call(self, y_true, y_pred):
         log_probs = tf.map_fn(calc_poisson, (tf.squeeze(y_true), y_pred), fn_output_signature=tf.float32)
         # return negative log likielihood
-        return -tf.reduce_mean(tf.reduce_mean(log_probs,axis=1))
+        return -tf.reduce_sum(tf.reduce_mean(log_probs,axis=1))
 
 
 class VarLogCallback(tf.keras.callbacks.Callback):
