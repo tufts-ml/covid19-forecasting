@@ -266,7 +266,7 @@ class CovidModel(tf.keras.Model):
         return
 
 
-    def _constrain_parameters(self):
+    def  _constrain_parameters(self):
         """Helper function to make sure all of our posterior variance parameters are positive"""
 
         self.T_serial_params = {}
@@ -310,45 +310,65 @@ class CovidModel(tf.keras.Model):
         """Here we again constrain, and our prior distribution will fix it"""
 
         T_serial_noise = tf.random.normal((self.posterior_samples,))
-        # correct with log determinant of jacobian
-        self.T_serial_probs = tfp.distributions.Normal(0,1).log_prob(T_serial_noise) - \
-                              tf.math.log(self.T_serial_params[Vax.total.value]['scale'])
+        # Use reparameterization trick to get unconstrained samples
         self.T_serial_samples = self.T_serial_params[Vax.total.value]['loc'] + \
                                 self.T_serial_params[Vax.total.value]['scale'] * T_serial_noise
+
+        # Constrain samples with softplus
         self.T_serial_samples_constrained = tfp.bijectors.Softplus().forward(self.T_serial_samples)
 
+        # Calulate variational posterior probability of un constrained samples
+        T_serial_variational_posterior = tfp.distributions.Normal(self.T_serial_params[Vax.total.value]['loc'],
+                                                                  self.T_serial_params[Vax.total.value]['scale'])
+
+        self.T_serial_probs = T_serial_variational_posterior.log_prob(self.T_serial_samples)
+
+
         rho_M_noise = tf.random.normal((self.posterior_samples,))
-        self.rho_M_probs = tfp.distributions.Normal(0,1).log_prob(rho_M_noise)
         self.rho_M_samples = self.rho_M_params[Vax.total.value]['loc'] + \
                              self.rho_M_params[Vax.total.value]['scale'] * rho_M_noise
         self.rho_M_samples_constrained = tfp.bijectors.Sigmoid().forward(self.rho_M_samples)
 
+        rho_M_variational_posterior = tfp.distributions.Normal(self.rho_M_params[Vax.total.value]['loc'],
+                                                               self.rho_M_params[Vax.total.value]['scale'])
+
+        self.rho_M_probs = rho_M_variational_posterior.log_prob(self.rho_M_samples)
 
         lambda_M_noise = tf.random.normal((self.posterior_samples,))
-        self.lambda_M_probs = tfp.distributions.Normal(0,1).log_prob(lambda_M_noise) - \
-                              tf.math.log(self.lambda_M_params[Vax.total.value]['scale'])
         self.lambda_M_samples = self.lambda_M_params[Vax.total.value]['loc'] + \
                                 self.lambda_M_params[Vax.total.value]['scale'] * lambda_M_noise
         self.lambda_M_samples_constrained = tfp.bijectors.Softplus().forward(self.lambda_M_samples)
 
+        lambda_M_variational_posterior = tfp.distributions.Normal(self.lambda_M_params[Vax.total.value]['loc'],
+                                                                  self.lambda_M_params[Vax.total.value]['scale'])
+
+        self.lambda_M_probs = lambda_M_variational_posterior.log_prob(self.lambda_M_samples)
+
+
         nu_M_noise = tf.random.normal((self.posterior_samples,))
-        self.nu_M_probs = tfp.distributions.Normal(0,1).log_prob(nu_M_noise) - \
-                          tf.math.log(self.nu_M_params[Vax.total.value]['scale'])
         self.nu_M_samples = self.nu_M_params[Vax.total.value]['loc'] + \
                             self.nu_M_params[Vax.total.value]['scale'] * nu_M_noise
         self.nu_M_samples_constrained = tfp.bijectors.Softplus().forward(self.nu_M_samples)
+
+        nu_M_variational_posterior = tfp.distributions.Normal(self.nu_M_params[Vax.total.value]['loc'],
+                                                              self.nu_M_params[Vax.total.value]['scale'])
+        self.nu_M_probs = nu_M_variational_posterior.log_prob(self.nu_M_samples)
 
         self.warmup_A_samples = []
         self.warmup_A_samples_constrained = []
         self.warmup_A_probs = []
         for day in range(self.transition_window):
             warmup_A_noise = tf.random.normal((self.posterior_samples,))
-            self.warmup_A_probs.append(tfp.distributions.Normal(0,1).log_prob(warmup_A_noise) -
-                                       tf.math.log(self.warmup_A_params[Vax.total.value][day]['scale']))
             self.warmup_A_samples.append(self.warmup_A_params[Vax.total.value][day]['loc'] +
                                          self.warmup_A_params[Vax.total.value][day]['scale'] *
                                          warmup_A_noise)
             self.warmup_A_samples_constrained.append(tfp.bijectors.Softplus().forward(self.warmup_A_samples[-1]))
+
+            warmup_A_variational_posterior = tfp.distributions.Normal(self.warmup_A_params[Vax.total.value][day]['loc'],
+                                                                      self.warmup_A_params[Vax.total.value][day]['scale'])
+
+
+            self.warmup_A_probs.append(warmup_A_variational_posterior.log_prob(self.warmup_A_samples[-1]))
 
         poisson_M_dist_samples = [tfp.distributions.Poisson(rate=lambda_M)
                                   for lambda_M in self.lambda_M_samples_constrained]
@@ -393,28 +413,31 @@ class CovidModel(tf.keras.Model):
         """Helper function for adding loss from model prior"""
 
         # Flip the signs from our elbo equation because tensorflow minimizes
-        T_serial_prior_prob = self.prior_distros[Comp.A.value][Vax.total.value]['T_serial'].log_prob(self.T_serial_samples)
-        T_serial_posterior_prob = self.T_serial_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(T_serial_posterior_prob- T_serial_prior_prob ,axis=-1)))
+        T_serial_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['T_serial'].log_prob(self.T_serial_samples_constrained) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.T_serial_samples)
+        T_serial_posterior_prob = -self.T_serial_probs
+        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(T_serial_prior_prob- T_serial_posterior_prob ,axis=-1)))
 
-        rho_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['rho_M'].log_prob(self.rho_M_samples)
+        rho_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['rho_M'].log_prob(self.rho_M_samples_constrained) + \
+            tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.rho_M_samples)
         rho_M_posterior_prob = -self.rho_M_probs
         self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob,axis=-1)))
 
-        lambda_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['lambda_M'].log_prob(
-            self.lambda_M_samples)
+        lambda_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['lambda_M'].log_prob(self.lambda_M_samples) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.lambda_M_samples)
         lambda_M_posterior_prob = -self.lambda_M_probs
         self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob,axis=-1)))
 
-        nu_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['nu_M'].log_prob(self.nu_M_samples)
+        nu_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['nu_M'].log_prob(self.nu_M_samples) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.nu_M_samples)
         nu_M_posterior_prob = -self.nu_M_probs
         self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob,axis=-1)))
 
 
-
         for day in range(self.transition_window):
-            warmup_A_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'][day].log_prob(self.warmup_A_samples[day])
-            warmup_A_posterior_prob = -self.nu_M_probs
+            warmup_A_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'][day].log_prob(self.warmup_A_samples[day]) + \
+                tfp.bijectors.Softplus().forward_log_det_jacobian(self.warmup_A_samples[day])
+            warmup_A_posterior_prob = -self.warmup_A_probs[day]
             self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(warmup_A_prior_prob - warmup_A_posterior_prob,axis=-1)))
 
 
