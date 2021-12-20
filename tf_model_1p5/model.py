@@ -1,3 +1,4 @@
+import copy
 from enum import Enum
 
 import numpy as np
@@ -28,7 +29,7 @@ class CovidModel(tf.keras.Model):
     def __init__(self,
                  vax_statuses, compartments,
                  transition_window, T_serial, rho_M, lambda_M, nu_M,
-                 warmup_A_params, posterior_samples=1000):
+                 warmup_A_params, posterior_samples=1000, debug_disable_theta=False):
         """Covid Model 1.5
 
         Args:
@@ -44,7 +45,7 @@ class CovidModel(tf.keras.Model):
 
         # create dictionaries to store model parameters / prior distributions
         self._initialize_parameters(T_serial, rho_M, lambda_M, nu_M,
-                                    warmup_A_params)
+                                    warmup_A_params, debug_disable_theta)
 
         self._initialize_priors(T_serial, rho_M, lambda_M, nu_M,
                                 warmup_A_params)
@@ -124,16 +125,16 @@ class CovidModel(tf.keras.Model):
         if return_all:
             result = forecasted_fluxes
         else:
-            result = forecasted_fluxes[Comp.M.value][Vax.total.value]
+            result = forecasted_fluxes[Comp.M.value][Vax.total.value].stack()
 
         # Tensorflow thinks we didn't use every array, so we gotta mark them as used
         # TODO: did i screw up?
         self._mark_arrays_used(forecasted_fluxes)
 
-        return result.stack()
+        return result
 
     def _initialize_parameters(self, T_serial, rho_M, lambda_M, nu_M,
-                               warmup_A_params):
+                               warmup_A_params, debug_disable_theta=False):
         """Helper function to hide the book-keeping behind initializing model parameters
 
         TODO: Replace with better/random initializations
@@ -150,39 +151,41 @@ class CovidModel(tf.keras.Model):
 
         self.previously_asymptomatic = {}
 
+        train_theta = not debug_disable_theta
+
         for vax_status in [status.value for status in self.vax_statuses]:
 
             self.unconstrained_T_serial[vax_status] = {}
             self.unconstrained_T_serial[vax_status]['loc'] = \
                 tf.Variable(T_serial[vax_status]['posterior_init']['loc'], dtype=tf.float32,
-                            name=f'T_serial_A_loc_{vax_status}')
+                            name=f'T_serial_A_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_T_serial[vax_status]['scale'] = \
                 tf.Variable(T_serial[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'T_serial_A_scale_{vax_status}')
+                            name=f'T_serial_A_scale_{vax_status}', trainable=train_theta)
 
             self.unconstrained_rho_M[vax_status] = {}
             self.unconstrained_rho_M[vax_status]['loc'] = \
                 tf.Variable(rho_M[vax_status]['posterior_init']['loc'], dtype=tf.float32,
-                            name=f'rho_M_loc_{vax_status}')
+                            name=f'rho_M_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_rho_M[vax_status]['scale'] = \
                 tf.Variable(rho_M[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'rho_M_scale_{vax_status}')
+                            name=f'rho_M_scale_{vax_status}', trainable=train_theta)
 
             self.unconstrained_lambda_M[vax_status] = {}
             self.unconstrained_lambda_M[vax_status]['loc'] = \
                 tf.Variable(lambda_M[vax_status]['posterior_init']['loc'], dtype=tf.float32,
-                            name=f'lambda_M_loc_{vax_status}')
+                            name=f'lambda_M_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_lambda_M[vax_status]['scale'] = \
                 tf.Variable(lambda_M[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'lambda_M_scale_{vax_status}')
+                            name=f'lambda_M_scale_{vax_status}', trainable=train_theta)
 
             self.unconstrained_nu_M[vax_status] = {}
             self.unconstrained_nu_M[vax_status]['loc'] = \
                 tf.Variable(nu_M[vax_status]['posterior_init']['loc'], dtype=tf.float32,
-                            name=f'nu_M_loc_{vax_status}')
+                            name=f'nu_M_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_nu_M[vax_status]['scale'] = \
                 tf.Variable(nu_M[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'nu_M_scale_{vax_status}')
+                            name=f'nu_M_scale_{vax_status}', trainable=train_theta)
 
             self.unconstrained_warmup_A_params[vax_status] = []
             for day in range(self.transition_window):
@@ -413,33 +416,32 @@ class CovidModel(tf.keras.Model):
         """Helper function for adding loss from model prior"""
 
         # Flip the signs from our elbo equation because tensorflow minimizes
-        T_serial_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['T_serial'].log_prob(self.T_serial_samples_constrained) + \
+        T_serial_prior_prob = self.prior_distros[Comp.A.value][Vax.total.value]['T_serial'].log_prob(self.T_serial_samples_constrained) + \
             tfp.bijectors.Softplus().forward_log_det_jacobian(self.T_serial_samples)
-        T_serial_posterior_prob = -self.T_serial_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(T_serial_prior_prob- T_serial_posterior_prob ,axis=-1)))
+        T_serial_posterior_prob = self.T_serial_probs
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(T_serial_prior_prob- T_serial_posterior_prob ,axis=-1)))
 
-        rho_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['rho_M'].log_prob(self.rho_M_samples_constrained) + \
+        rho_M_prior_prob = self.prior_distros[Comp.M.value][Vax.total.value]['rho_M'].log_prob(self.rho_M_samples_constrained) + \
             tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.rho_M_samples)
-        rho_M_posterior_prob = -self.rho_M_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob,axis=-1)))
+        rho_M_posterior_prob = self.rho_M_probs
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob,axis=-1)))
 
-        lambda_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['lambda_M'].log_prob(self.lambda_M_samples) + \
+        lambda_M_prior_prob = self.prior_distros[Comp.M.value][Vax.total.value]['lambda_M'].log_prob(self.lambda_M_samples) + \
             tfp.bijectors.Softplus().forward_log_det_jacobian(self.lambda_M_samples)
-        lambda_M_posterior_prob = -self.lambda_M_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob,axis=-1)))
+        lambda_M_posterior_prob = self.lambda_M_probs
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(lambda_M_prior_prob - lambda_M_posterior_prob,axis=-1)))
 
-        nu_M_prior_prob = -self.prior_distros[Comp.M.value][Vax.total.value]['nu_M'].log_prob(self.nu_M_samples) + \
+        nu_M_prior_prob = self.prior_distros[Comp.M.value][Vax.total.value]['nu_M'].log_prob(self.nu_M_samples) + \
             tfp.bijectors.Softplus().forward_log_det_jacobian(self.nu_M_samples)
-        nu_M_posterior_prob = -self.nu_M_probs
-        self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob,axis=-1)))
+        nu_M_posterior_prob = self.nu_M_probs
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(nu_M_prior_prob - nu_M_posterior_prob,axis=-1)))
 
-
-        for day in range(self.transition_window):
-            warmup_A_prior_prob = -self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'][day].log_prob(self.warmup_A_samples[day]) + \
+        # open bug about adding loss inisde a for loop: https://github.com/tensorflow/tensorflow/issues/44590
+        self.add_loss(lambda:  tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+                self.prior_distros[Comp.A.value][Vax.total.value]['warmup_A'][day].log_prob(
+                    self.warmup_A_samples[day]) + \
                 tfp.bijectors.Softplus().forward_log_det_jacobian(self.warmup_A_samples[day])
-            warmup_A_posterior_prob = -self.warmup_A_probs[day]
-            self.add_loss(lambda: tf.reduce_sum(tf.reduce_mean(warmup_A_prior_prob - warmup_A_posterior_prob,axis=-1)))
-
+                - self.warmup_A_probs[day],axis=-1)) for day in range(self.transition_window)]))
 
         if debug:
             print(f'Rho M loss {vax_status}: {rho_M_loss}')
@@ -487,21 +489,39 @@ class VarLogCallback(tf.keras.callbacks.Callback):
         if epoch % self.every_nth_epoch != 0:
             return
 
-        for vax_status in [0, 1]:
-            tf.summary.scalar(f'rho_M_{vax_status}', data=tf.squeeze(self.model.rho_M[vax_status]), step=epoch)
-            tf.summary.scalar(f'rho_X_{vax_status}', data=tf.squeeze(self.model.rho_X[vax_status]), step=epoch)
-            tf.summary.scalar(f'rho_G_{vax_status}', data=tf.squeeze(self.model.rho_G[vax_status]), step=epoch)
+        for vax_status in [status.value for status in self.model.vax_statuses]:
 
-            tf.summary.scalar(f'lambda_M_{vax_status}', data=tf.squeeze(self.model.lambda_M[vax_status]), step=epoch)
-            tf.summary.scalar(f'lambda_X_{vax_status}', data=tf.squeeze(self.model.lambda_X[vax_status]), step=epoch)
-            tf.summary.scalar(f'lambda_G_{vax_status}', data=tf.squeeze(self.model.lambda_G[vax_status]), step=epoch)
-            tf.summary.scalar(f'nu_M_{vax_status}', data=tf.squeeze(self.model.nu_M[vax_status]), step=epoch)
-            tf.summary.scalar(f'nu_X_{vax_status}', data=tf.squeeze(self.model.nu_X[vax_status]), step=epoch)
-            tf.summary.scalar(f'nu_G_{vax_status}', data=tf.squeeze(self.model.nu_G[vax_status]), step=epoch)
+            tf.summary.scalar(f'T_serial_mean',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_T_serial[vax_status]['loc'])),
+                              step=epoch)
+            tf.summary.scalar(f'T_serial_scale',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_T_serial[vax_status]['scale'])),
+                              step=epoch)
+            tf.summary.scalar(f'rho_M_mean',
+                              data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_M[vax_status]['loc'])),
+                              step=epoch)
+            tf.summary.scalar(f'rho_M_scale',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_M[vax_status]['scale'])),
+                              step=epoch)
+            tf.summary.scalar(f'lambda_M_mean',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_M[vax_status]['loc'])),
+                              step=epoch)
+            tf.summary.scalar(f'lambda_M_scale',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_M[vax_status]['scale'])),
+                              step=epoch)
+            tf.summary.scalar(f'nu_M_mean',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_M[vax_status]['loc'])),
+                              step=epoch)
+            tf.summary.scalar(f'nu_M_scale',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_M[vax_status]['scale'])),
+                              step=epoch)
 
-            tf.summary.scalar(f'delta_{vax_status}', data=tf.squeeze(self.model.delta[vax_status]), step=epoch)
+            for day in range(3):
+                tf.summary.scalar(f'warmup_A_-{-3+day}_mean', data=tf.squeeze(self.model.unconstrained_warmup_A_params[vax_status][day]['loc']), step=epoch)
+                tf.summary.scalar(f'warmup_A_-{-3 + day}_scale',
+                                  data=tf.squeeze(tf.math.softplus(self.model.unconstrained_warmup_A_params[vax_status][day]['scale'])), step=epoch)
 
-        tf.summary.scalar(f'eps', data=tf.squeeze(self.model.epsilon), step=epoch)
+
 
         return
 
