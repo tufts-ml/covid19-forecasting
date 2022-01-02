@@ -516,9 +516,9 @@ class VarLogCallback(tf.keras.callbacks.Callback):
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_M[vax_status]['scale'])),
                               step=epoch)
 
-            for day in range(3):
-                tf.summary.scalar(f'warmup_A_-{-3+day}_mean', data=tf.squeeze(self.model.unconstrained_warmup_A_params[vax_status][day]['loc']), step=epoch)
-                tf.summary.scalar(f'warmup_A_-{-3 + day}_scale',
+            for day in range(len(self.model.unconstrained_warmup_A_params[vax_status])):
+                tf.summary.scalar(f'warmup_A_-{-len(self.model.unconstrained_warmup_A_params[vax_status])+day}_mean', data=tf.squeeze(self.model.unconstrained_warmup_A_params[vax_status][day]['loc']), step=epoch)
+                tf.summary.scalar(f'warmup_A_-{-len(self.model.unconstrained_warmup_A_params[vax_status]) + day}_scale',
                                   data=tf.squeeze(tf.math.softplus(self.model.unconstrained_warmup_A_params[vax_status][day]['scale'])), step=epoch)
 
 
