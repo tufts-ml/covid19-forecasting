@@ -48,7 +48,7 @@ class CovidModel(tf.keras.Model):
         self._initialize_parameters(T_serial, rho_M, lambda_M, nu_M, rho_G, lambda_G, nu_G,
                                     warmup_A_params, warmup_M_params, debug_disable_theta)
 
-        self._initialize_priors(T_serial, rho_M, lambda_M, nu_M,
+        self._initialize_priors(T_serial, rho_M, lambda_M, nu_M, rho_G, lambda_G, nu_G,
                                 warmup_A_params, warmup_M_params)
 
     def call(self, r_t, debug_disable_prior=False, return_all=False):
