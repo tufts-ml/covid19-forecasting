@@ -15,6 +15,9 @@ class Comp(Enum):
     A = 0
     M = 1
     G = 2
+    I = 3
+    V = 4
+    D = 5
 
 
 class Vax(Enum):
@@ -29,7 +32,10 @@ class CovidModel(tf.keras.Model):
                  vax_statuses, compartments,
                  transition_window, T_serial, epsilon, delta, rho_M, lambda_M, nu_M,
                  rho_G, lambda_G, nu_G,
-                 warmup_A_params, warmup_M_params,
+                 rho_I, lambda_I, nu_I,
+                 rho_V, lambda_V, nu_V,
+                 rho_D, lambda_D, nu_D,
+                 warmup_A_params, warmup_M_params, warmup_G_params, warmup_I_params, warmup_V_params,
                  posterior_samples=1000, debug_disable_theta=False):
         """Covid Model 1.5
 
@@ -46,10 +52,23 @@ class CovidModel(tf.keras.Model):
 
         # create dictionaries to store model parameters / prior distributions
         self._initialize_parameters(T_serial, epsilon, delta, rho_M, lambda_M, nu_M, rho_G, lambda_G, nu_G,
-                                    warmup_A_params, warmup_M_params, debug_disable_theta)
+                                    rho_I, lambda_I, nu_I,
+                                    rho_V, lambda_V, nu_V,
+                                    rho_D, lambda_D, nu_D,
+                                    warmup_A_params, warmup_M_params,
+                                    warmup_G_params,
+                                    warmup_I_params,
+                                    warmup_V_params,
+                                    debug_disable_theta)
 
         self._initialize_priors(T_serial, epsilon, delta, rho_M, lambda_M, nu_M, rho_G, lambda_G, nu_G,
-                                warmup_A_params, warmup_M_params)
+                                rho_I, lambda_I, nu_I,
+                                rho_V, lambda_V, nu_V,
+                                rho_D, lambda_D, nu_D,
+                                warmup_A_params, warmup_M_params,
+                                warmup_G_params,
+                                warmup_I_params,
+                                warmup_V_params)
 
     def call(self, r_t, debug_disable_prior=False, return_all=False):
         """Run covid model 1.5
@@ -104,17 +123,32 @@ class CovidModel(tf.keras.Model):
                     if day - j - 1 < 0:
                         j_ago_asymp = self.warmup_A_samples_constrained[vax_status][day-j-1]
                         j_ago_mild = self.warmup_M_samples_constrained[vax_status][day - j - 1]
+                        j_ago_gen = self.warmup_G_samples_constrained[vax_status][day - j - 1]
+                        j_ago_icu = self.warmup_I_samples_constrained[vax_status][day - j - 1]
+                        j_ago_vent = self.warmup_V_samples_constrained[vax_status][day - j - 1]
                     else:
                         j_ago_asymp = forecasted_fluxes[Comp.A.value][vax_status].read(day-j-1)
                         j_ago_mild = forecasted_fluxes[Comp.M.value][vax_status].read(day - j - 1)
+                        j_ago_gen = forecasted_fluxes[Comp.G.value][vax_status].read(day - j - 1)
+                        j_ago_icu = forecasted_fluxes[Comp.I.value][vax_status].read(day - j - 1)
+                        j_ago_vent = forecasted_fluxes[Comp.V.value][vax_status].read(day - j - 1)
 
                     self.previously_asymptomatic[vax_status] = \
                         self.previously_asymptomatic[vax_status].write(j, j_ago_asymp)
                     self.previously_mild[vax_status] = \
                         self.previously_mild[vax_status].write(j, j_ago_mild)
+                    self.previously_gen[vax_status] = \
+                        self.previously_gen[vax_status].write(j, j_ago_gen)
+                    self.previously_icu[vax_status] = \
+                        self.previously_icu[vax_status].write(j, j_ago_icu)
+                    self.previously_vent[vax_status] = \
+                        self.previously_vent[vax_status].write(j, j_ago_vent)
 
                 previously_asymptomatic_tensor = self.previously_asymptomatic[vax_status].stack()
                 previously_mild_tensor = self.previously_mild[vax_status].stack()
+                previously_gen_tensor = self.previously_gen[vax_status].stack()
+                previously_icu_tensor = self.previously_icu[vax_status].stack()
+                previously_vent_tensor = self.previously_vent[vax_status].stack()
 
                 # Today's MG = sum of last J * rho * pi
                 forecasted_fluxes[Comp.M.value][vax_status] = \
@@ -132,6 +166,34 @@ class CovidModel(tf.keras.Model):
                                                                                self.rho_G_samples_constrained[vax_status] * self.pi_G_samples[vax_status],
                                                                                axis=0)
                                                                            )
+
+                forecasted_fluxes[Comp.I.value][vax_status] = \
+                    forecasted_fluxes[Comp.I.value][vax_status].write(day,
+                                                                      tf.reduce_sum(
+                                                                          previously_gen_tensor *
+                                                                          self.rho_I_samples_constrained[vax_status] *
+                                                                          self.pi_I_samples[vax_status],
+                                                                          axis=0)
+                                                                      )
+
+                forecasted_fluxes[Comp.V.value][vax_status] = \
+                    forecasted_fluxes[Comp.V.value][vax_status].write(day,
+                                                                      tf.reduce_sum(
+                                                                          previously_icu_tensor *
+                                                                          self.rho_V_samples_constrained[vax_status] *
+                                                                          self.pi_V_samples[vax_status],
+                                                                          axis=0)
+                                                                      )
+
+                forecasted_fluxes[Comp.D.value][vax_status] = \
+                    forecasted_fluxes[Comp.D.value][vax_status].write(day,
+                                                                      tf.reduce_sum(
+                                                                          previously_vent_tensor *
+                                                                          self.rho_D_samples_constrained[vax_status] *
+                                                                          self.pi_D_samples[vax_status],
+                                                                          axis=0)
+                                                                      )
+
 
         if not debug_disable_prior:
 
@@ -154,7 +216,13 @@ class CovidModel(tf.keras.Model):
         return result
 
     def _initialize_parameters(self, T_serial, epsilon, delta, rho_M, lambda_M, nu_M, rho_G, lambda_G, nu_G,
-                               warmup_A_params, warmup_M_params, debug_disable_theta=False):
+                                    rho_I, lambda_I, nu_I,
+                                    rho_V, lambda_V, nu_V,
+                                    rho_D, lambda_D, nu_D,
+                                    warmup_A_params, warmup_M_params,
+                                    warmup_G_params,
+                                    warmup_I_params,
+                                    warmup_V_params, debug_disable_theta=False):
         """Helper function to hide the book-keeping behind initializing model parameters
 
         TODO: Replace with better/random initializations
@@ -173,12 +241,27 @@ class CovidModel(tf.keras.Model):
         self.unconstrained_rho_G = {}
         self.unconstrained_lambda_G = {}
         self.unconstrained_nu_G = {}
+        self.unconstrained_rho_I = {}
+        self.unconstrained_lambda_I = {}
+        self.unconstrained_nu_I = {}
+        self.unconstrained_rho_V = {}
+        self.unconstrained_lambda_V = {}
+        self.unconstrained_nu_V = {}
+        self.unconstrained_rho_D = {}
+        self.unconstrained_lambda_D = {}
+        self.unconstrained_nu_D = {}
 
         self.unconstrained_warmup_A_params = {}
         self.unconstrained_warmup_M_params = {}
+        self.unconstrained_warmup_G_params = {}
+        self.unconstrained_warmup_I_params = {}
+        self.unconstrained_warmup_V_params = {}
 
         self.previously_asymptomatic = {}
         self.previously_mild = {}
+        self.previously_gen = {}
+        self.previously_icu = {}
+        self.previously_vent = {}
 
         train_theta = not debug_disable_theta
 
@@ -227,6 +310,30 @@ class CovidModel(tf.keras.Model):
                 tf.Variable(rho_G[vax_status]['posterior_init']['scale'], dtype=tf.float32,
                             name=f'rho_G_scale_{vax_status}', trainable=train_theta)
 
+            self.unconstrained_rho_I[vax_status] = {}
+            self.unconstrained_rho_I[vax_status]['loc'] = \
+                tf.Variable(rho_I[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'rho_I_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_rho_I[vax_status]['scale'] = \
+                tf.Variable(rho_I[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'rho_I_scale_{vax_status}', trainable=train_theta)
+
+            self.unconstrained_rho_V[vax_status] = {}
+            self.unconstrained_rho_V[vax_status]['loc'] = \
+                tf.Variable(rho_V[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'rho_V_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_rho_V[vax_status]['scale'] = \
+                tf.Variable(rho_V[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'rho_V_scale_{vax_status}', trainable=train_theta)
+
+            self.unconstrained_rho_D[vax_status] = {}
+            self.unconstrained_rho_D[vax_status]['loc'] = \
+                tf.Variable(rho_D[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'rho_D_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_rho_D[vax_status]['scale'] = \
+                tf.Variable(rho_D[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'rho_D_scale_{vax_status}', trainable=train_theta)
+
             self.unconstrained_lambda_M[vax_status] = {}
             self.unconstrained_lambda_M[vax_status]['loc'] = \
                 tf.Variable(lambda_M[vax_status]['posterior_init']['loc'], dtype=tf.float32,
@@ -242,6 +349,30 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_lambda_G[vax_status]['scale'] = \
                 tf.Variable(lambda_G[vax_status]['posterior_init']['scale'], dtype=tf.float32,
                             name=f'lambda_G_scale_{vax_status}', trainable=train_theta)
+
+            self.unconstrained_lambda_I[vax_status] = {}
+            self.unconstrained_lambda_I[vax_status]['loc'] = \
+                tf.Variable(lambda_I[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'lambda_I_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_lambda_I[vax_status]['scale'] = \
+                tf.Variable(lambda_I[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'lambda_I_scale_{vax_status}', trainable=train_theta)
+
+            self.unconstrained_lambda_V[vax_status] = {}
+            self.unconstrained_lambda_V[vax_status]['loc'] = \
+                tf.Variable(lambda_V[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'lambda_V_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_lambda_V[vax_status]['scale'] = \
+                tf.Variable(lambda_V[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'lambda_V_scale_{vax_status}', trainable=train_theta)
+
+            self.unconstrained_lambda_D[vax_status] = {}
+            self.unconstrained_lambda_D[vax_status]['loc'] = \
+                tf.Variable(lambda_D[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'lambda_D_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_lambda_D[vax_status]['scale'] = \
+                tf.Variable(lambda_D[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'lambda_D_scale_{vax_status}', trainable=train_theta)
 
             self.unconstrained_nu_M[vax_status] = {}
             self.unconstrained_nu_M[vax_status]['loc'] = \
@@ -259,8 +390,35 @@ class CovidModel(tf.keras.Model):
                 tf.Variable(nu_G[vax_status]['posterior_init']['scale'], dtype=tf.float32,
                             name=f'nu_G_scale_{vax_status}', trainable=train_theta)
 
+            self.unconstrained_nu_I[vax_status] = {}
+            self.unconstrained_nu_I[vax_status]['loc'] = \
+                tf.Variable(nu_I[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'nu_I_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_nu_I[vax_status]['scale'] = \
+                tf.Variable(nu_I[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'nu_I_scale_{vax_status}', trainable=train_theta)
+
+            self.unconstrained_nu_V[vax_status] = {}
+            self.unconstrained_nu_V[vax_status]['loc'] = \
+                tf.Variable(nu_V[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'nu_V_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_nu_V[vax_status]['scale'] = \
+                tf.Variable(nu_V[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'nu_V_scale_{vax_status}', trainable=train_theta)
+
+            self.unconstrained_nu_D[vax_status] = {}
+            self.unconstrained_nu_D[vax_status]['loc'] = \
+                tf.Variable(nu_D[vax_status]['posterior_init']['loc'], dtype=tf.float32,
+                            name=f'nu_D_loc_{vax_status}', trainable=train_theta)
+            self.unconstrained_nu_D[vax_status]['scale'] = \
+                tf.Variable(nu_D[vax_status]['posterior_init']['scale'], dtype=tf.float32,
+                            name=f'nu_D_scale_{vax_status}', trainable=train_theta)
+
             self.unconstrained_warmup_A_params[vax_status] = []
             self.unconstrained_warmup_M_params[vax_status] = []
+            self.unconstrained_warmup_G_params[vax_status] = []
+            self.unconstrained_warmup_I_params[vax_status] = []
+            self.unconstrained_warmup_V_params[vax_status] = []
             for day in range(self.transition_window):
                 self.unconstrained_warmup_A_params[vax_status].append({})
                 self.unconstrained_warmup_A_params[vax_status][day]['loc'] = \
@@ -282,16 +440,58 @@ class CovidModel(tf.keras.Model):
                                         dtype=tf.float32), dtype=tf.float32,
                                 name=f'warmup_M_scale_{day}_{vax_status}')
 
+                self.unconstrained_warmup_G_params[vax_status].append({})
+                self.unconstrained_warmup_G_params[vax_status][day]['loc'] = \
+                    tf.Variable(tf.cast(warmup_G_params[vax_status]['posterior_init'][day]['loc'],
+                                        dtype=tf.float32), dtype=tf.float32,
+                                name=f'warmup_G_loc_{day}_{vax_status}')
+                self.unconstrained_warmup_G_params[vax_status][day]['scale'] = \
+                    tf.Variable(tf.cast(warmup_G_params[vax_status]['posterior_init'][day]['scale'],
+                                        dtype=tf.float32), dtype=tf.float32,
+                                name=f'warmup_G_scale_{day}_{vax_status}')
+
+                self.unconstrained_warmup_I_params[vax_status].append({})
+                self.unconstrained_warmup_I_params[vax_status][day]['loc'] = \
+                    tf.Variable(tf.cast(warmup_I_params[vax_status]['posterior_init'][day]['loc'],
+                                        dtype=tf.float32), dtype=tf.float32,
+                                name=f'warmup_I_loc_{day}_{vax_status}')
+                self.unconstrained_warmup_I_params[vax_status][day]['scale'] = \
+                    tf.Variable(tf.cast(warmup_I_params[vax_status]['posterior_init'][day]['scale'],
+                                        dtype=tf.float32), dtype=tf.float32,
+                                name=f'warmup_I_scale_{day}_{vax_status}')
+
+                self.unconstrained_warmup_V_params[vax_status].append({})
+                self.unconstrained_warmup_V_params[vax_status][day]['loc'] = \
+                    tf.Variable(tf.cast(warmup_V_params[vax_status]['posterior_init'][day]['loc'],
+                                        dtype=tf.float32), dtype=tf.float32,
+                                name=f'warmup_V_loc_{day}_{vax_status}')
+                self.unconstrained_warmup_V_params[vax_status][day]['scale'] = \
+                    tf.Variable(tf.cast(warmup_V_params[vax_status]['posterior_init'][day]['scale'],
+                                        dtype=tf.float32), dtype=tf.float32,
+                                name=f'warmup_V_scale_{day}_{vax_status}')
+                
+
             self.previously_asymptomatic[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
                                                                       clear_after_read=False, name=f'prev_asymp')
             self.previously_mild[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
                                                                       clear_after_read=False, name=f'prev_mild')
+            self.previously_gen[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
+                                                              clear_after_read=False, name=f'prev_gen')
+            self.previously_icu[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
+                                                              clear_after_read=False, name=f'prev_icu')
+            self.previously_vent[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
+                                                              clear_after_read=False, name=f'prev_vent')
 
         return
 
-    def _initialize_priors(self, T_serial, epsilon, delta, rho_M, lambda_M, nu_M,
-                           rho_G, lambda_G, nu_G,
-                           warmup_A_params, warmup_M_params):
+    def _initialize_priors(self, T_serial, epsilon, delta, rho_M, lambda_M, nu_M, rho_G, lambda_G, nu_G,
+                                rho_I, lambda_I, nu_I,
+                                rho_V, lambda_V, nu_V,
+                                rho_D, lambda_D, nu_D,
+                                warmup_A_params, warmup_M_params,
+                                warmup_G_params,
+                                warmup_I_params,
+                                warmup_V_params):
         """Helper function to hide the book-keeping behind initializing model priors"""
 
         self.prior_distros = {}
@@ -344,6 +544,24 @@ class CovidModel(tf.keras.Model):
                     rho_G[vax_status]['prior']['b']),
                 bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
             )
+            self.prior_distros[Comp.I.value][vax_status]['rho_I'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.Beta(
+                    rho_I[vax_status]['prior']['a'],
+                    rho_I[vax_status]['prior']['b']),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+            )
+            self.prior_distros[Comp.V.value][vax_status]['rho_V'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.Beta(
+                    rho_V[vax_status]['prior']['a'],
+                    rho_V[vax_status]['prior']['b']),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+            )
+            self.prior_distros[Comp.D.value][vax_status]['rho_D'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.Beta(
+                    rho_D[vax_status]['prior']['a'],
+                    rho_D[vax_status]['prior']['b']),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+            )
 
             #  must be positive
             self.prior_distros[Comp.M.value][vax_status]['lambda_M'] = tfp.distributions.TransformedDistribution(
@@ -358,6 +576,27 @@ class CovidModel(tf.keras.Model):
                 tfp.distributions.TruncatedNormal(
                     lambda_G[vax_status]['prior']['loc'],
                     lambda_G[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
+            self.prior_distros[Comp.I.value][vax_status]['lambda_I'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    lambda_I[vax_status]['prior']['loc'],
+                    lambda_I[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
+            self.prior_distros[Comp.V.value][vax_status]['lambda_V'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    lambda_V[vax_status]['prior']['loc'],
+                    lambda_V[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
+            self.prior_distros[Comp.D.value][vax_status]['lambda_D'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    lambda_D[vax_status]['prior']['loc'],
+                    lambda_D[vax_status]['prior']['scale'],
                     0, np.inf),
                 bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
             )
@@ -377,9 +616,33 @@ class CovidModel(tf.keras.Model):
                     0, np.inf),
                 bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
             )
+            self.prior_distros[Comp.I.value][vax_status]['nu_I'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    nu_I[vax_status]['prior']['loc'],
+                    nu_I[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
+            self.prior_distros[Comp.V.value][vax_status]['nu_V'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    nu_V[vax_status]['prior']['loc'],
+                    nu_V[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
+            self.prior_distros[Comp.D.value][vax_status]['nu_D'] = tfp.distributions.TransformedDistribution(
+                tfp.distributions.TruncatedNormal(
+                    nu_D[vax_status]['prior']['loc'],
+                    nu_D[vax_status]['prior']['scale'],
+                    0, np.inf),
+                bijector=tfp.bijectors.Invert(tfp.bijectors.Softplus())
+            )
 
             self.prior_distros[Comp.A.value][vax_status]['warmup_A'] = []
             self.prior_distros[Comp.M.value][vax_status]['warmup_M'] = []
+            self.prior_distros[Comp.G.value][vax_status]['warmup_G'] = []
+            self.prior_distros[Comp.I.value][vax_status]['warmup_I'] = []
+            self.prior_distros[Comp.V.value][vax_status]['warmup_V'] = []
             for day in range(self.transition_window):
                 self.prior_distros[Comp.A.value][vax_status]['warmup_A'].append(
                     tfp.distributions.TransformedDistribution(
@@ -399,6 +662,36 @@ class CovidModel(tf.keras.Model):
                         bijector=tfp.bijectors.Invert(tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
                     )
                 )
+                self.prior_distros[Comp.G.value][vax_status]['warmup_G'].append(
+                    tfp.distributions.TransformedDistribution(
+                        tfp.distributions.TruncatedNormal(
+                            tf.cast(warmup_G_params[vax_status]['prior'][day]['loc'], dtype=tf.float32),
+                            tf.cast(warmup_G_params[vax_status]['prior'][day]['scale'], dtype=tf.float32),
+                            0, tf.float32.max),
+                        bijector=tfp.bijectors.Invert(
+                            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                    )
+                )
+                self.prior_distros[Comp.I.value][vax_status]['warmup_I'].append(
+                    tfp.distributions.TransformedDistribution(
+                        tfp.distributions.TruncatedNormal(
+                            tf.cast(warmup_I_params[vax_status]['prior'][day]['loc'], dtype=tf.float32),
+                            tf.cast(warmup_I_params[vax_status]['prior'][day]['scale'], dtype=tf.float32),
+                            0, tf.float32.max),
+                        bijector=tfp.bijectors.Invert(
+                            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                    )
+                )
+                self.prior_distros[Comp.V.value][vax_status]['warmup_V'].append(
+                    tfp.distributions.TransformedDistribution(
+                        tfp.distributions.TruncatedNormal(
+                            tf.cast(warmup_V_params[vax_status]['prior'][day]['loc'], dtype=tf.float32),
+                            tf.cast(warmup_V_params[vax_status]['prior'][day]['scale'], dtype=tf.float32),
+                            0, tf.float32.max),
+                        bijector=tfp.bijectors.Invert(
+                            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                    )
+                )
 
         return
 
@@ -414,8 +707,20 @@ class CovidModel(tf.keras.Model):
         self.rho_G_params = {}
         self.lambda_G_params = {}
         self.nu_G_params = {}
+        self.rho_I_params = {}
+        self.lambda_I_params = {}
+        self.nu_I_params = {}
+        self.rho_V_params = {}
+        self.lambda_V_params = {}
+        self.nu_V_params = {}
+        self.rho_D_params = {}
+        self.lambda_D_params = {}
+        self.nu_D_params = {}
         self.warmup_A_params = {}
         self.warmup_M_params = {}
+        self.warmup_G_params = {}
+        self.warmup_I_params = {}
+        self.warmup_V_params = {}
 
         self.T_serial_params[Vax.total.value] = {}
         self.epsilon_params[Vax.total.value] = {}
@@ -438,11 +743,26 @@ class CovidModel(tf.keras.Model):
             self.rho_G_params[vax_status] = {}
             self.lambda_G_params[vax_status] = {}
             self.nu_G_params[vax_status] = {}
+            self.rho_I_params[vax_status] = {}
+            self.lambda_I_params[vax_status] = {}
+            self.nu_I_params[vax_status] = {}
+            self.rho_V_params[vax_status] = {}
+            self.lambda_V_params[vax_status] = {}
+            self.nu_V_params[vax_status] = {}
+            self.rho_D_params[vax_status] = {}
+            self.lambda_D_params[vax_status] = {}
+            self.nu_D_params[vax_status] = {}
             self.warmup_A_params[vax_status] = []
             self.warmup_M_params[vax_status] = []
+            self.warmup_G_params[vax_status] = []
+            self.warmup_I_params[vax_status] = []
+            self.warmup_V_params[vax_status] = []
             for day in range(self.transition_window):
                 self.warmup_A_params[vax_status].append({})
                 self.warmup_M_params[vax_status].append({})
+                self.warmup_G_params[vax_status].append({})
+                self.warmup_I_params[vax_status].append({})
+                self.warmup_V_params[vax_status].append({})
 
             self.rho_M_params[vax_status]['loc'] = self.unconstrained_rho_M[vax_status]['loc']
             self.rho_M_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_rho_M[vax_status]['scale'])
@@ -462,6 +782,36 @@ class CovidModel(tf.keras.Model):
             self.nu_G_params[vax_status]['loc'] = self.unconstrained_nu_G[vax_status]['loc']
             self.nu_G_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_nu_G[vax_status]['scale'])
 
+            self.rho_I_params[vax_status]['loc'] = self.unconstrained_rho_I[vax_status]['loc']
+            self.rho_I_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_rho_I[vax_status]['scale'])
+
+            self.lambda_I_params[vax_status]['loc'] = self.unconstrained_lambda_I[vax_status]['loc']
+            self.lambda_I_params[vax_status]['scale'] = tf.math.softplus(
+                self.unconstrained_lambda_I[vax_status]['scale'])
+
+            self.nu_I_params[vax_status]['loc'] = self.unconstrained_nu_I[vax_status]['loc']
+            self.nu_I_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_nu_I[vax_status]['scale'])
+
+            self.rho_V_params[vax_status]['loc'] = self.unconstrained_rho_V[vax_status]['loc']
+            self.rho_V_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_rho_V[vax_status]['scale'])
+
+            self.lambda_V_params[vax_status]['loc'] = self.unconstrained_lambda_V[vax_status]['loc']
+            self.lambda_V_params[vax_status]['scale'] = tf.math.softplus(
+                self.unconstrained_lambda_V[vax_status]['scale'])
+
+            self.nu_V_params[vax_status]['loc'] = self.unconstrained_nu_V[vax_status]['loc']
+            self.nu_V_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_nu_V[vax_status]['scale'])
+
+            self.rho_D_params[vax_status]['loc'] = self.unconstrained_rho_D[vax_status]['loc']
+            self.rho_D_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_rho_D[vax_status]['scale'])
+
+            self.lambda_D_params[vax_status]['loc'] = self.unconstrained_lambda_D[vax_status]['loc']
+            self.lambda_D_params[vax_status]['scale'] = tf.math.softplus(
+                self.unconstrained_lambda_D[vax_status]['scale'])
+
+            self.nu_D_params[vax_status]['loc'] = self.unconstrained_nu_D[vax_status]['loc']
+            self.nu_D_params[vax_status]['scale'] = tf.math.softplus(self.unconstrained_nu_D[vax_status]['scale'])
+
             for day in range(self.transition_window):
                 self.warmup_A_params[vax_status][day]['loc'] = \
                     self.unconstrained_warmup_A_params[vax_status][day]['loc']
@@ -472,6 +822,21 @@ class CovidModel(tf.keras.Model):
                     self.unconstrained_warmup_M_params[vax_status][day]['loc']
                 self.warmup_M_params[vax_status][day]['scale'] = \
                     tf.math.softplus(self.unconstrained_warmup_M_params[vax_status][day]['scale'])
+
+                self.warmup_G_params[vax_status][day]['loc'] = \
+                    self.unconstrained_warmup_G_params[vax_status][day]['loc']
+                self.warmup_G_params[vax_status][day]['scale'] = \
+                    tf.math.softplus(self.unconstrained_warmup_G_params[vax_status][day]['scale'])
+
+                self.warmup_I_params[vax_status][day]['loc'] = \
+                    self.unconstrained_warmup_I_params[vax_status][day]['loc']
+                self.warmup_I_params[vax_status][day]['scale'] = \
+                    tf.math.softplus(self.unconstrained_warmup_I_params[vax_status][day]['scale'])
+
+                self.warmup_V_params[vax_status][day]['loc'] = \
+                    self.unconstrained_warmup_V_params[vax_status][day]['loc']
+                self.warmup_V_params[vax_status][day]['scale'] = \
+                    tf.math.softplus(self.unconstrained_warmup_V_params[vax_status][day]['scale'])
 
         return
 
@@ -498,6 +863,16 @@ class CovidModel(tf.keras.Model):
         self.rho_G_samples_constrained = {}
         self.rho_G_probs = {}
 
+        self.rho_I_samples = {}
+        self.rho_I_samples_constrained = {}
+        self.rho_I_probs = {}
+        self.rho_V_samples = {}
+        self.rho_V_samples_constrained = {}
+        self.rho_V_probs = {}
+        self.rho_D_samples = {}
+        self.rho_D_samples_constrained = {}
+        self.rho_D_probs = {}
+
         self.lambda_M_samples = {}
         self.lambda_M_samples_constrained = {}
         self.lambda_M_probs = {}
@@ -505,6 +880,15 @@ class CovidModel(tf.keras.Model):
         self.lambda_G_samples = {}
         self.lambda_G_samples_constrained = {}
         self.lambda_G_probs = {}
+        self.lambda_I_samples = {}
+        self.lambda_I_samples_constrained = {}
+        self.lambda_I_probs = {}
+        self.lambda_V_samples = {}
+        self.lambda_V_samples_constrained = {}
+        self.lambda_V_probs = {}
+        self.lambda_D_samples = {}
+        self.lambda_D_samples_constrained = {}
+        self.lambda_D_probs = {}
 
         self.nu_M_samples = {}
         self.nu_M_samples_constrained = {}
@@ -513,6 +897,15 @@ class CovidModel(tf.keras.Model):
         self.nu_G_samples = {}
         self.nu_G_samples_constrained = {}
         self.nu_G_probs = {}
+        self.nu_I_samples = {}
+        self.nu_I_samples_constrained = {}
+        self.nu_I_probs = {}
+        self.nu_V_samples = {}
+        self.nu_V_samples_constrained = {}
+        self.nu_V_probs = {}
+        self.nu_D_samples = {}
+        self.nu_D_samples_constrained = {}
+        self.nu_D_probs = {}
 
         self.warmup_A_samples = {}
         self.warmup_A_samples_constrained = {}
@@ -521,16 +914,22 @@ class CovidModel(tf.keras.Model):
         self.warmup_M_samples = {}
         self.warmup_M_samples_constrained = {}
         self.warmup_M_probs = {}
+        self.warmup_G_samples = {}
+        self.warmup_G_samples_constrained = {}
+        self.warmup_G_probs = {}
+        self.warmup_I_samples = {}
+        self.warmup_I_samples_constrained = {}
+        self.warmup_I_probs = {}
+        self.warmup_V_samples = {}
+        self.warmup_V_samples_constrained = {}
+        self.warmup_V_probs = {}
         
         self.pi_M_samples = {}
         self.pi_G_samples = {}
+        self.pi_I_samples = {}
+        self.pi_V_samples = {}
+        self.pi_D_samples = {}
 
-        self.warmup_A_samples = {}
-        self.warmup_A_samples_constrained = {}
-        self.warmup_A_probs = {}
-        self.warmup_M_samples = {}
-        self.warmup_M_samples_constrained = {}
-        self.warmup_M_probs = {}
 
         T_serial_noise = tf.random.normal((self.posterior_samples,))
         self.T_serial_samples[Vax.total.value] = self.T_serial_params[Vax.total.value]['loc'] + \
@@ -598,6 +997,36 @@ class CovidModel(tf.keras.Model):
 
             self.rho_G_probs[vax_status] = rho_G_variational_posterior.log_prob(self.rho_G_samples[vax_status])
 
+            rho_I_noise = tf.random.normal((self.posterior_samples,))
+            self.rho_I_samples[vax_status] = self.rho_I_params[vax_status]['loc'] + \
+                                             self.rho_I_params[vax_status]['scale'] * rho_I_noise
+            self.rho_I_samples_constrained[vax_status] = tfp.bijectors.Sigmoid().forward(self.rho_I_samples[vax_status])
+
+            rho_I_variational_posterior = tfp.distributions.Normal(self.rho_I_params[vax_status]['loc'],
+                                                                   self.rho_I_params[vax_status]['scale'])
+
+            self.rho_I_probs[vax_status] = rho_I_variational_posterior.log_prob(self.rho_I_samples[vax_status])
+
+            rho_V_noise = tf.random.normal((self.posterior_samples,))
+            self.rho_V_samples[vax_status] = self.rho_V_params[vax_status]['loc'] + \
+                                             self.rho_V_params[vax_status]['scale'] * rho_V_noise
+            self.rho_V_samples_constrained[vax_status] = tfp.bijectors.Sigmoid().forward(self.rho_V_samples[vax_status])
+
+            rho_V_variational_posterior = tfp.distributions.Normal(self.rho_V_params[vax_status]['loc'],
+                                                                   self.rho_V_params[vax_status]['scale'])
+
+            self.rho_V_probs[vax_status] = rho_V_variational_posterior.log_prob(self.rho_V_samples[vax_status])
+
+            rho_D_noise = tf.random.normal((self.posterior_samples,))
+            self.rho_D_samples[vax_status] = self.rho_D_params[vax_status]['loc'] + \
+                                             self.rho_D_params[vax_status]['scale'] * rho_D_noise
+            self.rho_D_samples_constrained[vax_status] = tfp.bijectors.Sigmoid().forward(self.rho_D_samples[vax_status])
+
+            rho_D_variational_posterior = tfp.distributions.Normal(self.rho_D_params[vax_status]['loc'],
+                                                                   self.rho_D_params[vax_status]['scale'])
+
+            self.rho_D_probs[vax_status] = rho_D_variational_posterior.log_prob(self.rho_D_samples[vax_status])
+
             lambda_M_noise = tf.random.normal((self.posterior_samples,))
             self.lambda_M_samples[vax_status] = self.lambda_M_params[vax_status]['loc'] + \
                                              self.lambda_M_params[vax_status]['scale'] * lambda_M_noise
@@ -618,6 +1047,39 @@ class CovidModel(tf.keras.Model):
 
             self.lambda_G_probs[vax_status] = lambda_G_variational_posterior.log_prob(self.lambda_G_samples[vax_status])
 
+            lambda_I_noise = tf.random.normal((self.posterior_samples,))
+            self.lambda_I_samples[vax_status] = self.lambda_I_params[vax_status]['loc'] + \
+                                                self.lambda_I_params[vax_status]['scale'] * lambda_I_noise
+            self.lambda_I_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(
+                self.lambda_I_samples[vax_status])
+
+            lambda_I_variational_posterior = tfp.distributions.Normal(self.lambda_I_params[vax_status]['loc'],
+                                                                      self.lambda_I_params[vax_status]['scale'])
+
+            self.lambda_I_probs[vax_status] = lambda_I_variational_posterior.log_prob(self.lambda_I_samples[vax_status])
+
+            lambda_V_noise = tf.random.normal((self.posterior_samples,))
+            self.lambda_V_samples[vax_status] = self.lambda_V_params[vax_status]['loc'] + \
+                                                self.lambda_V_params[vax_status]['scale'] * lambda_V_noise
+            self.lambda_V_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(
+                self.lambda_V_samples[vax_status])
+
+            lambda_V_variational_posterior = tfp.distributions.Normal(self.lambda_V_params[vax_status]['loc'],
+                                                                      self.lambda_V_params[vax_status]['scale'])
+
+            self.lambda_V_probs[vax_status] = lambda_V_variational_posterior.log_prob(self.lambda_V_samples[vax_status])
+
+            lambda_D_noise = tf.random.normal((self.posterior_samples,))
+            self.lambda_D_samples[vax_status] = self.lambda_D_params[vax_status]['loc'] + \
+                                                self.lambda_D_params[vax_status]['scale'] * lambda_D_noise
+            self.lambda_D_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(
+                self.lambda_D_samples[vax_status])
+
+            lambda_D_variational_posterior = tfp.distributions.Normal(self.lambda_D_params[vax_status]['loc'],
+                                                                      self.lambda_D_params[vax_status]['scale'])
+
+            self.lambda_D_probs[vax_status] = lambda_D_variational_posterior.log_prob(self.lambda_D_samples[vax_status])
+
             nu_M_noise = tf.random.normal((self.posterior_samples,))
             self.nu_M_samples[vax_status] = self.nu_M_params[vax_status]['loc'] + \
                                              self.nu_M_params[vax_status]['scale'] * nu_M_noise
@@ -637,6 +1099,38 @@ class CovidModel(tf.keras.Model):
                                                                    self.nu_G_params[vax_status]['scale'])
 
             self.nu_G_probs[vax_status] = nu_G_variational_posterior.log_prob(self.nu_G_samples[vax_status])
+
+            nu_I_noise = tf.random.normal((self.posterior_samples,))
+            self.nu_I_samples[vax_status] = self.nu_I_params[vax_status]['loc'] + \
+                                            self.nu_I_params[vax_status]['scale'] * nu_I_noise
+            self.nu_I_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_I_samples[vax_status])
+
+            nu_I_variational_posterior = tfp.distributions.Normal(self.nu_I_params[vax_status]['loc'],
+                                                                  self.nu_I_params[vax_status]['scale'])
+
+            self.nu_I_probs[vax_status] = nu_I_variational_posterior.log_prob(self.nu_I_samples[vax_status])
+
+            nu_V_noise = tf.random.normal((self.posterior_samples,))
+            self.nu_V_samples[vax_status] = self.nu_V_params[vax_status]['loc'] + \
+                                            self.nu_V_params[vax_status]['scale'] * nu_V_noise
+            self.nu_V_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_V_samples[vax_status])
+
+            nu_V_variational_posterior = tfp.distributions.Normal(self.nu_V_params[vax_status]['loc'],
+                                                                  self.nu_V_params[vax_status]['scale'])
+
+            self.nu_V_probs[vax_status] = nu_V_variational_posterior.log_prob(self.nu_V_samples[vax_status])
+
+            nu_D_noise = tf.random.normal((self.posterior_samples,))
+            self.nu_D_samples[vax_status] = self.nu_D_params[vax_status]['loc'] + \
+                                            self.nu_D_params[vax_status]['scale'] * nu_D_noise
+            self.nu_D_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_D_samples[vax_status])
+
+            nu_D_variational_posterior = tfp.distributions.Normal(self.nu_D_params[vax_status]['loc'],
+                                                                  self.nu_D_params[vax_status]['scale'])
+
+            self.nu_D_probs[vax_status] = nu_D_variational_posterior.log_prob(self.nu_D_samples[vax_status])
+            
+            
     
             self.warmup_A_samples[vax_status] = []
             self.warmup_A_samples_constrained[vax_status] = []
@@ -644,6 +1138,15 @@ class CovidModel(tf.keras.Model):
             self.warmup_M_samples[vax_status] = []
             self.warmup_M_samples_constrained[vax_status] = []
             self.warmup_M_probs[vax_status] = []
+            self.warmup_G_samples[vax_status] = []
+            self.warmup_G_samples_constrained[vax_status] = []
+            self.warmup_G_probs[vax_status] = []
+            self.warmup_I_samples[vax_status] = []
+            self.warmup_I_samples_constrained[vax_status] = []
+            self.warmup_I_probs[vax_status] = []
+            self.warmup_D_samples[vax_status] = []
+            self.warmup_D_samples_constrained[vax_status] = []
+            self.warmup_D_probs[vax_status] = []
             
             for day in range(self.transition_window):
                 warmup_A_noise = tf.random.normal((self.posterior_samples,))
@@ -668,12 +1171,63 @@ class CovidModel(tf.keras.Model):
                                                                               'scale'])
     
                 self.warmup_M_probs[vax_status].append(warmup_M_variational_posterior.log_prob(self.warmup_M_samples[vax_status][-1]))
+
+                warmup_G_noise = tf.random.normal((self.posterior_samples,))
+                self.warmup_G_samples[vax_status].append(self.warmup_G_params[vax_status][day]['loc'] +
+                                                         self.warmup_G_params[vax_status][day]['scale'] *
+                                                         warmup_G_noise)
+                self.warmup_G_samples_constrained[vax_status].append(
+                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                        self.warmup_G_samples[vax_status][-1]))
+
+                warmup_G_variational_posterior = tfp.distributions.Normal(self.warmup_G_params[vax_status][day]['loc'],
+                                                                          self.warmup_G_params[vax_status][day][
+                                                                              'scale'])
+
+                self.warmup_G_probs[vax_status].append(
+                    warmup_G_variational_posterior.log_prob(self.warmup_G_samples[vax_status][-1]))
+
+                warmup_I_noise = tf.random.normal((self.posterior_samples,))
+                self.warmup_I_samples[vax_status].append(self.warmup_I_params[vax_status][day]['loc'] +
+                                                         self.warmup_I_params[vax_status][day]['scale'] *
+                                                         warmup_I_noise)
+                self.warmup_I_samples_constrained[vax_status].append(
+                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                        self.warmup_I_samples[vax_status][-1]))
+
+                warmup_I_variational_posterior = tfp.distributions.Normal(self.warmup_I_params[vax_status][day]['loc'],
+                                                                          self.warmup_I_params[vax_status][day][
+                                                                              'scale'])
+
+                self.warmup_I_probs[vax_status].append(
+                    warmup_I_variational_posterior.log_prob(self.warmup_I_samples[vax_status][-1]))
+
+                warmup_V_noise = tf.random.normal((self.posterior_samples,))
+                self.warmup_V_samples[vax_status].append(self.warmup_V_params[vax_status][day]['loc'] +
+                                                         self.warmup_V_params[vax_status][day]['scale'] *
+                                                         warmup_V_noise)
+                self.warmup_V_samples_constrained[vax_status].append(
+                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                        self.warmup_V_samples[vax_status][-1]))
+
+                warmup_V_variational_posterior = tfp.distributions.Normal(self.warmup_V_params[vax_status][day]['loc'],
+                                                                          self.warmup_V_params[vax_status][day][
+                                                                              'scale'])
+
+                self.warmup_V_probs[vax_status].append(
+                    warmup_V_variational_posterior.log_prob(self.warmup_V_samples[vax_status][-1]))
     
             poisson_M_dist_samples = [tfp.distributions.Poisson(rate=lambda_M)
                                       for lambda_M in self.lambda_M_samples_constrained[vax_status]]
     
             poisson_G_dist_samples = [tfp.distributions.Poisson(rate=lambda_G)
                                       for lambda_G in self.lambda_G_samples_constrained[vax_status]]
+            poisson_I_dist_samples = [tfp.distributions.Poisson(rate=lambda_I)
+                                      for lambda_I in self.lambda_I_samples_constrained[vax_status]]
+            poisson_V_dist_samples = [tfp.distributions.Poisson(rate=lambda_V)
+                                      for lambda_V in self.lambda_V_samples_constrained[vax_status]]
+            poisson_D_dist_samples = [tfp.distributions.Poisson(rate=lambda_D)
+                                      for lambda_D in self.lambda_D_samples_constrained[vax_status]]
     
     
             self.pi_M_samples[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window, clear_after_read=False,
@@ -681,6 +1235,15 @@ class CovidModel(tf.keras.Model):
     
             self.pi_G_samples[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window, clear_after_read=False,
                                                name='pi_G_samples')
+            self.pi_I_samples[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
+                                                           clear_after_read=False,
+                                                           name='pi_I_samples')
+            self.pi_V_samples[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
+                                                           clear_after_read=False,
+                                                           name='pi_V_samples')
+            self.pi_D_samples[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
+                                                           clear_after_read=False,
+                                                           name='pi_D_samples')
     
             for j in range(self.transition_window):
                 self.pi_M_samples[vax_status] = self.pi_M_samples[vax_status].write(j, np.array([dist.log_prob(j + 1) for dist in poisson_M_dist_samples]) /
@@ -689,12 +1252,30 @@ class CovidModel(tf.keras.Model):
                 self.pi_G_samples[vax_status] = self.pi_G_samples[vax_status].write(j, np.array(
                     [dist.log_prob(j + 1) for dist in poisson_G_dist_samples]) /
                                                             self.nu_G_samples_constrained[vax_status])
+                self.pi_I_samples[vax_status] = self.pi_I_samples[vax_status].write(j, np.array(
+                    [dist.log_prob(j + 1) for dist in poisson_I_dist_samples]) /
+                                                                                    self.nu_I_samples_constrained[
+                                                                                        vax_status])
+                self.pi_V_samples[vax_status] = self.pi_V_samples[vax_status].write(j, np.array(
+                    [dist.log_prob(j + 1) for dist in poisson_V_dist_samples]) /
+                                                                                    self.nu_V_samples_constrained[
+                                                                                        vax_status])
+                self.pi_D_samples[vax_status] = self.pi_D_samples[vax_status].write(j, np.array(
+                    [dist.log_prob(j + 1) for dist in poisson_D_dist_samples]) /
+                                                                                    self.nu_D_samples_constrained[
+                                                                                        vax_status])
     
             self.pi_M_samples[vax_status] = self.pi_M_samples[vax_status].stack()
             self.pi_G_samples[vax_status] = self.pi_G_samples[vax_status].stack()
+            self.pi_I_samples[vax_status] = self.pi_I_samples[vax_status].stack()
+            self.pi_V_samples[vax_status] = self.pi_V_samples[vax_status].stack()
+            self.pi_D_samples[vax_status] = self.pi_D_samples[vax_status].stack()
             # Softmax so it sums to 1
             self.pi_M_samples[vax_status] = tf.nn.softmax(self.pi_M_samples[vax_status], axis=0)
             self.pi_G_samples[vax_status] = tf.nn.softmax(self.pi_G_samples[vax_status], axis=0)
+            self.pi_I_samples[vax_status] = tf.nn.softmax(self.pi_I_samples[vax_status], axis=0)
+            self.pi_V_samples[vax_status] = tf.nn.softmax(self.pi_V_samples[vax_status], axis=0)
+            self.pi_D_samples[vax_status] = tf.nn.softmax(self.pi_D_samples[vax_status], axis=0)
 
         return
 
@@ -750,6 +1331,34 @@ class CovidModel(tf.keras.Model):
             tf.reduce_mean(rho_G_prior_probs[status.value] - rho_G_posterior_probs[status.value], axis=-1))
                                              for status in self.vax_statuses]))
 
+        rho_I_prior_probs = [
+            self.prior_distros[Comp.I.value][status.value]['rho_I'].log_prob(
+                self.rho_I_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.rho_I_samples[status.value]) for status in
+            self.vax_statuses]
+        rho_I_posterior_probs = self.rho_I_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(rho_I_prior_probs[status.value] - rho_I_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+        rho_V_prior_probs = [
+            self.prior_distros[Comp.V.value][status.value]['rho_V'].log_prob(
+                self.rho_V_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.rho_V_samples[status.value]) for status in
+            self.vax_statuses]
+        rho_V_posterior_probs = self.rho_V_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(rho_V_prior_probs[status.value] - rho_V_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+        rho_D_prior_probs = [
+            self.prior_distros[Comp.D.value][status.value]['rho_D'].log_prob(
+                self.rho_D_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.rho_D_samples[status.value]) for status in
+            self.vax_statuses]
+        rho_D_posterior_probs = self.rho_D_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(rho_D_prior_probs[status.value] - rho_D_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+
         lambda_M_prior_probs = [
             self.prior_distros[Comp.M.value][status.value]['lambda_M'].log_prob(self.lambda_M_samples_constrained[status.value]) + \
             tfp.bijectors.Softplus().forward_log_det_jacobian(self.lambda_M_samples[status.value]) for status in self.vax_statuses]
@@ -764,6 +1373,33 @@ class CovidModel(tf.keras.Model):
         lambda_G_posterior_probs = self.lambda_G_probs
         self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
             tf.reduce_mean(lambda_G_prior_probs[status.value] - lambda_G_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+        lambda_I_prior_probs = [
+            self.prior_distros[Comp.I.value][status.value]['lambda_I'].log_prob(
+                self.lambda_I_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.lambda_I_samples[status.value]) for status in
+            self.vax_statuses]
+        lambda_I_posterior_probs = self.lambda_I_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(lambda_I_prior_probs[status.value] - lambda_I_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+        lambda_V_prior_probs = [
+            self.prior_distros[Comp.V.value][status.value]['lambda_V'].log_prob(
+                self.lambda_V_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.lambda_V_samples[status.value]) for status in
+            self.vax_statuses]
+        lambda_V_posterior_probs = self.lambda_V_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(lambda_V_prior_probs[status.value] - lambda_V_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+        lambda_D_prior_probs = [
+            self.prior_distros[Comp.D.value][status.value]['lambda_D'].log_prob(
+                self.lambda_D_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.lambda_D_samples[status.value]) for status in
+            self.vax_statuses]
+        lambda_D_posterior_probs = self.lambda_D_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(lambda_D_prior_probs[status.value] - lambda_D_posterior_probs[status.value], axis=-1))
                                              for status in self.vax_statuses]))
 
         nu_M_prior_probs = [
@@ -781,6 +1417,33 @@ class CovidModel(tf.keras.Model):
         self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
             tf.reduce_mean(nu_G_prior_probs[status.value] - nu_G_posterior_probs[status.value], axis=-1))
                                              for status in self.vax_statuses]))
+        nu_I_prior_probs = [
+            self.prior_distros[Comp.I.value][status.value]['nu_I'].log_prob(
+                self.nu_I_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.nu_I_samples[status.value]) for status in
+            self.vax_statuses]
+        nu_I_posterior_probs = self.nu_I_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(nu_I_prior_probs[status.value] - nu_I_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+        nu_V_prior_probs = [
+            self.prior_distros[Comp.V.value][status.value]['nu_V'].log_prob(
+                self.nu_V_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.nu_V_samples[status.value]) for status in
+            self.vax_statuses]
+        nu_V_posterior_probs = self.nu_V_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(nu_V_prior_probs[status.value] - nu_V_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
+        nu_D_prior_probs = [
+            self.prior_distros[Comp.D.value][status.value]['nu_D'].log_prob(
+                self.nu_D_samples_constrained[status.value]) + \
+            tfp.bijectors.Softplus().forward_log_det_jacobian(self.nu_D_samples[status.value]) for status in
+            self.vax_statuses]
+        nu_D_posterior_probs = self.nu_D_probs
+        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
+            tf.reduce_mean(nu_D_prior_probs[status.value] - nu_D_posterior_probs[status.value], axis=-1))
+                                             for status in self.vax_statuses]))
 
         # open bug about adding loss inisde a for loop: https://github.com/tensorflow/tensorflow/issues/44590
         self.add_loss(lambda:  tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
@@ -794,6 +1457,27 @@ class CovidModel(tf.keras.Model):
                 self.warmup_M_samples[status.value][day]) + \
             tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(self.warmup_M_samples[status.value][day])
             - self.warmup_M_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
+                                             self.vax_statuses]))
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+            self.prior_distros[Comp.G.value][status.value]['warmup_G'][day].log_prob(
+                self.warmup_G_samples[status.value][day]) + \
+            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+                self.warmup_G_samples[status.value][day])
+            - self.warmup_G_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
+                                             self.vax_statuses]))
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+            self.prior_distros[Comp.I.value][status.value]['warmup_I'][day].log_prob(
+                self.warmup_I_samples[status.value][day]) + \
+            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+                self.warmup_I_samples[status.value][day])
+            - self.warmup_I_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
+                                             self.vax_statuses]))
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+            self.prior_distros[Comp.V.value][status.value]['warmup_V'][day].log_prob(
+                self.warmup_V_samples[status.value][day]) + \
+            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+                self.warmup_V_samples[status.value][day])
+            - self.warmup_V_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
 
         if debug:
@@ -814,8 +1498,14 @@ class CovidModel(tf.keras.Model):
             forecasted_fluxes[Comp.A.value][vax_status].mark_used()
             forecasted_fluxes[Comp.M.value][vax_status].mark_used()
             forecasted_fluxes[Comp.G.value][vax_status].mark_used()
+            forecasted_fluxes[Comp.I.value][vax_status].mark_used()
+            forecasted_fluxes[Comp.V.value][vax_status].mark_used()
+            forecasted_fluxes[Comp.D.value][vax_status].mark_used()
             self.previously_asymptomatic[vax_status].mark_used()
             self.previously_mild[vax_status].mark_used()
+            self.previously_gen[vax_status].mark_used()
+            self.previously_icu[vax_status].mark_used()
+            self.previously_vent[vax_status].mark_used()
 
         return
 
