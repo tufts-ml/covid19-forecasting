@@ -51,10 +51,18 @@ def read_data(data_dir='./data', covid_estim_date='20210901', hhs_date='20210903
     hhs = hhs[hhs['state'] == state_abbrev]
     assert len(hhs) == len(hhs.date.unique())
 
+    hhs.loc[:, 'date'] = pd.to_datetime(hhs['date'])
+
+    hhs = hhs.rename(columns={'adult_icu_bed_covid_utilization_numerator': 'icu_count',
+                              'inpatient_beds_used_covid': 'general_ward_count'})
+
     # we have previous day admissions, so add 1 to date
-    hhs.loc[:, 'date'] = pd.to_datetime(hhs['date']) + pd.DateOffset(days=1)
+    gen = hhs.copy()
+    gen.loc[:, 'date'] = gen['date'] + pd.DateOffset(days=1)
+    gen = gen.set_index('date').sort_index()
+    gen = gen.rename(columns={'previous_day_admission_adult_covid_confirmed': 'general_ward_in'})
+
     hhs = hhs.set_index('date').sort_index()
-    hhs = hhs.rename(columns={'previous_day_admission_adult_covid_confirmed': 'general_ward'})
 
     owid = pd.read_csv(owid_path)
     owid = owid[owid['location'] == state]
@@ -65,15 +73,16 @@ def read_data(data_dir='./data', covid_estim_date='20210901', hhs_date='20210903
         method='linear')
     owid['vax_pct'] = owid[['people_fully_vaccinated_per_hundred']] * 0.01
 
-    df = pd.merge(hhs[['general_ward']],
+    df = pd.merge(hhs[['icu_count', 'general_ward_count', 'deaths_covid']],
                   covid_estim[['asymp', 'extreme', 'mild', 'Rt']],
                   how='outer',
-                  left_index=True, right_index=True).merge(owid[['vax_pct']], how='outer', left_index=True,
-                                                           right_index=True)
+                  left_index=True, right_index=True).merge(
+        gen[['general_ward_in']], how='outer', left_index=True, right_index=True
+    ).merge(owid[['vax_pct']], how='outer', left_index=True, right_index=True)
 
     return df
 
-def create_warmup(df, warmup_start, warmup_end, vax_asymp_risk, vax_mild_risk, vax_extreme_risk):
+def create_warmup(df, warmup_start, warmup_end, vax_asymp_risk, vax_mild_risk, vax_gen_risk, vax_icu_risk):
     """Create arrays of warmup data using a dataframe with a datetime index. Incorrectly splits on vax. status.
 
     Args:
@@ -92,7 +101,9 @@ def create_warmup(df, warmup_start, warmup_end, vax_asymp_risk, vax_mild_risk, v
     warmup_infected = {}
     warmup_asymp = {}
     warmup_mild = {}
-    warmup_extreme = {}
+    warmup_gen = {}
+    count_gen = {}
+    count_icu = {}
 
     not_vaxxed = 0
     vaxxed = 1
@@ -108,9 +119,17 @@ def create_warmup(df, warmup_start, warmup_end, vax_asymp_risk, vax_mild_risk, v
                            df.loc[warmup_start:warmup_end, 'mild']).values
     warmup_mild[not_vaxxed] = df.loc[warmup_start:warmup_end, 'mild'].values - warmup_mild[vaxxed]
 
-    warmup_extreme[vaxxed] = (df.loc[warmup_start:warmup_end, 'vax_pct'] * (1 - vax_extreme_risk) * \
-                              df.loc[warmup_start:warmup_end, 'extreme']).values
-    warmup_extreme[not_vaxxed] = df.loc[warmup_start:warmup_end, 'extreme'].values - warmup_extreme[vaxxed]
+    warmup_gen[vaxxed] = (df.loc[warmup_start:warmup_end, 'vax_pct'] * (1 - vax_gen_risk) * \
+                              df.loc[warmup_start:warmup_end, 'general_ward_in']).values
+    warmup_gen[not_vaxxed] = df.loc[warmup_start:warmup_end, 'general_ward_in'].values - warmup_gen[vaxxed]
 
-    return warmup_asymp, warmup_mild, warmup_extreme
+    count_gen[vaxxed] = (df.loc[warmup_start, 'vax_pct'] * (1 - vax_gen_risk) * \
+                          df.loc[warmup_start, 'general_ward_count'])
+    count_gen[not_vaxxed] = df.loc[warmup_start, 'general_ward_count'] - count_gen[vaxxed]
+
+    count_icu[vaxxed] = (df.loc[warmup_start, 'vax_pct'] * (1 - vax_gen_risk) * \
+                         df.loc[warmup_start, 'icu_count'])
+    count_icu[not_vaxxed] = df.loc[warmup_start, 'icu_count'] - count_icu[vaxxed]
+
+    return warmup_asymp, warmup_mild, count_gen, count_icu
 
