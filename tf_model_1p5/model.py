@@ -136,6 +136,9 @@ class CovidModel(tf.keras.Model):
                 if day == 0:
                     prev_count_G[vax_status] = self.init_count_G_samples_constrained[vax_status]
                     prev_count_I[vax_status] = self.init_count_I_samples_constrained[vax_status]
+                else:
+                    prev_count_G[vax_status] = forecasted_counts[Comp.G.value][vax_status].read(day-1)
+                    prev_count_I[vax_status] = forecasted_counts[Comp.I.value][vax_status].read(day-1)
 
                 for j in range(self.transition_window):
 
@@ -780,7 +783,7 @@ class CovidModel(tf.keras.Model):
                             tf.cast(day * warmup_A_params[vax_status]['prior']['slope'],dtype=tf.float32),
                             tf.cast(warmup_A_params[vax_status]['prior']['scale'],dtype=tf.float32),
                             0, tf.float32.max),
-                        bijector=tfp.bijectors.Invert(tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                        bijector=tfp.bijectors.Invert(tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                     )
                 )
                 self.prior_distros[Comp.M.value][vax_status]['warmup_M'].append(
@@ -790,7 +793,7 @@ class CovidModel(tf.keras.Model):
                             tf.cast(day * warmup_M_params[vax_status]['prior']['slope'], dtype=tf.float32),
                             tf.cast(warmup_M_params[vax_status]['prior']['scale'], dtype=tf.float32),
                             0, tf.float32.max),
-                        bijector=tfp.bijectors.Invert(tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                        bijector=tfp.bijectors.Invert(tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                     )
                 )
                 self.prior_distros[Comp.G.value][vax_status]['warmup_G'].append(
@@ -801,7 +804,7 @@ class CovidModel(tf.keras.Model):
                             tf.cast(warmup_G_params[vax_status]['prior']['scale'], dtype=tf.float32),
                             0, tf.float32.max),
                         bijector=tfp.bijectors.Invert(
-                            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                     )
                 )
                 self.prior_distros[Comp.GR.value][vax_status]['warmup_GR'].append(
@@ -812,7 +815,7 @@ class CovidModel(tf.keras.Model):
                             tf.cast(warmup_GR_params[vax_status]['prior']['scale'], dtype=tf.float32),
                             0, tf.float32.max),
                         bijector=tfp.bijectors.Invert(
-                            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                     )
                 )
                 self.prior_distros[Comp.I.value][vax_status]['warmup_I'].append(
@@ -823,7 +826,7 @@ class CovidModel(tf.keras.Model):
                             tf.cast(warmup_I_params[vax_status]['prior']['scale'], dtype=tf.float32),
                             0, tf.float32.max),
                         bijector=tfp.bijectors.Invert(
-                            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                     )
                 )
                 self.prior_distros[Comp.IR.value][vax_status]['warmup_IR'].append(
@@ -834,7 +837,7 @@ class CovidModel(tf.keras.Model):
                             tf.cast(warmup_IR_params[vax_status]['prior']['scale'], dtype=tf.float32),
                             0, tf.float32.max),
                         bijector=tfp.bijectors.Invert(
-                            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                     )
                 )
             self.prior_distros[Comp.G.value][vax_status]['init_count_G'] = (
@@ -844,7 +847,7 @@ class CovidModel(tf.keras.Model):
                         tf.cast(init_count_G[vax_status]['prior']['scale'], dtype=tf.float32),
                         0, tf.float32.max),
                     bijector=tfp.bijectors.Invert(
-                        tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                        tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                 )
             )
             self.prior_distros[Comp.I.value][vax_status]['init_count_I'] = (
@@ -854,7 +857,7 @@ class CovidModel(tf.keras.Model):
                         tf.cast(init_count_I[vax_status]['prior']['scale'], dtype=tf.float32),
                         0, tf.float32.max),
                     bijector=tfp.bijectors.Invert(
-                        tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]))
+                        tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
                 )
             )
 
@@ -1379,7 +1382,7 @@ class CovidModel(tf.keras.Model):
                                                          self.warmup_A_params[vax_status]['intercept'] +
                                              self.warmup_A_params[vax_status]['scale'] *
                                              warmup_A_noise)
-                self.warmup_A_samples_constrained[vax_status].append(tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(self.warmup_A_samples[vax_status][-1]))
+                self.warmup_A_samples_constrained[vax_status].append(tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(self.warmup_A_samples[vax_status][-1]))
     
                 warmup_A_variational_posterior = tfp.distributions.Normal(self.warmup_A_params[vax_status]['slope'] * day +
                                                                           self.warmup_A_params[vax_status]['intercept'],
@@ -1393,7 +1396,7 @@ class CovidModel(tf.keras.Model):
                                                          self.warmup_M_params[vax_status]['scale'] *
                                                          warmup_M_noise)
                 self.warmup_M_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                         self.warmup_M_samples[vax_status][-1]))
 
                 warmup_M_variational_posterior = tfp.distributions.Normal(
@@ -1410,7 +1413,7 @@ class CovidModel(tf.keras.Model):
                                                          self.warmup_G_params[vax_status]['scale'] *
                                                          warmup_G_noise)
                 self.warmup_G_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                         self.warmup_G_samples[vax_status][-1]))
 
                 warmup_G_variational_posterior = tfp.distributions.Normal(
@@ -1427,7 +1430,7 @@ class CovidModel(tf.keras.Model):
                                                          self.warmup_GR_params[vax_status]['scale'] *
                                                          warmup_GR_noise)
                 self.warmup_GR_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                         self.warmup_GR_samples[vax_status][-1]))
 
                 warmup_GR_variational_posterior = tfp.distributions.Normal(
@@ -1444,7 +1447,7 @@ class CovidModel(tf.keras.Model):
                                                          self.warmup_I_params[vax_status]['scale'] *
                                                          warmup_I_noise)
                 self.warmup_I_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                         self.warmup_I_samples[vax_status][-1]))
 
                 warmup_I_variational_posterior = tfp.distributions.Normal(
@@ -1461,7 +1464,7 @@ class CovidModel(tf.keras.Model):
                                                          self.warmup_IR_params[vax_status]['scale'] *
                                                          warmup_IR_noise)
                 self.warmup_IR_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                         self.warmup_IR_samples[vax_status][-1]))
 
                 warmup_IR_variational_posterior = tfp.distributions.Normal(
@@ -1477,7 +1480,7 @@ class CovidModel(tf.keras.Model):
                                                      self.init_count_G_params[vax_status]['scale'] *
                                                      init_count_G_noise)
             self.init_count_G_samples_constrained[vax_status] = (
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.init_count_G_samples[vax_status]))
 
             init_count_G_variational_posterior = tfp.distributions.Normal(self.init_count_G_params[vax_status]['loc'],
@@ -1492,7 +1495,7 @@ class CovidModel(tf.keras.Model):
                                                      self.init_count_I_params[vax_status]['scale'] *
                                                      init_count_I_noise)
             self.init_count_I_samples_constrained[vax_status] = (
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.init_count_I_samples[vax_status]))
 
             init_count_I_variational_posterior = tfp.distributions.Normal(self.init_count_I_params[vax_status]['loc'],
@@ -1766,8 +1769,8 @@ class CovidModel(tf.keras.Model):
         init_count_G_prior_probs = [
             self.prior_distros[Comp.G.value][status.value]['init_count_G'].log_prob(
                 self.init_count_G_samples[status.value]) + \
-            tfp.bijectors.Chain([tfp.bijectors.Softplus(), 
-                                 tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+            tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                 tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.init_count_G_samples[status.value]) for status in
             self.vax_statuses]
         init_count_G_posterior_probs = self.init_count_G_probs
@@ -1778,8 +1781,8 @@ class CovidModel(tf.keras.Model):
         init_count_I_prior_probs = [
             self.prior_distros[Comp.I.value][status.value]['init_count_I'].log_prob(
                 self.init_count_I_samples[status.value]) + \
-            tfp.bijectors.Chain([tfp.bijectors.Softplus(),
-                                 tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+            tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                 tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.init_count_I_samples[status.value]) for status in
             self.vax_statuses]
         init_count_I_posterior_probs = self.init_count_I_probs
@@ -1792,40 +1795,40 @@ class CovidModel(tf.keras.Model):
         self.add_loss(lambda:  tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
                 self.prior_distros[Comp.A.value][status.value]['warmup_A'][day].log_prob(
                     self.warmup_A_samples[status.value][day]) + \
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(self.warmup_A_samples[status.value][day])
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(self.warmup_A_samples[status.value][day])
                 - self.warmup_A_probs[status.value][day],axis=-1)) for day in range(self.transition_window)])for status in self.vax_statuses]))
 
         self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.M.value][status.value]['warmup_M'][day].log_prob(
                 self.warmup_M_samples[status.value][day]) + \
-            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(self.warmup_M_samples[status.value][day])
+            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(self.warmup_M_samples[status.value][day])
             - self.warmup_M_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
         self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.G.value][status.value]['warmup_G'][day].log_prob(
                 self.warmup_G_samples[status.value][day]) + \
-            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.warmup_G_samples[status.value][day])
             - self.warmup_G_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
         self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.GR.value][status.value]['warmup_GR'][day].log_prob(
                 self.warmup_GR_samples[status.value][day]) + \
-            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.warmup_GR_samples[status.value][day])
             - self.warmup_GR_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
         self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.I.value][status.value]['warmup_I'][day].log_prob(
                 self.warmup_I_samples[status.value][day]) + \
-            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.warmup_I_samples[status.value][day])
             - self.warmup_I_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
         self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.IR.value][status.value]['warmup_IR'][day].log_prob(
                 self.warmup_IR_samples[status.value][day]) + \
-            tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward_log_det_jacobian(
+            tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.warmup_IR_samples[status.value][day])
             - self.warmup_IR_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
@@ -2023,63 +2026,63 @@ class VarLogCallback(tf.keras.callbacks.Callback):
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_D_bar[vax_status]['scale'])),
                               step=epoch)
 
-            tf.summary.scalar(f'warmup_A_mean_{vax_status}', data=tf.squeeze(tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(self.model.unconstrained_warmup_A_params[vax_status]['intercept'])), step=epoch)
+            tf.summary.scalar(f'warmup_A_mean_{vax_status}', data=tf.squeeze(tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(self.model.unconstrained_warmup_A_params[vax_status]['intercept'])), step=epoch)
             tf.summary.scalar(f'warmup_A_scale_{vax_status}',
-                              data=tf.squeeze(tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(self.model.unconstrained_warmup_A_params[vax_status]['scale'])), step=epoch)
+                              data=tf.squeeze(tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(self.model.unconstrained_warmup_A_params[vax_status]['scale'])), step=epoch)
             tf.summary.scalar(f'warmup_M_mean_{vax_status}', data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_warmup_M_params[vax_status]['intercept'])), step=epoch)
             tf.summary.scalar(f'warmup_M_scale_{vax_status}',
                               data=tf.squeeze(
-                                  tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                                       self.model.unconstrained_warmup_M_params[vax_status]['scale'])), step=epoch)
             tf.summary.scalar(f'warmup_G_mean_{vax_status}', data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_warmup_G_params[vax_status]['intercept'])), step=epoch)
             tf.summary.scalar(f'warmup_G_scale_{vax_status}',
                               data=tf.squeeze(
-                                  tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                                       self.model.unconstrained_warmup_G_params[vax_status]['scale'])), step=epoch)
             tf.summary.scalar(f'warmup_GR_mean_{vax_status}', data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_warmup_GR_params[vax_status]['intercept'])), step=epoch)
             tf.summary.scalar(f'warmup_GR_scale_{vax_status}',
                               data=tf.squeeze(
-                                  tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                                       self.model.unconstrained_warmup_GR_params[vax_status]['scale'])), step=epoch)
             tf.summary.scalar(f'warmup_I_mean_{vax_status}', data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_warmup_I_params[vax_status]['intercept'])), step=epoch)
             tf.summary.scalar(f'warmup_I_scale_{vax_status}',
                               data=tf.squeeze(
-                                  tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                                       self.model.unconstrained_warmup_I_params[vax_status]['scale'])), step=epoch)
             tf.summary.scalar(f'warmup_IR_mean_{vax_status}', data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_warmup_IR_params[vax_status]['intercept'])), step=epoch)
             tf.summary.scalar(f'warmup_IR_scale_{vax_status}',
                               data=tf.squeeze(
-                                  tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                                       self.model.unconstrained_warmup_IR_params[vax_status]['scale'])), step=epoch)
 
             tf.summary.scalar(f'init_count_G_mean_{vax_status}',
                               data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_init_count_G_params[vax_status]['loc'])),
                               step=epoch)
             tf.summary.scalar(f'init_count_G_scale_{vax_status}',
                               data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_init_count_G_params[vax_status]['scale'])),
                               step=epoch)
             tf.summary.scalar(f'init_count_I_mean_{vax_status}',
                               data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_init_count_I_params[vax_status]['loc'])),
                               step=epoch)
             tf.summary.scalar(f'init_count_I_scale_{vax_status}',
                               data=tf.squeeze(
-                tfp.bijectors.Chain([tfp.bijectors.Softplus(), tfp.bijectors.Scale(100)]).forward(
+                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
                     self.model.unconstrained_init_count_I_params[vax_status]['scale'])),
                               step=epoch)
 
