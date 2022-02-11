@@ -1869,9 +1869,9 @@ class CovidModel(tf.keras.Model):
 
 # Custom LogPoisson Probability Loss function
 def calc_poisson(inputs):
-    true_rate, predicted_rate = inputs
-    poisson = tfp.distributions.Poisson(rate=true_rate+1e-6)
-    return poisson.log_prob(predicted_rate)
+    predicted_rate, true_rate = inputs
+    poisson = tfp.distributions.Poisson(rate=predicted_rate+1e-6)
+    return poisson.log_prob(true_rate)
 
 
 class LogPoissonProb(tf.keras.losses.Loss):
