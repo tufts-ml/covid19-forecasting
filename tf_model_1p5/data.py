@@ -123,13 +123,13 @@ def create_warmup(df, warmup_start, warmup_end, vax_asymp_risk, vax_mild_risk, v
                               df.loc[warmup_start:warmup_end, 'general_ward_in']).values
     warmup_gen[not_vaxxed] = df.loc[warmup_start:warmup_end, 'general_ward_in'].values - warmup_gen[vaxxed]
 
-    count_gen[vaxxed] = (df.loc[warmup_start, 'vax_pct'] * (1 - vax_gen_risk) * \
-                          df.loc[warmup_start, 'general_ward_count'])
-    count_gen[not_vaxxed] = df.loc[warmup_start, 'general_ward_count'] - count_gen[vaxxed]
+    count_gen[vaxxed] = (df.loc[warmup_end, 'vax_pct'] * (1 - vax_gen_risk) * \
+                          df.loc[warmup_end, 'general_ward_count'])
+    count_gen[not_vaxxed] = df.loc[warmup_end, 'general_ward_count'] - count_gen[vaxxed]
 
-    count_icu[vaxxed] = (df.loc[warmup_start, 'vax_pct'] * (1 - vax_gen_risk) * \
-                         df.loc[warmup_start, 'icu_count'])
-    count_icu[not_vaxxed] = df.loc[warmup_start, 'icu_count'] - count_icu[vaxxed]
+    count_icu[vaxxed] = (df.loc[warmup_end, 'vax_pct'] * (1 - vax_gen_risk) * \
+                         df.loc[warmup_end, 'icu_count'])
+    count_icu[not_vaxxed] = df.loc[warmup_end, 'icu_count'] - count_icu[vaxxed]
 
     return warmup_asymp, warmup_mild, count_gen, count_icu
 
