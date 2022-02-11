@@ -144,12 +144,17 @@ class CovidModel(tf.keras.Model):
 
                     if day == 0 and j>0:
 
-                        prev_count_G[vax_status] = prev_count_G[vax_status] + \
-                                                   self.warmup_G_samples_constrained[vax_status][j] - \
-                                                   self.warmup_GR_samples_constrained[vax_status][j]
-                        prev_count_I[vax_status] = prev_count_I[vax_status] + \
+                        # ignore warmup
+                        """
+                        prev_count_G[vax_status] = tf.math.maximum(0, prev_count_G[vax_status] +
+                                                   self.warmup_G_samples_constrained[vax_status][j] -
+                                                   self.warmup_GR_samples_constrained[vax_status][j] -
+                                                   self.warmup_I_samples_constrained[vax_status][j])
+                        prev_count_I[vax_status] = tf.math.maximum(0, prev_count_I[vax_status] + \
                                                    self.warmup_I_samples_constrained[vax_status][j] - \
-                                                   self.warmup_IR_samples_constrained[vax_status][j]
+                                                   self.warmup_IR_samples_constrained[vax_status][j]-
+                                                   self.warmup_D_samples_constrained[vax_status][j])
+                        """
 
                     if day - j - 1 < 0:
                         j_ago_asymp = self.warmup_A_samples_constrained[vax_status][day-j-1]
@@ -189,63 +194,59 @@ class CovidModel(tf.keras.Model):
                                                                          axis=0)
                                                                      )
 
+                current_G_in = tf.reduce_sum(previously_mild_tensor *
+                                               self.rho_G_samples_constrained[vax_status] * self.pi_G_samples[vax_status],
+                                               axis=0)
+                current_I_in = tf.reduce_sum(previously_gen_tensor *
+                                             self.rho_I_samples_constrained[vax_status] * self.pi_I_samples[vax_status],
+                                             axis=0)
+                current_D_in = tf.reduce_sum(previously_icu_tensor *
+                                             self.rho_D_samples_constrained[vax_status] * self.pi_D_samples[vax_status],
+                                             axis=0)
                 forecasted_fluxes[Comp.G.value][vax_status] = \
-                    forecasted_fluxes[Comp.G.value][vax_status].write(day,
-                                                                           tf.reduce_sum(
-                                                                               previously_mild_tensor *
-                                                                               self.rho_G_samples_constrained[vax_status] * self.pi_G_samples[vax_status],
-                                                                               axis=0)
-                                                                           )
+                    forecasted_fluxes[Comp.G.value][vax_status].write(day, current_G_in )
+                
+                
+                current_GR = tf.reduce_sum(previously_gen_tensor *
+                                              (1-self.rho_I_samples_constrained[vax_status]) *
+                                              self.pi_I_bar_samples[vax_status],
+                                              axis=0)
+
+                current_GR = tf.math.maximum(0,tf.math.minimum(current_GR, prev_count_G[vax_status]+current_G_in-current_I_in))
+                    
+                
                 forecasted_fluxes[Comp.GR.value][vax_status] = \
-                    forecasted_fluxes[Comp.GR.value][vax_status].write(day,
-                                                                      tf.reduce_sum(
-                                                                          previously_gen_tensor *
-                                                                          (1-self.rho_I_samples_constrained[vax_status]) *
-                                                                          self.pi_I_bar_samples[vax_status],
-                                                                          axis=0)
-                                                                      )
+                    forecasted_fluxes[Comp.GR.value][vax_status].write(day, current_GR)
+
+                forecasted_counts[Comp.G.value][vax_status] = \
+                    forecasted_counts[Comp.G.value][vax_status].write(day,tf.math.maximum(0,
+                                                                      prev_count_G[vax_status] + \
+                                                                      current_G_in - \
+                                                                      current_GR - current_I_in))
+
 
                 forecasted_fluxes[Comp.I.value][vax_status] = \
-                    forecasted_fluxes[Comp.I.value][vax_status].write(day,
-                                                                      tf.reduce_sum(
-                                                                          previously_gen_tensor *
-                                                                          self.rho_I_samples_constrained[vax_status] *
-                                                                          self.pi_I_samples[vax_status],
-                                                                          axis=0)
-                                                                      )
+                    forecasted_fluxes[Comp.I.value][vax_status].write(day, current_I_in)
+
+                current_IR = tf.reduce_sum(previously_icu_tensor *
+                                           (1 - self.rho_D_samples_constrained[vax_status]) *
+                                           self.pi_D_bar_samples[vax_status],
+                                           axis=0)
+
+                current_IR = tf.math.maximum(0,tf.math.minimum(current_IR, prev_count_I[vax_status]+current_I_in-current_D_in))
 
                 forecasted_fluxes[Comp.IR.value][vax_status] = \
-                    forecasted_fluxes[Comp.IR.value][vax_status].write(day,
-                                                                      tf.reduce_sum(
-                                                                          previously_icu_tensor *
-                                                                          (1-self.rho_D_samples_constrained[vax_status]) *
-                                                                          self.pi_D_bar_samples[vax_status],
-                                                                          axis=0)
-                                                                      )
-
-
-                forecasted_fluxes[Comp.D.value][vax_status] = \
-                    forecasted_fluxes[Comp.D.value][vax_status].write(day,
-                                                                      tf.reduce_sum(
-                                                                          previously_icu_tensor *
-                                                                          self.rho_D_samples_constrained[vax_status] *
-                                                                          self.pi_D_samples[vax_status],
-                                                                          axis=0)
-                                                                      )
-
-                forecasted_counts[Comp.G.value][vax_status] =  \
-                    forecasted_counts[Comp.G.value][vax_status].write(day,
-                                                                      prev_count_G[vax_status] + \
-                                                                      forecasted_fluxes[Comp.G.value][vax_status].read(day) - \
-                                                                      forecasted_fluxes[Comp.GR.value][vax_status].read(day))
+                    forecasted_fluxes[Comp.IR.value][vax_status].write(day, current_IR)
 
                 forecasted_counts[Comp.I.value][vax_status] = \
-                    forecasted_counts[Comp.I.value][vax_status].write(day,
+                    forecasted_counts[Comp.I.value][vax_status].write(day,tf.math.maximum(0,
                                                                       prev_count_I[vax_status] + \
-                                                                      forecasted_fluxes[Comp.I.value][vax_status].read(
-                                                                          day) - \
-                                                                      forecasted_fluxes[Comp.IR.value][vax_status].read(
-                                                                          day))
+                                                                      current_I_in - \
+                                                                      current_IR - current_D_in))
+
+                forecasted_fluxes[Comp.D.value][vax_status] = \
+                    forecasted_fluxes[Comp.D.value][vax_status].write(day, current_D_in)
+
 
         if not debug_disable_prior:
 
@@ -264,12 +265,13 @@ class CovidModel(tf.keras.Model):
             result['G_in'] = forecasted_fluxes[Comp.G.value][Vax.yes.value].stack() + forecasted_fluxes[Comp.G.value][Vax.no.value].stack()
             result['I_count'] = forecasted_counts[Comp.I.value][Vax.yes.value].stack() + forecasted_counts[Comp.I.value][Vax.no.value].stack()
             result['D_in'] = forecasted_fluxes[Comp.D.value][Vax.yes.value].stack() + forecasted_fluxes[Comp.D.value][Vax.no.value].stack()
+            result = tf.expand_dims((result['G_count'], result['G_in'], result['I_count'], result['D_in']), axis=0)
 
         # Tensorflow thinks we didn't use every array, so we gotta mark them as used
         # TODO: did i screw up?
         self._mark_arrays_used(forecasted_fluxes)
 
-        return tf.expand_dims((result['G_count'], result['G_in'], result['I_count'], result['D_in']), axis=0)
+        return result
 
     def _initialize_parameters(self, T_serial, epsilon, delta,
                                     rho_M, lambda_M, nu_M,
@@ -1792,40 +1794,41 @@ class CovidModel(tf.keras.Model):
                                              for status in self.vax_statuses]))
 
         # open bug about adding loss inisde a for loop: https://github.com/tensorflow/tensorflow/issues/44590
-        self.add_loss(lambda:  tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+        # sum over status, mean over days, sum over nothing, mean over draws
+        self.add_loss(lambda:  tf.reduce_sum([tf.reduce_mean([-tf.reduce_sum(tf.reduce_mean(
                 self.prior_distros[Comp.A.value][status.value]['warmup_A'][day].log_prob(
                     self.warmup_A_samples[status.value][day]) + \
                 tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(self.warmup_A_samples[status.value][day])
                 - self.warmup_A_probs[status.value][day],axis=-1)) for day in range(self.transition_window)])for status in self.vax_statuses]))
 
-        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_mean([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.M.value][status.value]['warmup_M'][day].log_prob(
                 self.warmup_M_samples[status.value][day]) + \
             tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(self.warmup_M_samples[status.value][day])
             - self.warmup_M_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
-        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_mean([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.G.value][status.value]['warmup_G'][day].log_prob(
                 self.warmup_G_samples[status.value][day]) + \
             tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.warmup_G_samples[status.value][day])
             - self.warmup_G_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
-        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_mean([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.GR.value][status.value]['warmup_GR'][day].log_prob(
                 self.warmup_GR_samples[status.value][day]) + \
             tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.warmup_GR_samples[status.value][day])
             - self.warmup_GR_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
-        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_mean([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.I.value][status.value]['warmup_I'][day].log_prob(
                 self.warmup_I_samples[status.value][day]) + \
             tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
                 self.warmup_I_samples[status.value][day])
             - self.warmup_I_probs[status.value][day], axis=-1)) for day in range(self.transition_window)]) for status in
                                              self.vax_statuses]))
-        self.add_loss(lambda: tf.reduce_sum([tf.reduce_sum([-tf.reduce_sum(tf.reduce_mean(
+        self.add_loss(lambda: tf.reduce_sum([tf.reduce_mean([-tf.reduce_sum(tf.reduce_mean(
             self.prior_distros[Comp.IR.value][status.value]['warmup_IR'][day].log_prob(
                 self.warmup_IR_samples[status.value][day]) + \
             tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward_log_det_jacobian(
@@ -1873,7 +1876,7 @@ def calc_poisson(inputs):
 
 class LogPoissonProb(tf.keras.losses.Loss):
 
-    def call(self, y_true, y_pred):
+    def call(self, y_true, y_pred, debug=False):
         if len(y_true.shape)==3:
             # we got a batch
             y_true = y_true[0]
@@ -1901,11 +1904,23 @@ class LogPoissonProb(tf.keras.losses.Loss):
         log_probs_D_in = tf.map_fn(calc_poisson, (tf.squeeze(y_t['D_in']), y_p['D_in']),
                                    fn_output_signature=tf.float32)
 
+        # mean over days, mean over draws
+        G_count_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_G_count,axis=1))
+        G_in_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_G_in, axis=1))
+        I_count_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_I_count, axis=1))
+        D_in_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_D_in, axis=1))
+
+        if True:
+            print(f'G count: {G_count_log_likelihood}')
+            print(f'G in: {G_in_log_likelihood}')
+            print(f'I count: {I_count_log_likelihood}')
+            print(f'D in: {D_in_log_likelihood}')
+
         # return negative log likielihood
-        return -tf.reduce_sum(tf.reduce_mean(log_probs_G_count,axis=1)) + \
-               -tf.reduce_sum(tf.reduce_mean(log_probs_G_in, axis=1)) + \
-               -tf.reduce_sum(tf.reduce_mean(log_probs_I_count, axis=1)) + \
-               -tf.reduce_sum(tf.reduce_mean(log_probs_D_in, axis=1))
+        return -G_count_log_likelihood*10 + \
+               -G_in_log_likelihood + \
+               -I_count_log_likelihood*10 + \
+               -D_in_log_likelihood
 
 
 class VarLogCallback(tf.keras.callbacks.Callback):
