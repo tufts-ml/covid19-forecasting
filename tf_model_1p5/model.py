@@ -1895,13 +1895,13 @@ class LogPoissonProb(tf.keras.losses.Loss):
         y_p['I_count'] = y_pred[2]
         y_p['D_in'] = y_pred[3]
 
-        log_probs_G_count = tf.map_fn(calc_poisson, (y_t['G_count'], y_p['G_count']),
+        log_probs_G_count = tf.map_fn(calc_poisson, (y_p['G_count'], y_t['G_count']),
                                       fn_output_signature=tf.float32)
-        log_probs_G_in = tf.map_fn(calc_poisson, (tf.squeeze(y_t['G_in']), y_p['G_in']),
+        log_probs_G_in = tf.map_fn(calc_poisson, (tf.squeeze(y_p['G_in']), y_t['G_in']),
                                       fn_output_signature=tf.float32)
-        log_probs_I_count = tf.map_fn(calc_poisson, (y_t['I_count'], y_p['I_count']),
+        log_probs_I_count = tf.map_fn(calc_poisson, (y_p['I_count'], y_t['I_count']),
                                       fn_output_signature=tf.float32)
-        log_probs_D_in = tf.map_fn(calc_poisson, (tf.squeeze(y_t['D_in']), y_p['D_in']),
+        log_probs_D_in = tf.map_fn(calc_poisson, (tf.squeeze(y_p['D_in']), y_t['D_in']),
                                    fn_output_signature=tf.float32)
 
         # mean over days, mean over draws
@@ -1917,9 +1917,9 @@ class LogPoissonProb(tf.keras.losses.Loss):
             print(f'D in: {D_in_log_likelihood}')
 
         # return negative log likielihood
-        return -G_count_log_likelihood*10 + \
+        return -G_count_log_likelihood + \
                -G_in_log_likelihood + \
-               -I_count_log_likelihood*10 + \
+               -I_count_log_likelihood + \
                -D_in_log_likelihood
 
 
