@@ -1,3 +1,4 @@
+from collections import defaultdict
 import copy
 from enum import Enum
 
@@ -12,6 +13,7 @@ from scipy.stats import beta, truncnorm
 
 
 class Comp(Enum):
+    """"""
     A = 0
     M = 1
     G = 2
@@ -48,6 +50,11 @@ class CovidModel(tf.keras.Model):
         Args:
             transition_window (int): J in our notation, the number of days to consider a
                 possible transition to a more severe state
+            model parameters (dict): Dictionary with key for 'prior' and 'posterior_init'.
+                Prior values are in the variable's natural (constrained) domain.
+                Posterior initializations are given in the modeling (unconstrained) domain
+            posterior_samples (int): How many samples to take
+            debug_disable_theta (bool): Optional, will disable prior losses if True
         """
         super(CovidModel, self).__init__()
 
@@ -86,7 +93,7 @@ class CovidModel(tf.keras.Model):
         """Run covid model 1.5
 
         Args:
-            r_t (tf.Tensor): A tuple of all input tensors we need. It should be, in order:
+            r_t (tf.Tensor): A tensor of our input data
                 rt should be size (1, days_to_forecast)
             debug_disable_prior (bool): If True, will disable adding the prior to the loss. Used to debug gradients
         Returns:
@@ -96,7 +103,9 @@ class CovidModel(tf.keras.Model):
         self._constrain_parameters()
         self._sample_and_reparameterize()
 
+        # get rid of batch dimension
         r_t = tf.squeeze(r_t)
+
         forecast_days = r_t.shape[-1]
 
         # It's a little weird to iteratively write to tensors one day at a time
@@ -105,9 +114,7 @@ class CovidModel(tf.keras.Model):
         # This helper function creates a nested dictionary keyed on:
         #  compartment->
         #      vaccinestatus->
-        #           TensorArray with one tensor per day from:
-        #               warmup_start to forecast_end for any quantities with warmup data
-        #               forecast_start to forecast_end for the outcome, which does not have warmup data
+        #           TensorArray with one tensor per day from: forecast_start to forecast_end for
         forecasted_fluxes = self._initialize_flux_arrays(forecast_days)
         forecasted_counts = self._initialize_count_arrays(forecast_days)
         prev_count_G = {}
@@ -122,6 +129,9 @@ class CovidModel(tf.keras.Model):
                     yesterday_asymp_yes = forecasted_fluxes[Comp.A.value][Vax.yes.value].read(day - 1)
 
                 if vax_status == Vax.yes.value:
+                    # I was getting lots of nan gradients for epsilon/delta/T_serial
+                    # I worried that the end of the forecast was too sensitive to changes here
+                    # So I added 1e-6 to T_serial
                     today_asymp = (yesterday_asymp_no +
                                    self.epsilon_samples_constrained[Vax.total.value]*yesterday_asymp_yes) * \
                     self.delta_samples_constrained[Vax.yes.value]*r_t[day] ** (1/(self.T_serial_samples_constrained[Vax.total.value] + 1e-6))
@@ -133,6 +143,9 @@ class CovidModel(tf.keras.Model):
                 forecasted_fluxes[Comp.A.value][vax_status] = \
                     forecasted_fluxes[Comp.A.value][vax_status].write(day, today_asymp)
 
+                # We treat our initial count as the count at day -1, not day -J as the writeup expresses.
+                # This lets us ignore a situation where it is difficult to understand the count at day 0 as it
+                #   would be a function of the warmup. It would also require extra warmup for
                 if day == 0:
                     prev_count_G[vax_status] = self.init_count_G_samples_constrained[vax_status]
                     prev_count_I[vax_status] = self.init_count_I_samples_constrained[vax_status]
@@ -140,52 +153,10 @@ class CovidModel(tf.keras.Model):
                     prev_count_G[vax_status] = forecasted_counts[Comp.G.value][vax_status].read(day-1)
                     prev_count_I[vax_status] = forecasted_counts[Comp.I.value][vax_status].read(day-1)
 
-                for j in range(self.transition_window):
+                previously_asymptomatic_tensor, previously_mild_tensor, previously_gen_tensor, previously_icu_tensor = \
+                    self._get_prev_tensors(forecasted_fluxes, vax_status, day)
 
-                    if day == 0 and j>0:
-
-                        # ignore warmup
-                        """
-                        prev_count_G[vax_status] = tf.math.maximum(0, prev_count_G[vax_status] +
-                                                   self.warmup_G_samples_constrained[vax_status][j] -
-                                                   self.warmup_GR_samples_constrained[vax_status][j] -
-                                                   self.warmup_I_samples_constrained[vax_status][j])
-                        prev_count_I[vax_status] = tf.math.maximum(0, prev_count_I[vax_status] + \
-                                                   self.warmup_I_samples_constrained[vax_status][j] - \
-                                                   self.warmup_IR_samples_constrained[vax_status][j]-
-                                                   self.warmup_D_samples_constrained[vax_status][j])
-                        """
-
-                    if day - j - 1 < 0:
-                        j_ago_asymp = self.warmup_A_samples_constrained[vax_status][day-j-1]
-                        j_ago_mild = self.warmup_M_samples_constrained[vax_status][day - j - 1]
-                        j_ago_gen = self.warmup_G_samples_constrained[vax_status][day - j - 1]
-                        j_ago_genrec = self.warmup_G_samples_constrained[vax_status][day - j - 1]
-                        j_ago_icu = self.warmup_I_samples_constrained[vax_status][day - j - 1]
-                        j_ago_icurec = self.warmup_I_samples_constrained[vax_status][day - j - 1]
-                    else:
-                        j_ago_asymp = forecasted_fluxes[Comp.A.value][vax_status].read(day-j-1)
-                        j_ago_mild = forecasted_fluxes[Comp.M.value][vax_status].read(day - j - 1)
-                        j_ago_gen = forecasted_fluxes[Comp.G.value][vax_status].read(day - j - 1)
-                        j_ago_genrec = forecasted_fluxes[Comp.GR.value][vax_status].read(day - j - 1)
-                        j_ago_icu = forecasted_fluxes[Comp.I.value][vax_status].read(day - j - 1)
-                        j_ago_icurec = forecasted_fluxes[Comp.IR.value][vax_status].read(day - j - 1)
-
-                    self.previously_asymptomatic[vax_status] = \
-                        self.previously_asymptomatic[vax_status].write(j, j_ago_asymp)
-                    self.previously_mild[vax_status] = \
-                        self.previously_mild[vax_status].write(j, j_ago_mild)
-                    self.previously_gen[vax_status] = \
-                        self.previously_gen[vax_status].write(j, j_ago_gen)
-                    self.previously_icu[vax_status] = \
-                        self.previously_icu[vax_status].write(j, j_ago_icu)
-
-                previously_asymptomatic_tensor = self.previously_asymptomatic[vax_status].stack()
-                previously_mild_tensor = self.previously_mild[vax_status].stack()
-                previously_gen_tensor = self.previously_gen[vax_status].stack()
-                previously_icu_tensor = self.previously_icu[vax_status].stack()
-
-                # Today's MG = sum of last J * rho * pi
+                # Today's A->M = sum of last J day of A * rho * pi
                 forecasted_fluxes[Comp.M.value][vax_status] = \
                     forecasted_fluxes[Comp.M.value][vax_status].write(day,
                                                                      tf.reduce_sum(
@@ -203,16 +174,22 @@ class CovidModel(tf.keras.Model):
                 current_D_in = tf.reduce_sum(previously_icu_tensor *
                                              self.rho_D_samples_constrained[vax_status] * self.pi_D_samples[vax_status],
                                              axis=0)
+
+
                 forecasted_fluxes[Comp.G.value][vax_status] = \
                     forecasted_fluxes[Comp.G.value][vax_status].write(day, current_G_in )
                 
-                
+                # People who recover from G = people who used to be in G * (1-prob moving to I) * I recovery duration
                 current_GR = tf.reduce_sum(previously_gen_tensor *
                                               (1-self.rho_I_samples_constrained[vax_status]) *
                                               self.pi_I_bar_samples[vax_status],
                                               axis=0)
 
-                current_GR = tf.math.maximum(0,tf.math.minimum(current_GR, prev_count_G[vax_status]+current_G_in-current_I_in))
+                # Make sure GR doesn't go negative. I don't think that first maximum(0, is necessary
+                current_GR = tf.math.maximum(0,
+                                             tf.math.minimum(current_GR,
+                                                             prev_count_G[vax_status]+current_G_in-current_I_in)
+                                             )
                     
                 
                 forecasted_fluxes[Comp.GR.value][vax_status] = \
@@ -249,7 +226,6 @@ class CovidModel(tf.keras.Model):
 
 
         if not debug_disable_prior:
-
             self._callable_losses.clear()
             self._add_prior_loss()
 
@@ -866,7 +842,10 @@ class CovidModel(tf.keras.Model):
         return
 
     def  _constrain_parameters(self):
-        """Helper function to make sure all of our posterior variance parameters are positive"""
+        """Helper function to make sure all of our posterior variance parameters are positive
+
+        Note: We don't constrain the means here, the means are still real numbers
+        """
 
         self.T_serial_params = {}
         self.epsilon_params = {}
@@ -1046,469 +1025,190 @@ class CovidModel(tf.keras.Model):
     def _sample_and_reparameterize(self):
         """Here we again constrain, and our prior distribution will fix it"""
         
-        self.T_serial_samples = {}
-        self.T_serial_samples_constrained = {}
-        self.T_serial_probs = {}
+        self._create_sample_tensor_dicts()
 
-        self.epsilon_samples = {}
-        self.epsilon_samples_constrained = {}
-        self.epsilon_probs = {}
 
-        self.delta_samples = {}
-        self.delta_samples_constrained = {}
-        self.delta_probs = {}
+        (self.T_serial_samples[Vax.total.value],
+         self.T_serial_samples_constrained[Vax.total.value],
+         self.T_serial_probs[Vax.total.value])  = \
+            self._sample_reparam_single(self.T_serial_params[Vax.total.value], tfp.bijectors.Softplus())
 
-        self.rho_M_samples = {}
-        self.rho_M_samples_constrained = {}
-        self.rho_M_probs = {}
+        (self.epsilon_samples[Vax.total.value],
+         self.epsilon_samples_constrained[Vax.total.value],
+         self.epsilon_probs[Vax.total.value]) = \
+            self._sample_reparam_single(self.epsilon_params[Vax.total.value], tfp.bijectors.Sigmoid())
 
-        self.rho_G_samples = {}
-        self.rho_G_samples_constrained = {}
-        self.rho_G_probs = {}
-
-        self.rho_I_samples = {}
-        self.rho_I_samples_constrained = {}
-        self.rho_I_probs = {}
-
-        self.rho_D_samples = {}
-        self.rho_D_samples_constrained = {}
-        self.rho_D_probs = {}
-
-        self.lambda_M_samples = {}
-        self.lambda_M_samples_constrained = {}
-        self.lambda_M_probs = {}
-
-        self.lambda_G_samples = {}
-        self.lambda_G_samples_constrained = {}
-        self.lambda_G_probs = {}
-        self.lambda_I_samples = {}
-        self.lambda_I_samples_constrained = {}
-        self.lambda_I_probs = {}
-        self.lambda_I_bar_samples = {}
-        self.lambda_I_bar_samples_constrained = {}
-        self.lambda_I_bar_probs = {}
-
-        self.lambda_D_samples = {}
-        self.lambda_D_samples_constrained = {}
-        self.lambda_D_probs = {}
-        self.lambda_D_bar_samples = {}
-        self.lambda_D_bar_samples_constrained = {}
-        self.lambda_D_bar_probs = {}
-
-        self.nu_M_samples = {}
-        self.nu_M_samples_constrained = {}
-        self.nu_M_probs = {}
-
-        self.nu_G_samples = {}
-        self.nu_G_samples_constrained = {}
-        self.nu_G_probs = {}
-        self.nu_I_samples = {}
-        self.nu_I_samples_constrained = {}
-        self.nu_I_probs = {}
-        self.nu_I_bar_samples = {}
-        self.nu_I_bar_samples_constrained = {}
-        self.nu_I_bar_probs = {}
-        self.nu_D_samples = {}
-        self.nu_D_samples_constrained = {}
-        self.nu_D_probs = {}
-        self.nu_D_bar_samples = {}
-        self.nu_D_bar_samples_constrained = {}
-        self.nu_D_bar_probs = {}
-
-        self.warmup_A_samples = {}
-        self.warmup_A_samples_constrained = {}
-        self.warmup_A_probs = {}
-
-        self.warmup_M_samples = {}
-        self.warmup_M_samples_constrained = {}
-        self.warmup_M_probs = {}
-        self.warmup_G_samples = {}
-        self.warmup_G_samples_constrained = {}
-        self.warmup_G_probs = {}
-        self.warmup_GR_samples = {}
-        self.warmup_GR_samples_constrained = {}
-        self.warmup_GR_probs = {}
-        self.warmup_I_samples = {}
-        self.warmup_I_samples_constrained = {}
-        self.warmup_I_probs = {}
-        self.warmup_IR_samples = {}
-        self.warmup_IR_samples_constrained = {}
-        self.warmup_IR_probs = {}
-
-        self.init_count_G_samples = {}
-        self.init_count_G_samples_constrained = {}
-        self.init_count_G_probs = {}
-        self.init_count_I_samples = {}
-        self.init_count_I_samples_constrained = {}
-        self.init_count_I_probs = {}
-        
-        self.pi_M_samples = {}
-        self.pi_G_samples = {}
-        self.pi_I_samples = {}
-        self.pi_I_bar_samples = {}
-        self.pi_D_samples = {}
-        self.pi_D_bar_samples = {}
-
-        T_serial_noise = tf.random.normal((self.posterior_samples,))
-        self.T_serial_samples[Vax.total.value] = self.T_serial_params[Vax.total.value]['loc'] + \
-                                                self.T_serial_params[Vax.total.value]['scale'] * T_serial_noise
-
-        # Constrain samples with softplus
-        self.T_serial_samples_constrained[Vax.total.value] = tfp.bijectors.Softplus().forward(
-            self.T_serial_samples[Vax.total.value])
-
-        # Calulate variational posterior probability of un constrained samples
-        T_serial_variational_posterior = tfp.distributions.Normal(self.T_serial_params[Vax.total.value]['loc'],
-                                                                 self.T_serial_params[Vax.total.value]['scale'])
-
-        self.T_serial_probs[Vax.total.value] = T_serial_variational_posterior.log_prob(
-            self.T_serial_samples[Vax.total.value])
-
-        epsilon_noise = tf.random.normal((self.posterior_samples,))
-        self.epsilon_samples[Vax.total.value] = self.epsilon_params[Vax.total.value]['loc'] + \
-                                            self.epsilon_params[Vax.total.value]['scale'] * epsilon_noise
-
-        # Constrain samples with softplus
-        self.epsilon_samples_constrained[Vax.total.value] = tfp.bijectors.Softplus().forward(
-            self.epsilon_samples[Vax.total.value])
-
-        # Calulate variational posterior probability of un constrained samples
-        epsilon_variational_posterior = tfp.distributions.Normal(self.epsilon_params[Vax.total.value]['loc'],
-                                                               self.epsilon_params[Vax.total.value]['scale'])
-
-        self.epsilon_probs[Vax.total.value] = epsilon_variational_posterior.log_prob(self.epsilon_samples[Vax.total.value])
-
-        delta_noise = tf.random.normal((self.posterior_samples,))
-        # Use reparameterization trick to get unconstrained samples
-        self.delta_samples[Vax.yes.value] = self.delta_params[Vax.yes.value]['loc'] + \
-                                self.delta_params[Vax.yes.value]['scale'] * delta_noise
-
-        # Constrain samples with softplus
-        self.delta_samples_constrained[Vax.yes.value] = tfp.bijectors.Softplus().forward(self.delta_samples[Vax.yes.value])
-
-        # Calulate variational posterior probability of un constrained samples
-        delta_variational_posterior = tfp.distributions.Normal(self.delta_params[Vax.yes.value]['loc'],
-                                                                  self.delta_params[Vax.yes.value]['scale'])
-
-        self.delta_probs[Vax.yes.value] = delta_variational_posterior.log_prob(self.delta_samples[Vax.yes.value])
-
+        (self.delta_samples[Vax.yes.value],
+         self.delta_samples_constrained[Vax.yes.value],
+         self.delta_probs[Vax.yes.value]) = \
+            self._sample_reparam_single(self.delta_params[Vax.yes.value], tfp.bijectors.Sigmoid())
 
         for vax_status in [status.value for status in self.vax_statuses]:
-    
-            rho_M_noise = tf.random.normal((self.posterior_samples,))
-            self.rho_M_samples[vax_status] = self.rho_M_params[vax_status]['loc'] + \
-                                             self.rho_M_params[vax_status]['scale'] * rho_M_noise
-            self.rho_M_samples_constrained[vax_status] = tfp.bijectors.Sigmoid().forward(self.rho_M_samples[vax_status])
-    
-            rho_M_variational_posterior = tfp.distributions.Normal(self.rho_M_params[vax_status]['loc'],
-                                                                   self.rho_M_params[vax_status]['scale'])
-    
-            self.rho_M_probs[vax_status] = rho_M_variational_posterior.log_prob(self.rho_M_samples[vax_status])
 
-            rho_G_noise = tf.random.normal((self.posterior_samples,))
-            self.rho_G_samples[vax_status] = self.rho_G_params[vax_status]['loc'] + \
-                                             self.rho_G_params[vax_status]['scale'] * rho_G_noise
-            self.rho_G_samples_constrained[vax_status] = tfp.bijectors.Sigmoid().forward(self.rho_G_samples[vax_status])
+            (self.rho_M_samples[vax_status],
+             self.rho_M_samples_constrained[vax_status],
+             self.rho_M_probs[vax_status]) =self._sample_reparam_single(self.rho_M_params[vax_status],
+                                                                        tfp.bijectors.Sigmoid())
 
-            rho_G_variational_posterior = tfp.distributions.Normal(self.rho_G_params[vax_status]['loc'],
-                                                                   self.rho_G_params[vax_status]['scale'])
+            (self.rho_G_samples[vax_status],
+             self.rho_G_samples_constrained[vax_status],
+             self.rho_G_probs[vax_status]) = self._sample_reparam_single(self.rho_G_params[vax_status],
+                                                                         tfp.bijectors.Sigmoid())
 
-            self.rho_G_probs[vax_status] = rho_G_variational_posterior.log_prob(self.rho_G_samples[vax_status])
+            (self.rho_I_samples[vax_status],
+             self.rho_I_samples_constrained[vax_status],
+             self.rho_I_probs[vax_status]) = self._sample_reparam_single(self.rho_I_params[vax_status],
+                                                                         tfp.bijectors.Sigmoid())
 
-            rho_I_noise = tf.random.normal((self.posterior_samples,))
-            self.rho_I_samples[vax_status] = self.rho_I_params[vax_status]['loc'] + \
-                                             self.rho_I_params[vax_status]['scale'] * rho_I_noise
-            self.rho_I_samples_constrained[vax_status] = tfp.bijectors.Sigmoid().forward(self.rho_I_samples[vax_status])
+            (self.rho_D_samples[vax_status],
+             self.rho_D_samples_constrained[vax_status],
+             self.rho_D_probs[vax_status]) = self._sample_reparam_single(self.rho_D_params[vax_status],
+                                                                         tfp.bijectors.Sigmoid())
 
-            rho_I_variational_posterior = tfp.distributions.Normal(self.rho_I_params[vax_status]['loc'],
-                                                                   self.rho_I_params[vax_status]['scale'])
+            (self.lambda_M_samples[vax_status],
+             self.lambda_M_samples_constrained[vax_status],
+             self.lambda_M_probs[vax_status]) = self._sample_reparam_single(self.lambda_M_params[vax_status],
+                                                                            tfp.bijectors.Softplus())
 
-            self.rho_I_probs[vax_status] = rho_I_variational_posterior.log_prob(self.rho_I_samples[vax_status])
+            (self.lambda_G_samples[vax_status],
+             self.lambda_G_samples_constrained[vax_status],
+             self.lambda_G_probs[vax_status]) = self._sample_reparam_single(self.lambda_G_params[vax_status],
+                                                                            tfp.bijectors.Softplus())
 
-            rho_D_noise = tf.random.normal((self.posterior_samples,))
-            self.rho_D_samples[vax_status] = self.rho_D_params[vax_status]['loc'] + \
-                                             self.rho_D_params[vax_status]['scale'] * rho_D_noise
-            self.rho_D_samples_constrained[vax_status] = tfp.bijectors.Sigmoid().forward(self.rho_D_samples[vax_status])
+            (self.lambda_I_samples[vax_status],
+             self.lambda_I_samples_constrained[vax_status],
+             self.lambda_I_probs[vax_status]) = self._sample_reparam_single(self.lambda_I_params[vax_status],
+                                                                            tfp.bijectors.Softplus())
 
-            rho_D_variational_posterior = tfp.distributions.Normal(self.rho_D_params[vax_status]['loc'],
-                                                                   self.rho_D_params[vax_status]['scale'])
+            (self.lambda_I_bar_samples[vax_status],
+             self.lambda_I_bar_samples_constrained[vax_status],
+             self.lambda_I_bar_probs[vax_status]) = self._sample_reparam_single(self.lambda_I_bar_params[vax_status],
+                                                                                tfp.bijectors.Softplus())
 
-            self.rho_D_probs[vax_status] = rho_D_variational_posterior.log_prob(self.rho_D_samples[vax_status])
+            (self.lambda_D_samples[vax_status],
+             self.lambda_D_samples_constrained[vax_status],
+             self.lambda_D_probs[vax_status]) = self._sample_reparam_single(self.lambda_D_params[vax_status],
+                                                                            tfp.bijectors.Softplus())
 
-            lambda_M_noise = tf.random.normal((self.posterior_samples,))
-            self.lambda_M_samples[vax_status] = self.lambda_M_params[vax_status]['loc'] + \
-                                             self.lambda_M_params[vax_status]['scale'] * lambda_M_noise
-            self.lambda_M_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.lambda_M_samples[vax_status])
+            (self.lambda_D_bar_samples[vax_status],
+             self.lambda_D_bar_samples_constrained[vax_status],
+             self.lambda_D_bar_probs[vax_status]) = self._sample_reparam_single(self.lambda_D_bar_params[vax_status],
+                                                                                tfp.bijectors.Softplus())
 
-            lambda_M_variational_posterior = tfp.distributions.Normal(self.lambda_M_params[vax_status]['loc'],
-                                                                   self.lambda_M_params[vax_status]['scale'])
+            (self.nu_M_samples[vax_status],
+             self.nu_M_samples_constrained[vax_status],
+             self.nu_M_probs[vax_status]) = self._sample_reparam_single(self.nu_M_params[vax_status],
+                                                                        tfp.bijectors.Softplus())
 
-            self.lambda_M_probs[vax_status] = lambda_M_variational_posterior.log_prob(self.lambda_M_samples[vax_status])
+            (self.nu_G_samples[vax_status],
+             self.nu_G_samples_constrained[vax_status],
+             self.nu_G_probs[vax_status]) = self._sample_reparam_single(self.nu_G_params[vax_status],
+                                                                        tfp.bijectors.Softplus())
 
-            lambda_G_noise = tf.random.normal((self.posterior_samples,))
-            self.lambda_G_samples[vax_status] = self.lambda_G_params[vax_status]['loc'] + \
-                                             self.lambda_G_params[vax_status]['scale'] * lambda_G_noise
-            self.lambda_G_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.lambda_G_samples[vax_status])
+            (self.nu_I_samples[vax_status],
+             self.nu_I_samples_constrained[vax_status],
+             self.nu_I_probs[vax_status]) = self._sample_reparam_single(self.nu_I_params[vax_status],
+                                                                        tfp.bijectors.Softplus())
 
-            lambda_G_variational_posterior = tfp.distributions.Normal(self.lambda_G_params[vax_status]['loc'],
-                                                                   self.lambda_G_params[vax_status]['scale'])
+            (self.nu_I_bar_samples[vax_status],
+             self.nu_I_bar_samples_constrained[vax_status],
+             self.nu_I_bar_probs[vax_status]) = self._sample_reparam_single(self.nu_I_bar_params[vax_status],
+                                                                            tfp.bijectors.Softplus())
 
-            self.lambda_G_probs[vax_status] = lambda_G_variational_posterior.log_prob(self.lambda_G_samples[vax_status])
+            (self.nu_D_samples[vax_status],
+             self.nu_D_samples_constrained[vax_status],
+             self.nu_D_probs[vax_status]) = self._sample_reparam_single(self.nu_D_params[vax_status],
+                                                                        tfp.bijectors.Softplus())
 
-            lambda_I_noise = tf.random.normal((self.posterior_samples,))
-            self.lambda_I_samples[vax_status] = self.lambda_I_params[vax_status]['loc'] + \
-                                                self.lambda_I_params[vax_status]['scale'] * lambda_I_noise
-            self.lambda_I_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(
-                self.lambda_I_samples[vax_status])
-
-            lambda_I_variational_posterior = tfp.distributions.Normal(self.lambda_I_params[vax_status]['loc'],
-                                                                      self.lambda_I_params[vax_status]['scale'])
-
-            self.lambda_I_probs[vax_status] = lambda_I_variational_posterior.log_prob(self.lambda_I_samples[vax_status])
-
-            lambda_I_bar_noise = tf.random.normal((self.posterior_samples,))
-            self.lambda_I_bar_samples[vax_status] = self.lambda_I_bar_params[vax_status]['loc'] + \
-                                                self.lambda_I_bar_params[vax_status]['scale'] * lambda_I_bar_noise
-            self.lambda_I_bar_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(
-                self.lambda_I_bar_samples[vax_status])
-
-            lambda_I_bar_variational_posterior = tfp.distributions.Normal(self.lambda_I_bar_params[vax_status]['loc'],
-                                                                      self.lambda_I_bar_params[vax_status]['scale'])
-
-            self.lambda_I_bar_probs[vax_status] = lambda_I_bar_variational_posterior.log_prob(self.lambda_I_bar_samples[vax_status])
-
-            lambda_D_noise = tf.random.normal((self.posterior_samples,))
-            self.lambda_D_samples[vax_status] = self.lambda_D_params[vax_status]['loc'] + \
-                                                self.lambda_D_params[vax_status]['scale'] * lambda_D_noise
-            self.lambda_D_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(
-                self.lambda_D_samples[vax_status])
-
-            lambda_D_variational_posterior = tfp.distributions.Normal(self.lambda_D_params[vax_status]['loc'],
-                                                                      self.lambda_D_params[vax_status]['scale'])
-
-            self.lambda_D_probs[vax_status] = lambda_D_variational_posterior.log_prob(self.lambda_D_samples[vax_status])
-
-            lambda_D_bar_noise = tf.random.normal((self.posterior_samples,))
-            self.lambda_D_bar_samples[vax_status] = self.lambda_D_bar_params[vax_status]['loc'] + \
-                                                self.lambda_D_bar_params[vax_status]['scale'] * lambda_D_bar_noise
-            self.lambda_D_bar_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(
-                self.lambda_D_bar_samples[vax_status])
-
-            lambda_D_bar_variational_posterior = tfp.distributions.Normal(self.lambda_D_bar_params[vax_status]['loc'],
-                                                                      self.lambda_D_bar_params[vax_status]['scale'])
-
-            self.lambda_D_bar_probs[vax_status] = lambda_D_bar_variational_posterior.log_prob(self.lambda_D_bar_samples[vax_status])
-
-            nu_M_noise = tf.random.normal((self.posterior_samples,))
-            self.nu_M_samples[vax_status] = self.nu_M_params[vax_status]['loc'] + \
-                                             self.nu_M_params[vax_status]['scale'] * nu_M_noise
-            self.nu_M_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_M_samples[vax_status])
-
-            nu_M_variational_posterior = tfp.distributions.Normal(self.nu_M_params[vax_status]['loc'],
-                                                                   self.nu_M_params[vax_status]['scale'])
-
-            self.nu_M_probs[vax_status] = nu_M_variational_posterior.log_prob(self.nu_M_samples[vax_status])
-
-            nu_G_noise = tf.random.normal((self.posterior_samples,))
-            self.nu_G_samples[vax_status] = self.nu_G_params[vax_status]['loc'] + \
-                                             self.nu_G_params[vax_status]['scale'] * nu_G_noise
-            self.nu_G_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_G_samples[vax_status])
-
-            nu_G_variational_posterior = tfp.distributions.Normal(self.nu_G_params[vax_status]['loc'],
-                                                                   self.nu_G_params[vax_status]['scale'])
-
-            self.nu_G_probs[vax_status] = nu_G_variational_posterior.log_prob(self.nu_G_samples[vax_status])
-
-            nu_I_noise = tf.random.normal((self.posterior_samples,))
-            self.nu_I_samples[vax_status] = self.nu_I_params[vax_status]['loc'] + \
-                                            self.nu_I_params[vax_status]['scale'] * nu_I_noise
-            self.nu_I_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_I_samples[vax_status])
-
-            nu_I_variational_posterior = tfp.distributions.Normal(self.nu_I_params[vax_status]['loc'],
-                                                                  self.nu_I_params[vax_status]['scale'])
-
-            self.nu_I_probs[vax_status] = nu_I_variational_posterior.log_prob(self.nu_I_samples[vax_status])
-
-            nu_I_bar_noise = tf.random.normal((self.posterior_samples,))
-            self.nu_I_bar_samples[vax_status] = self.nu_I_bar_params[vax_status]['loc'] + \
-                                            self.nu_I_bar_params[vax_status]['scale'] * nu_I_bar_noise
-            self.nu_I_bar_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_I_bar_samples[vax_status])
-
-            nu_I_bar_variational_posterior = tfp.distributions.Normal(self.nu_I_bar_params[vax_status]['loc'],
-                                                                  self.nu_I_bar_params[vax_status]['scale'])
-
-            self.nu_I_bar_probs[vax_status] = nu_I_bar_variational_posterior.log_prob(self.nu_I_bar_samples[vax_status])
-
-            nu_D_noise = tf.random.normal((self.posterior_samples,))
-            self.nu_D_samples[vax_status] = self.nu_D_params[vax_status]['loc'] + \
-                                            self.nu_D_params[vax_status]['scale'] * nu_D_noise
-            self.nu_D_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_D_samples[vax_status])
-
-            nu_D_variational_posterior = tfp.distributions.Normal(self.nu_D_params[vax_status]['loc'],
-                                                                  self.nu_D_params[vax_status]['scale'])
-
-            self.nu_D_probs[vax_status] = nu_D_variational_posterior.log_prob(self.nu_D_samples[vax_status])
-
-            nu_D_bar_noise = tf.random.normal((self.posterior_samples,))
-            self.nu_D_bar_samples[vax_status] = self.nu_D_bar_params[vax_status]['loc'] + \
-                                            self.nu_D_bar_params[vax_status]['scale'] * nu_D_bar_noise
-            self.nu_D_bar_samples_constrained[vax_status] = tfp.bijectors.Softplus().forward(self.nu_D_bar_samples[vax_status])
-
-            nu_D_bar_variational_posterior = tfp.distributions.Normal(self.nu_D_bar_params[vax_status]['loc'],
-                                                                  self.nu_D_bar_params[vax_status]['scale'])
-
-            self.nu_D_bar_probs[vax_status] = nu_D_bar_variational_posterior.log_prob(self.nu_D_bar_samples[vax_status])
-
-            self.warmup_A_samples[vax_status] = []
-            self.warmup_A_samples_constrained[vax_status] = []
-            self.warmup_A_probs[vax_status] = []
-            self.warmup_M_samples[vax_status] = []
-            self.warmup_M_samples_constrained[vax_status] = []
-            self.warmup_M_probs[vax_status] = []
-            self.warmup_G_samples[vax_status] = []
-            self.warmup_G_samples_constrained[vax_status] = []
-            self.warmup_G_probs[vax_status] = []
-            self.warmup_GR_samples[vax_status] = []
-            self.warmup_GR_samples_constrained[vax_status] = []
-            self.warmup_GR_probs[vax_status] = []
-            self.warmup_I_samples[vax_status] = []
-            self.warmup_I_samples_constrained[vax_status] = []
-            self.warmup_I_probs[vax_status] = []
-            self.warmup_IR_samples[vax_status] = []
-            self.warmup_IR_samples_constrained[vax_status] = []
-            self.warmup_IR_probs[vax_status] = []
+            (self.nu_D_bar_samples[vax_status],
+             self.nu_D_bar_samples_constrained[vax_status],
+             self.nu_D_bar_probs[vax_status]) = self._sample_reparam_single(self.nu_D_bar_params[vax_status],
+                                                                            tfp.bijectors.Softplus())
+            
             
             for day in range(self.transition_window):
-                warmup_A_noise = tf.random.normal((self.posterior_samples,))
-                self.warmup_A_samples[vax_status].append(self.warmup_A_params[vax_status]['slope'] * day +
-                                                         self.warmup_A_params[vax_status]['intercept'] +
-                                             self.warmup_A_params[vax_status]['scale'] *
-                                             warmup_A_noise)
-                self.warmup_A_samples_constrained[vax_status].append(tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(self.warmup_A_samples[vax_status][-1]))
-    
-                warmup_A_variational_posterior = tfp.distributions.Normal(self.warmup_A_params[vax_status]['slope'] * day +
-                                                                          self.warmup_A_params[vax_status]['intercept'],
-                                                                          self.warmup_A_params[vax_status]['scale'])
+                
+                (samples,
+                 samples_constrained,
+                 probs) = \
+                    self._sample_reparam_single(self.warmup_A_params[vax_status], 
+                                                tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                     tfp.bijectors.Softplus()]),
+                                                warmup=True, day=day)
+                self.warmup_A_samples[vax_status].append(samples)
+                self.warmup_A_samples_constrained[vax_status].append(samples_constrained)
+                self.warmup_A_probs[vax_status].append(probs)
 
-                self.warmup_A_probs[vax_status].append(warmup_A_variational_posterior.log_prob(self.warmup_A_samples[vax_status][-1]))
+                (samples,
+                 samples_constrained,
+                 probs) = \
+                    self._sample_reparam_single(self.warmup_M_params[vax_status],
+                                                tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                     tfp.bijectors.Softplus()]),
+                                                warmup=True, day=day)
+                self.warmup_M_samples[vax_status].append(samples)
+                self.warmup_M_samples_constrained[vax_status].append(samples_constrained)
+                self.warmup_M_probs[vax_status].append(probs)
 
-                warmup_M_noise = tf.random.normal((self.posterior_samples,))
-                self.warmup_M_samples[vax_status].append(self.warmup_M_params[vax_status]['slope'] * day +
-                                                         self.warmup_M_params[vax_status]['intercept'] +
-                                                         self.warmup_M_params[vax_status]['scale'] *
-                                                         warmup_M_noise)
-                self.warmup_M_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
-                        self.warmup_M_samples[vax_status][-1]))
+                (samples,
+                 samples_constrained,
+                 probs) = \
+                    self._sample_reparam_single(self.warmup_G_params[vax_status],
+                                                tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                     tfp.bijectors.Softplus()]),
+                                                warmup=True, day=day)
+                self.warmup_G_samples[vax_status].append(samples)
+                self.warmup_G_samples_constrained[vax_status].append(samples_constrained)
+                self.warmup_G_probs[vax_status].append(probs)
 
-                warmup_M_variational_posterior = tfp.distributions.Normal(
-                    self.warmup_M_params[vax_status]['slope'] * day +
-                    self.warmup_M_params[vax_status]['intercept'],
-                    self.warmup_M_params[vax_status]['scale'])
+                (samples,
+                 samples_constrained,
+                 probs) = \
+                    self._sample_reparam_single(self.warmup_GR_params[vax_status],
+                                                tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                     tfp.bijectors.Softplus()]),
+                                                warmup=True, day=day)
+                self.warmup_GR_samples[vax_status].append(samples)
+                self.warmup_GR_samples_constrained[vax_status].append(samples_constrained)
+                self.warmup_GR_probs[vax_status].append(probs)
 
-                self.warmup_M_probs[vax_status].append(
-                    warmup_M_variational_posterior.log_prob(self.warmup_M_samples[vax_status][-1]))
+                (samples,
+                 samples_constrained,
+                 probs) = \
+                    self._sample_reparam_single(self.warmup_I_params[vax_status],
+                                                tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                     tfp.bijectors.Softplus()]),
+                                                warmup=True, day=day)
+                self.warmup_I_samples[vax_status].append(samples)
+                self.warmup_I_samples_constrained[vax_status].append(samples_constrained)
+                self.warmup_I_probs[vax_status].append(probs)
 
-                warmup_G_noise = tf.random.normal((self.posterior_samples,))
-                self.warmup_G_samples[vax_status].append(self.warmup_G_params[vax_status]['slope'] * day +
-                                                         self.warmup_G_params[vax_status]['intercept'] +
-                                                         self.warmup_G_params[vax_status]['scale'] *
-                                                         warmup_G_noise)
-                self.warmup_G_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
-                        self.warmup_G_samples[vax_status][-1]))
+                (samples,
+                 samples_constrained,
+                 probs) = \
+                    self._sample_reparam_single(self.warmup_IR_params[vax_status],
+                                                tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                     tfp.bijectors.Softplus()]),
+                                                warmup=True, day=day)
+                self.warmup_IR_samples[vax_status].append(samples)
+                self.warmup_IR_samples_constrained[vax_status].append(samples_constrained)
+                self.warmup_IR_probs[vax_status].append(probs)
 
-                warmup_G_variational_posterior = tfp.distributions.Normal(
-                    self.warmup_G_params[vax_status]['slope'] * day +
-                    self.warmup_G_params[vax_status]['intercept'],
-                    self.warmup_G_params[vax_status]['scale'])
+            (self.init_count_G_samples[vax_status],
+             self.init_count_G_samples_constrained[vax_status],
+             self.init_count_G_probs[vax_status]) = \
+                self._sample_reparam_single(self.init_count_G_params[vax_status],
+                                            tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                 tfp.bijectors.Softplus()]))
 
-                self.warmup_G_probs[vax_status].append(
-                    warmup_G_variational_posterior.log_prob(self.warmup_G_samples[vax_status][-1]))
-
-                warmup_GR_noise = tf.random.normal((self.posterior_samples,))
-                self.warmup_GR_samples[vax_status].append(self.warmup_GR_params[vax_status]['slope'] * day +
-                                                         self.warmup_GR_params[vax_status]['intercept'] +
-                                                         self.warmup_GR_params[vax_status]['scale'] *
-                                                         warmup_GR_noise)
-                self.warmup_GR_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
-                        self.warmup_GR_samples[vax_status][-1]))
-
-                warmup_GR_variational_posterior = tfp.distributions.Normal(
-                    self.warmup_GR_params[vax_status]['slope'] * day +
-                    self.warmup_GR_params[vax_status]['intercept'],
-                    self.warmup_GR_params[vax_status]['scale'])
-
-                self.warmup_GR_probs[vax_status].append(
-                    warmup_GR_variational_posterior.log_prob(self.warmup_GR_samples[vax_status][-1]))
-
-                warmup_I_noise = tf.random.normal((self.posterior_samples,))
-                self.warmup_I_samples[vax_status].append(self.warmup_I_params[vax_status]['slope'] * day +
-                                                         self.warmup_I_params[vax_status]['intercept'] +
-                                                         self.warmup_I_params[vax_status]['scale'] *
-                                                         warmup_I_noise)
-                self.warmup_I_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
-                        self.warmup_I_samples[vax_status][-1]))
-
-                warmup_I_variational_posterior = tfp.distributions.Normal(
-                    self.warmup_I_params[vax_status]['slope'] * day +
-                    self.warmup_I_params[vax_status]['intercept'],
-                    self.warmup_I_params[vax_status]['scale'])
-
-                self.warmup_I_probs[vax_status].append(
-                    warmup_I_variational_posterior.log_prob(self.warmup_I_samples[vax_status][-1]))
-
-                warmup_IR_noise = tf.random.normal((self.posterior_samples,))
-                self.warmup_IR_samples[vax_status].append(self.warmup_IR_params[vax_status]['slope'] * day +
-                                                         self.warmup_IR_params[vax_status]['intercept'] +
-                                                         self.warmup_IR_params[vax_status]['scale'] *
-                                                         warmup_IR_noise)
-                self.warmup_IR_samples_constrained[vax_status].append(
-                    tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
-                        self.warmup_IR_samples[vax_status][-1]))
-
-                warmup_IR_variational_posterior = tfp.distributions.Normal(
-                    self.warmup_IR_params[vax_status]['slope'] * day +
-                    self.warmup_IR_params[vax_status]['intercept'],
-                    self.warmup_IR_params[vax_status]['scale'])
-
-                self.warmup_IR_probs[vax_status].append(
-                    warmup_IR_variational_posterior.log_prob(self.warmup_IR_samples[vax_status][-1]))
-
-            init_count_G_noise = tf.random.normal((self.posterior_samples,))
-            self.init_count_G_samples[vax_status] = (self.init_count_G_params[vax_status]['loc'] +
-                                                     self.init_count_G_params[vax_status]['scale'] *
-                                                     init_count_G_noise)
-            self.init_count_G_samples_constrained[vax_status] = (
-                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
-                    self.init_count_G_samples[vax_status]))
-
-            init_count_G_variational_posterior = tfp.distributions.Normal(self.init_count_G_params[vax_status]['loc'],
-                                                                      self.init_count_G_params[vax_status][
-                                                                          'scale'])
-
-            self.init_count_G_probs[vax_status] = (
-                init_count_G_variational_posterior.log_prob(self.init_count_G_samples[vax_status]))
-
-            init_count_I_noise = tf.random.normal((self.posterior_samples,))
-            self.init_count_I_samples[vax_status] = (self.init_count_I_params[vax_status]['loc'] +
-                                                     self.init_count_I_params[vax_status]['scale'] *
-                                                     init_count_I_noise)
-            self.init_count_I_samples_constrained[vax_status] = (
-                tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]).forward(
-                    self.init_count_I_samples[vax_status]))
-
-            init_count_I_variational_posterior = tfp.distributions.Normal(self.init_count_I_params[vax_status]['loc'],
-                                                                      self.init_count_I_params[vax_status][
-                                                                          'scale'])
-
-            self.init_count_I_probs[vax_status] = (
-                init_count_I_variational_posterior.log_prob(self.init_count_I_samples[vax_status]))
+            (self.init_count_I_samples[vax_status],
+             self.init_count_I_samples_constrained[vax_status],
+             self.init_count_I_probs[vax_status]) = \
+                self._sample_reparam_single(self.init_count_I_params[vax_status],
+                                            tfp.bijectors.Chain([tfp.bijectors.Scale(100),
+                                                                 tfp.bijectors.Softplus()]))
 
 
-    
             poisson_M_dist_samples = [tfp.distributions.Poisson(rate=lambda_M)
                                       for lambda_M in self.lambda_M_samples_constrained[vax_status]]
     
@@ -1866,6 +1566,216 @@ class CovidModel(tf.keras.Model):
 
         return
 
+
+    def _get_prev_tensors(self, forecasted_fluxes, vax_status, day):
+        """Build a tensor with the last j days of each compartment we can multiply this by pi
+
+        previously_[compartment]_tensor is (j, 1000), and the days are in reverse order:
+            previously_mild_tensor[0,:] = 1000 samples of the mild influx at day t-1
+            previously_mild_tensor[4,:] = 1000 samples of the mild influx at day t-5
+
+        This way, pi[0] can be the probability of a duration 1 transition and the two tensors
+            can be elementwise multiplied
+
+        Returns:
+            (asmyptomatic, mild, gen, icu)
+        """
+        for j in range(self.transition_window):
+
+            if day - j - 1 < 0:
+                j_ago_asymp = self.warmup_A_samples_constrained[vax_status][day - j - 1]
+                j_ago_mild = self.warmup_M_samples_constrained[vax_status][day - j - 1]
+                j_ago_gen = self.warmup_G_samples_constrained[vax_status][day - j - 1]
+                j_ago_genrec = self.warmup_G_samples_constrained[vax_status][day - j - 1]
+                j_ago_icu = self.warmup_I_samples_constrained[vax_status][day - j - 1]
+                j_ago_icurec = self.warmup_I_samples_constrained[vax_status][day - j - 1]
+            else:
+                j_ago_asymp = forecasted_fluxes[Comp.A.value][vax_status].read(day - j - 1)
+                j_ago_mild = forecasted_fluxes[Comp.M.value][vax_status].read(day - j - 1)
+                j_ago_gen = forecasted_fluxes[Comp.G.value][vax_status].read(day - j - 1)
+                j_ago_genrec = forecasted_fluxes[Comp.GR.value][vax_status].read(day - j - 1)
+                j_ago_icu = forecasted_fluxes[Comp.I.value][vax_status].read(day - j - 1)
+                j_ago_icurec = forecasted_fluxes[Comp.IR.value][vax_status].read(day - j - 1)
+
+            self.previously_asymptomatic[vax_status] = \
+                self.previously_asymptomatic[vax_status].write(j, j_ago_asymp)
+            self.previously_mild[vax_status] = \
+                self.previously_mild[vax_status].write(j, j_ago_mild)
+            self.previously_gen[vax_status] = \
+                self.previously_gen[vax_status].write(j, j_ago_gen)
+            self.previously_icu[vax_status] = \
+                self.previously_icu[vax_status].write(j, j_ago_icu)
+
+        previously_asymptomatic_tensor = self.previously_asymptomatic[vax_status].stack()
+        previously_mild_tensor = self.previously_mild[vax_status].stack()
+        previously_gen_tensor = self.previously_gen[vax_status].stack()
+        previously_icu_tensor = self.previously_icu[vax_status].stack()
+
+        return (previously_asymptomatic_tensor, previously_mild_tensor, previously_gen_tensor, previously_icu_tensor)
+
+
+    def _create_sample_tensor_dicts(self):
+        self.T_serial_samples = defaultdict(int)
+        self.T_serial_samples_constrained = defaultdict(int)
+        self.T_serial_probs = defaultdict(int)
+
+        self.epsilon_samples = defaultdict(int)
+        self.epsilon_samples_constrained = defaultdict(int)
+        self.epsilon_probs = defaultdict(int)
+
+        self.delta_samples = defaultdict(int)
+        self.delta_samples_constrained = defaultdict(int)
+        self.delta_probs = defaultdict(int)
+
+        self.rho_M_samples = defaultdict(int)
+        self.rho_M_samples_constrained = defaultdict(int)
+        self.rho_M_probs = defaultdict(int)
+
+        self.rho_G_samples = defaultdict(int)
+        self.rho_G_samples_constrained = defaultdict(int)
+        self.rho_G_probs = defaultdict(int)
+
+        self.rho_I_samples = defaultdict(int)
+        self.rho_I_samples_constrained = defaultdict(int)
+        self.rho_I_probs = defaultdict(int)
+
+        self.rho_D_samples = defaultdict(int)
+        self.rho_D_samples_constrained = defaultdict(int)
+        self.rho_D_probs = defaultdict(int)
+
+        self.lambda_M_samples = defaultdict(int)
+        self.lambda_M_samples_constrained = defaultdict(int)
+        self.lambda_M_probs = defaultdict(int)
+
+        self.lambda_G_samples = defaultdict(int)
+        self.lambda_G_samples_constrained = defaultdict(int)
+        self.lambda_G_probs = defaultdict(int)
+        self.lambda_I_samples = defaultdict(int)
+        self.lambda_I_samples_constrained = defaultdict(int)
+        self.lambda_I_probs = defaultdict(int)
+        self.lambda_I_bar_samples = defaultdict(int)
+        self.lambda_I_bar_samples_constrained = defaultdict(int)
+        self.lambda_I_bar_probs = defaultdict(int)
+
+        self.lambda_D_samples = defaultdict(int)
+        self.lambda_D_samples_constrained = defaultdict(int)
+        self.lambda_D_probs = defaultdict(int)
+        self.lambda_D_bar_samples = defaultdict(int)
+        self.lambda_D_bar_samples_constrained = defaultdict(int)
+        self.lambda_D_bar_probs = defaultdict(int)
+
+        self.nu_M_samples = defaultdict(int)
+        self.nu_M_samples_constrained = defaultdict(int)
+        self.nu_M_probs = defaultdict(int)
+
+        self.nu_G_samples = defaultdict(int)
+        self.nu_G_samples_constrained = defaultdict(int)
+        self.nu_G_probs = defaultdict(int)
+        self.nu_I_samples = defaultdict(int)
+        self.nu_I_samples_constrained = defaultdict(int)
+        self.nu_I_probs = defaultdict(int)
+        self.nu_I_bar_samples = defaultdict(int)
+        self.nu_I_bar_samples_constrained = defaultdict(int)
+        self.nu_I_bar_probs = defaultdict(int)
+        self.nu_D_samples = defaultdict(int)
+        self.nu_D_samples_constrained = defaultdict(int)
+        self.nu_D_probs = defaultdict(int)
+        self.nu_D_bar_samples = defaultdict(int)
+        self.nu_D_bar_samples_constrained = defaultdict(int)
+        self.nu_D_bar_probs = defaultdict(int)
+
+        self.warmup_A_samples = defaultdict(int)
+        self.warmup_A_samples_constrained = defaultdict(int)
+        self.warmup_A_probs = defaultdict(int)
+
+        self.warmup_M_samples = defaultdict(int)
+        self.warmup_M_samples_constrained = defaultdict(int)
+        self.warmup_M_probs = defaultdict(int)
+        self.warmup_G_samples = defaultdict(int)
+        self.warmup_G_samples_constrained = defaultdict(int)
+        self.warmup_G_probs = defaultdict(int)
+        self.warmup_GR_samples = defaultdict(int)
+        self.warmup_GR_samples_constrained = defaultdict(int)
+        self.warmup_GR_probs = defaultdict(int)
+        self.warmup_I_samples = defaultdict(int)
+        self.warmup_I_samples_constrained = defaultdict(int)
+        self.warmup_I_probs = defaultdict(int)
+        self.warmup_IR_samples = defaultdict(int)
+        self.warmup_IR_samples_constrained = defaultdict(int)
+        self.warmup_IR_probs = defaultdict(int)
+
+        self.init_count_G_samples = defaultdict(int)
+        self.init_count_G_samples_constrained = defaultdict(int)
+        self.init_count_G_probs = defaultdict(int)
+        self.init_count_I_samples = defaultdict(int)
+        self.init_count_I_samples_constrained = defaultdict(int)
+        self.init_count_I_probs = defaultdict(int)
+
+        self.pi_M_samples = defaultdict(int)
+        self.pi_G_samples = defaultdict(int)
+        self.pi_I_samples = defaultdict(int)
+        self.pi_I_bar_samples = defaultdict(int)
+        self.pi_D_samples = defaultdict(int)
+        self.pi_D_bar_samples = defaultdict(int)
+
+        for vax_status in [status.value for status in self.vax_statuses]:
+            self.warmup_A_samples[vax_status] = []
+            self.warmup_A_samples_constrained[vax_status] = []
+            self.warmup_A_probs[vax_status] = []
+            self.warmup_M_samples[vax_status] = []
+            self.warmup_M_samples_constrained[vax_status] = []
+            self.warmup_M_probs[vax_status] = []
+            self.warmup_G_samples[vax_status] = []
+            self.warmup_G_samples_constrained[vax_status] = []
+            self.warmup_G_probs[vax_status] = []
+            self.warmup_GR_samples[vax_status] = []
+            self.warmup_GR_samples_constrained[vax_status] = []
+            self.warmup_GR_probs[vax_status] = []
+            self.warmup_I_samples[vax_status] = []
+            self.warmup_I_samples_constrained[vax_status] = []
+            self.warmup_I_probs[vax_status] = []
+            self.warmup_IR_samples[vax_status] = []
+            self.warmup_IR_samples_constrained[vax_status] = []
+            self.warmup_IR_probs[vax_status] = []
+
+        return
+
+
+    def _sample_reparam_single(self, params, bijector, warmup=False, day=None):
+        """Create samples and reparameterize a single variable.
+
+        Args:
+            params (dict): dictionary containing variational 'loc' and 'scale params
+            bijector (tfp.bijectors): Transformation real numbers -> space we care about
+            warmup (bool): Optional, if True, will calculate the mean as intercept + slope * day rather than loc
+        Returns:
+            samples (tf.Tensor): Tensor (or list of tensors) for storing samples on the real line
+            samples_constrained (tf.Tensor): Tensor (or list) for storing samples in data space
+            probs (tf.Tensor): Tensor (or list) for storing posterior probabilities
+        """
+
+        noise = tf.random.normal((self.posterior_samples, ))
+
+        if warmup:
+            assert(day is not None)
+            mean = params['slope']*day + params['intercept']
+        else:
+            mean = params['loc']
+
+        # Create samples, mean is still on real numbers
+        samples = mean + params['scale']*noise
+
+        # get samples in interpretable space
+        samples_constrained = bijector.forward(samples)
+
+        # faster to store this as a model object rather than make it
+        # every loop?
+        variational_posterior = tfp.distributions.Normal(mean,
+                                                         params['scale'])
+
+        probs = variational_posterior.log_prob(samples)
+
+        return samples, samples_constrained, probs
 
 # Custom LogPoisson Probability Loss function
 def calc_poisson(inputs):
