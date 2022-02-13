@@ -44,7 +44,8 @@ class CovidModel(tf.keras.Model):
                  warmup_M_params,
                  warmup_G_params, warmup_GR_params, init_count_G,
                  warmup_I_params, warmup_IR_params, init_count_I,
-                 posterior_samples=1000, debug_disable_theta=False):
+                 posterior_samples=1000, debug_disable_theta=False,
+                 fix_variance=False):
         """Covid Model 1.5
 
         Args:
@@ -55,6 +56,7 @@ class CovidModel(tf.keras.Model):
                 Posterior initializations are given in the modeling (unconstrained) domain
             posterior_samples (int): How many samples to take
             debug_disable_theta (bool): Optional, will disable prior losses if True
+            fix_variance (bool): Optional, will not learn variance parameters if True
         """
         super(CovidModel, self).__init__()
 
@@ -75,7 +77,7 @@ class CovidModel(tf.keras.Model):
                                     warmup_M_params,
                                     warmup_G_params, warmup_GR_params, init_count_G,
                                     warmup_I_params, warmup_IR_params, init_count_I,
-                                    debug_disable_theta)
+                                    debug_disable_theta, fix_variance)
 
         self._initialize_priors(T_serial, epsilon, delta,
                                 rho_M, lambda_M, nu_M,
@@ -260,7 +262,7 @@ class CovidModel(tf.keras.Model):
                                     warmup_M_params,
                                warmup_G_params, warmup_GR_params, init_count_G,
                                warmup_I_params, warmup_IR_params, init_count_I,
-                               debug_disable_theta=False):
+                               debug_disable_theta=False, fix_variance=False):
         """Helper function to hide the book-keeping behind initializing model parameters
 
         TODO: Replace with better/random initializations
@@ -307,6 +309,7 @@ class CovidModel(tf.keras.Model):
         self.previously_icu = {}
 
         train_theta = not debug_disable_theta
+        train_variance = not (debug_disable_theta or fix_variance)
 
         # T_serial, Delta and epsilon dont vary by vaccination status
         self.unconstrained_T_serial = {}
@@ -315,7 +318,7 @@ class CovidModel(tf.keras.Model):
                         name=f'T_serial_A_loc', trainable=train_theta)
         self.unconstrained_T_serial['scale'] = \
             tf.Variable(T_serial['posterior_init']['scale'], dtype=tf.float32,
-                        name=f'T_serial_A_scale', trainable=train_theta)
+                        name=f'T_serial_A_scale', trainable=train_variance)
 
         self.unconstrained_epsilon = {}
         self.unconstrained_epsilon['loc'] = \
@@ -323,7 +326,7 @@ class CovidModel(tf.keras.Model):
                         name=f'epsilon_A_loc', trainable=train_theta)
         self.unconstrained_epsilon['scale'] = \
             tf.Variable(epsilon['posterior_init']['scale'], dtype=tf.float32,
-                        name=f'epsilon_A_scale', trainable=train_theta)
+                        name=f'epsilon_A_scale', trainable=train_variance)
 
         self.unconstrained_delta = {}
         self.unconstrained_delta['loc'] = \
@@ -331,7 +334,7 @@ class CovidModel(tf.keras.Model):
                         name=f'delta_A_loc', trainable=train_theta)
         self.unconstrained_delta['scale'] = \
             tf.Variable(delta['posterior_init']['scale'], dtype=tf.float32,
-                        name=f'delta_A_scale', trainable=train_theta)
+                        name=f'delta_A_scale', trainable=train_variance)
 
         for vax_status in [status.value for status in self.vax_statuses]:
 
@@ -341,7 +344,7 @@ class CovidModel(tf.keras.Model):
                             name=f'rho_M_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_rho_M[vax_status]['scale'] = \
                 tf.Variable(rho_M[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'rho_M_scale_{vax_status}', trainable=train_theta)
+                            name=f'rho_M_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_rho_G[vax_status] = {}
             self.unconstrained_rho_G[vax_status]['loc'] = \
@@ -349,7 +352,7 @@ class CovidModel(tf.keras.Model):
                             name=f'rho_G_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_rho_G[vax_status]['scale'] = \
                 tf.Variable(rho_G[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'rho_G_scale_{vax_status}', trainable=train_theta)
+                            name=f'rho_G_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_rho_I[vax_status] = {}
             self.unconstrained_rho_I[vax_status]['loc'] = \
@@ -357,7 +360,7 @@ class CovidModel(tf.keras.Model):
                             name=f'rho_I_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_rho_I[vax_status]['scale'] = \
                 tf.Variable(rho_I[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'rho_I_scale_{vax_status}', trainable=train_theta)
+                            name=f'rho_I_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_rho_D[vax_status] = {}
             self.unconstrained_rho_D[vax_status]['loc'] = \
@@ -365,7 +368,7 @@ class CovidModel(tf.keras.Model):
                             name=f'rho_D_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_rho_D[vax_status]['scale'] = \
                 tf.Variable(rho_D[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'rho_D_scale_{vax_status}', trainable=train_theta)
+                            name=f'rho_D_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_lambda_M[vax_status] = {}
             self.unconstrained_lambda_M[vax_status]['loc'] = \
@@ -373,7 +376,7 @@ class CovidModel(tf.keras.Model):
                             name=f'lambda_M_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_lambda_M[vax_status]['scale'] = \
                 tf.Variable(lambda_M[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'lambda_M_scale_{vax_status}', trainable=train_theta)
+                            name=f'lambda_M_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_lambda_G[vax_status] = {}
             self.unconstrained_lambda_G[vax_status]['loc'] = \
@@ -381,7 +384,7 @@ class CovidModel(tf.keras.Model):
                             name=f'lambda_G_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_lambda_G[vax_status]['scale'] = \
                 tf.Variable(lambda_G[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'lambda_G_scale_{vax_status}', trainable=train_theta)
+                            name=f'lambda_G_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_lambda_I[vax_status] = {}
             self.unconstrained_lambda_I[vax_status]['loc'] = \
@@ -389,7 +392,7 @@ class CovidModel(tf.keras.Model):
                             name=f'lambda_I_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_lambda_I[vax_status]['scale'] = \
                 tf.Variable(lambda_I[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'lambda_I_scale_{vax_status}', trainable=train_theta)
+                            name=f'lambda_I_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_lambda_I_bar[vax_status] = {}
             self.unconstrained_lambda_I_bar[vax_status]['loc'] = \
@@ -397,7 +400,7 @@ class CovidModel(tf.keras.Model):
                             name=f'lambda_I_bar_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_lambda_I_bar[vax_status]['scale'] = \
                 tf.Variable(lambda_I_bar[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'lambda_I_bar_scale_{vax_status}', trainable=train_theta)
+                            name=f'lambda_I_bar_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_lambda_D[vax_status] = {}
             self.unconstrained_lambda_D[vax_status]['loc'] = \
@@ -405,7 +408,7 @@ class CovidModel(tf.keras.Model):
                             name=f'lambda_D_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_lambda_D[vax_status]['scale'] = \
                 tf.Variable(lambda_D[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'lambda_D_scale_{vax_status}', trainable=train_theta)
+                            name=f'lambda_D_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_lambda_D_bar[vax_status] = {}
             self.unconstrained_lambda_D_bar[vax_status]['loc'] = \
@@ -413,7 +416,7 @@ class CovidModel(tf.keras.Model):
                             name=f'lambda_D_bar_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_lambda_D_bar[vax_status]['scale'] = \
                 tf.Variable(lambda_D_bar[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'lambda_D_bar_scale_{vax_status}', trainable=train_theta)
+                            name=f'lambda_D_bar_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_nu_M[vax_status] = {}
             self.unconstrained_nu_M[vax_status]['loc'] = \
@@ -421,7 +424,7 @@ class CovidModel(tf.keras.Model):
                             name=f'nu_M_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_nu_M[vax_status]['scale'] = \
                 tf.Variable(nu_M[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'nu_M_scale_{vax_status}', trainable=train_theta)
+                            name=f'nu_M_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_nu_G[vax_status] = {}
             self.unconstrained_nu_G[vax_status]['loc'] = \
@@ -429,7 +432,7 @@ class CovidModel(tf.keras.Model):
                             name=f'nu_G_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_nu_G[vax_status]['scale'] = \
                 tf.Variable(nu_G[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'nu_G_scale_{vax_status}', trainable=train_theta)
+                            name=f'nu_G_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_nu_I[vax_status] = {}
             self.unconstrained_nu_I[vax_status]['loc'] = \
@@ -437,7 +440,7 @@ class CovidModel(tf.keras.Model):
                             name=f'nu_I_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_nu_I[vax_status]['scale'] = \
                 tf.Variable(nu_I[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'nu_I_scale_{vax_status}', trainable=train_theta)
+                            name=f'nu_I_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_nu_I_bar[vax_status] = {}
             self.unconstrained_nu_I_bar[vax_status]['loc'] = \
@@ -445,7 +448,7 @@ class CovidModel(tf.keras.Model):
                             name=f'nu_I_bar_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_nu_I_bar[vax_status]['scale'] = \
                 tf.Variable(nu_I_bar[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'nu_I_bar_scale_{vax_status}', trainable=train_theta)
+                            name=f'nu_I_bar_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_nu_D[vax_status] = {}
             self.unconstrained_nu_D[vax_status]['loc'] = \
@@ -453,7 +456,7 @@ class CovidModel(tf.keras.Model):
                             name=f'nu_D_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_nu_D[vax_status]['scale'] = \
                 tf.Variable(nu_D[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'nu_D_scale_{vax_status}', trainable=train_theta)
+                            name=f'nu_D_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_nu_D_bar[vax_status] = {}
             self.unconstrained_nu_D_bar[vax_status]['loc'] = \
@@ -461,7 +464,7 @@ class CovidModel(tf.keras.Model):
                             name=f'nu_D_bar_loc_{vax_status}', trainable=train_theta)
             self.unconstrained_nu_D_bar[vax_status]['scale'] = \
                 tf.Variable(nu_D_bar[vax_status]['posterior_init']['scale'], dtype=tf.float32,
-                            name=f'nu_D_bar_scale_{vax_status}', trainable=train_theta)
+                            name=f'nu_D_bar_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_warmup_A_params[vax_status] = {}
             self.unconstrained_warmup_M_params[vax_status] = {}
@@ -483,7 +486,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_warmup_A_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(warmup_A_params[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'warmup_A_scale_{vax_status}')
+                            name=f'warmup_A_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_warmup_M_params[vax_status]['slope'] = \
                 tf.Variable(tf.cast(warmup_M_params[vax_status]['posterior_init']['slope'],
@@ -496,7 +499,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_warmup_M_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(warmup_M_params[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'warmup_M_scale_{vax_status}')
+                            name=f'warmup_M_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_warmup_G_params[vax_status]['slope'] = \
                 tf.Variable(tf.cast(warmup_G_params[vax_status]['posterior_init']['slope'],
@@ -509,7 +512,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_warmup_G_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(warmup_G_params[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'warmup_G_scale_{vax_status}')
+                            name=f'warmup_G_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_warmup_GR_params[vax_status]['slope'] = \
                 tf.Variable(tf.cast(warmup_GR_params[vax_status]['posterior_init']['slope'],
@@ -522,7 +525,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_warmup_GR_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(warmup_GR_params[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'warmup_GR_scale_{vax_status}')
+                            name=f'warmup_GR_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_warmup_I_params[vax_status]['slope'] = \
                 tf.Variable(tf.cast(warmup_I_params[vax_status]['posterior_init']['slope'],
@@ -535,7 +538,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_warmup_I_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(warmup_I_params[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'warmup_I_scale_{vax_status}')
+                            name=f'warmup_I_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_warmup_IR_params[vax_status]['slope'] = \
                 tf.Variable(tf.cast(warmup_IR_params[vax_status]['posterior_init']['slope'],
@@ -548,7 +551,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_warmup_IR_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(warmup_IR_params[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'warmup_IR_scale_{vax_status}')
+                            name=f'warmup_IR_scale_{vax_status}', trainable=train_variance)
                 
             self.unconstrained_init_count_G_params[vax_status]['loc'] = \
                 tf.Variable(tf.cast(init_count_G[vax_status]['posterior_init']['loc'],
@@ -557,7 +560,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_init_count_G_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(init_count_G[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'init_count_G_scale_{vax_status}')
+                            name=f'init_count_G_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_init_count_I_params[vax_status]['loc'] = \
                 tf.Variable(tf.cast(init_count_I[vax_status]['posterior_init']['loc'],
@@ -566,7 +569,7 @@ class CovidModel(tf.keras.Model):
             self.unconstrained_init_count_I_params[vax_status]['scale'] = \
                 tf.Variable(tf.cast(init_count_I[vax_status]['posterior_init']['scale'],
                                     dtype=tf.float32), dtype=tf.float32,
-                            name=f'init_count_I_scale_{vax_status}')
+                            name=f'init_count_I_scale_{vax_status}', trainable=train_variance)
 
             self.previously_asymptomatic[vax_status] = tf.TensorArray(tf.float32, size=self.transition_window,
                                                                       clear_after_read=False, name=f'prev_asymp')
