@@ -347,6 +347,10 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     pre_training_preds = model.call(x_train)
 
     logging_callbacks = get_logging_callbacks(log_dir)
+    loss = LogPoissonProb()
+    optimizer = tf.keras.optimizers.Adam(
+        learning_rate=learning_rate,  # beta_1=0.1, beta_2=0.1
+    )
 
     model.compile(loss=loss, optimizer=optimizer, run_eagerly=True)
     model.fit(x=np.asarray([x_train]),
