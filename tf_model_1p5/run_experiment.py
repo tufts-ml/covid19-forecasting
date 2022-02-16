@@ -367,7 +367,7 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     ax = plt.gca()
     ax.xaxis.set_major_locator(month_ticks)
     plt.title('ICU Count')
-    plt.save_fig(icu_plot_loc)
+    plt.savefig(icu_plot_loc)
 
 
     gen_plot_loc = os.path.join(log_dir, 'gen_c.png')
@@ -379,7 +379,7 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     ax.xaxis.set_major_locator(month_ticks)
     plt.legend()
     plt.title('Gen Count')
-    plt.save_fig(gen_plot_loc)
+    plt.savefig(gen_plot_loc)
 
     death_plot_loc = os.path.join(log_dir, 'death.png')
     plt.figure(figsize=(8, 6))
@@ -390,7 +390,7 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     ax.xaxis.set_major_locator(month_ticks)
     plt.legend()
     plt.title('Death Influx')
-    plt.save_fig(death_plot_loc)
+    plt.savefig(death_plot_loc)
 
     return
 
