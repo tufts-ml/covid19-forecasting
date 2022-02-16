@@ -19,7 +19,8 @@ from data import read_data, create_warmup
 
 import scipy
 
-
+import matplotlib
+import matplotlib.pyplot as plt
 
 def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None):
 
@@ -39,9 +40,6 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     covid_estim_date = '20210901'
     hhs_date = '20210903'
     owid_date = '20210903'
-
-    # Learning rate
-    learning_rate = 0.05
 
     df = read_data(data_dir=data_dir,
                    covid_estim_date=covid_estim_date,
@@ -132,7 +130,7 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
         y_train['G_in'] = tf.cast(df.loc[train_start:train_end, 'general_ward_in'], dtype=tf.float32)
         y_train['G_count'] = tf.cast(df.loc[train_start:train_end, 'general_ward_count'], dtype=tf.float32)
         y_train['I_count'] = tf.cast(df.loc[train_start:train_end, 'icu_count'], dtype=tf.float32)
-        y_train['D_in'] = tf.cast(df.loc[train_start:train_end, 'deaths_covid'], dtype=tf.float32) + 1
+        y_train['D_in'] = tf.cast(df.loc[train_start:train_end, 'deaths_covid'], dtype=tf.float32)
 
         y_test = {}
         y_test['G_in'] = tf.cast(df.loc[train_start:test_end, 'general_ward_in'], dtype=tf.float32)
@@ -235,11 +233,11 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     lambda_D_bar_scale = 1.0
     nu_D_bar_scale = 0.2
 
-    T_serial['posterior_init'] = {'loc': tfp.math.softplus_inverse(4.0),
+    T_serial['posterior_init'] = {'loc': tfp.math.softplus_inverse(5.3),
                                   'scale': tf.cast(tfp.math.softplus_inverse(T_serial_scale), dtype=tf.float32)}
-    delta['posterior_init'] = {'loc': tf.cast(np.log(0.1 / (1 - 0.1)), dtype=tf.float32),
+    delta['posterior_init'] = {'loc': tf.cast(np.log(0.03 / (1 - 0.03)), dtype=tf.float32),
                                'scale': tf.cast(tfp.math.softplus_inverse(delta_scale), dtype=tf.float32)}
-    epsilon['posterior_init'] = {'loc': tf.cast(np.log(0.5 / (1 - 0.5)), dtype=tf.float32),
+    epsilon['posterior_init'] = {'loc': tf.cast(np.log(0.2 / (1 - 0.5)), dtype=tf.float32),
                                  'scale': tf.cast(tfp.math.softplus_inverse(epsilon_scale), dtype=tf.float32)}
 
     for vax_status in [status.value for status in vax_statuses]:
@@ -370,6 +368,29 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     ax.xaxis.set_major_locator(month_ticks)
     plt.title('ICU Count')
     plt.save_fig(icu_plot_loc)
+
+
+    gen_plot_loc = os.path.join(log_dir, 'gen_c.png')
+    plt.figure(figsize=(8, 6))
+    plt.plot(df.loc[train_start:test_end].index.values, y_test['G_count'], )
+    plt.plot(df.loc[train_start:test_end].index.values, preds[0][0])
+    month_ticks = matplotlib.dates.MonthLocator(interval=1)
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(month_ticks)
+    plt.legend()
+    plt.title('Gen Count')
+    plt.save_fig(gen_plot_loc)
+
+    death_plot_loc = os.path.join(log_dir, 'death.png')
+    plt.figure(figsize=(8, 6))
+    plt.plot(df.loc[train_start:test_end].index.values, y_test['D_in'], )
+    plt.plot(df.loc[train_start:test_end].index.values, preds[0][3])
+    month_ticks = matplotlib.dates.MonthLocator(interval=1)
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(month_ticks)
+    plt.legend()
+    plt.title('Death Influx')
+    plt.save_fig(death_plot_loc)
 
     return
 
