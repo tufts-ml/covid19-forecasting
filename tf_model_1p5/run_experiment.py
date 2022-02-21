@@ -98,8 +98,8 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
 
     init_count_G[0]['prior'] = {'loc': 0.9*count_gen[0], 'scale': count_gen[0]*0.9/10}
     init_count_I[0]['prior'] = {'loc': 0.9*count_icu[0], 'scale': count_icu[0]*0.9 / 10}
-    init_count_G[0]['prior'] = {'loc': 0.1 * count_gen[0], 'scale': count_gen[0] * 0.1 / 10}
-    init_count_I[0]['prior'] = {'loc': 0.1 * count_icu[0], 'scale': count_icu[0] * 0.1 / 10}
+    init_count_G[1]['prior'] = {'loc': 0.1 * count_gen[0], 'scale': count_gen[0] * 0.1 / 10}
+    init_count_I[1]['prior'] = {'loc': 0.1 * count_icu[0], 'scale': count_icu[0] * 0.1 / 10}
 
     warmup_A_params[0]['prior'] = {'intercept': warmup_asymp[0][0] / 2,
                                             'slope': 0,
