@@ -96,118 +96,138 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
 
         # Set priors
 
-        init_count_G[vax_status]['prior'] = {'loc': count_gen[vax_status], 'scale': count_gen[vax_status] / 10}
-        init_count_I[vax_status]['prior'] = {'loc': count_icu[vax_status], 'scale': count_icu[vax_status] / 10}
+    init_count_G[0]['prior'] = {'loc': 0.9*count_gen[0], 'scale': count_gen[0]*0.9/10}
+    init_count_I[0]['prior'] = {'loc': 0.9*count_icu[0], 'scale': count_icu[0]*0.9 / 10}
+    init_count_G[0]['prior'] = {'loc': 0.1 * count_gen[0], 'scale': count_gen[0] * 0.1 / 10}
+    init_count_I[0]['prior'] = {'loc': 0.1 * count_icu[0], 'scale': count_icu[0] * 0.1 / 10}
 
-        warmup_A_params[vax_status]['prior'] = {'intercept': warmup_asymp[vax_status][0] / 2,
-                                                'slope': 0,
-                                                'scale': warmup_asymp[vax_status][0] / 2 / 10}
+    warmup_A_params[0]['prior'] = {'intercept': warmup_asymp[0][0] / 2,
+                                            'slope': 0,
+                                            'scale': warmup_asymp[0][0] / 2 / 10}
+    warmup_A_params[1]['prior'] = {'intercept': warmup_asymp[1][0] / 2,
+                                            'slope': 0,
+                                            'scale': warmup_asymp[1][0] / 2 / 10}
 
-        warmup_M_params[vax_status]['prior'] = {'intercept': warmup_mild[vax_status][0] / 2,
-                                                'slope': 0,
-                                                'scale': warmup_mild[vax_status][0] / 2 / 10}
+    warmup_M_params[0]['prior'] = {'intercept': warmup_mild[0][0] / 2,
+                                            'slope': 0,
+                                            'scale': warmup_mild[0][0] / 2 / 10}
+    warmup_M_params[1]['prior'] = {'intercept': warmup_mild[1][0] / 2,
+                                   'slope': 0,
+                                   'scale': warmup_mild[1][0] / 2 / 10}
 
-        warmup_G_params[vax_status]['prior'] = {'intercept': count_gen[vax_status] / 10,
-                                                'slope': 0,
-                                                'scale': count_gen[vax_status] / 10}
+    warmup_G_params[0]['prior'] = {'intercept': count_gen[0] / 5,
+                                            'slope': 0,
+                                            'scale': count_gen[0] / 5}
+    warmup_G_params[1]['prior'] = {'intercept': count_gen[0]*0.1 / 5,
+                                   'slope': 0,
+                                   'scale': count_gen[0]*0.1 / 5}
 
-        warmup_GR_params[vax_status]['prior'] = {'intercept': count_gen[vax_status] / 2 / 10,
-                                                 'slope': 0,
-                                                 'scale': count_gen[vax_status] / 2 / 10}
+    warmup_GR_params[0]['prior'] = {'intercept': count_gen[0]/5/2,
+                                             'slope': 0,
+                                             'scale': count_gen[0]/5/2}
+    warmup_GR_params[1]['prior'] = {'intercept': count_gen[0]*0.1 / 5 / 2,
+                                             'slope': 0,
+                                             'scale': count_gen[0]*0.1 / 5 / 2}
 
-        warmup_I_params[vax_status]['prior'] = {'intercept': count_icu[vax_status] / 10,
-                                                'slope': 0,
-                                                'scale': count_icu[vax_status] / 10}
+    warmup_I_params[0]['prior'] = {'intercept': count_icu[0] /5,
+                                            'slope': 0,
+                                            'scale': count_icu[0] / 5}
+    warmup_I_params[1]['prior'] = {'intercept': count_icu[0] *0.1/ 5,
+                                   'slope': 0,
+                                   'scale': count_icu[0]*0.1 / 5}
 
-        warmup_IR_params[vax_status]['prior'] = {'intercept': count_icu[vax_status] / 2 / 10,
-                                                 'slope': 0,
-                                                 'scale': count_icu[vax_status] / 2 / 10}
+    warmup_IR_params[0]['prior'] = {'intercept': count_icu[0] / 5/2,
+                                   'slope': 0,
+                                   'scale': count_icu[0] / 5/2}
+    warmup_IR_params[1]['prior'] = {'intercept': count_icu[0] * 0.1 / 5/2,
+                                   'slope': 0,
+                                   'scale': count_icu[0] * 0.1 / 5/2}
 
-        x_train = tf.cast(df.loc[train_start:train_end, 'Rt'].values, dtype=tf.float32)
-        x_test = tf.cast(df.loc[train_start:test_end, 'Rt'].values, dtype=tf.float32)
+    x_train = tf.cast(df.loc[train_start:train_end, 'Rt'].values, dtype=tf.float32)
+    x_test = tf.cast(df.loc[train_start:test_end, 'Rt'].values, dtype=tf.float32)
 
-        y_train = {}
-        y_train['G_in'] = tf.cast(df.loc[train_start:train_end, 'general_ward_in'], dtype=tf.float32)
-        y_train['G_count'] = tf.cast(df.loc[train_start:train_end, 'general_ward_count'], dtype=tf.float32)
-        y_train['I_count'] = tf.cast(df.loc[train_start:train_end, 'icu_count'], dtype=tf.float32)
-        y_train['D_in'] = tf.cast(df.loc[train_start:train_end, 'deaths_covid'], dtype=tf.float32)
+    y_train = {}
+    y_train['G_in'] = tf.cast(df.loc[train_start:train_end, 'general_ward_in'], dtype=tf.float32)
+    y_train['G_count'] = tf.cast(df.loc[train_start:train_end, 'general_ward_count'], dtype=tf.float32)
+    y_train['I_count'] = tf.cast(df.loc[train_start:train_end, 'icu_count'], dtype=tf.float32)
+    y_train['D_in'] = tf.cast(df.loc[train_start:train_end, 'deaths_covid'], dtype=tf.float32)
 
-        y_test = {}
-        y_test['G_in'] = tf.cast(df.loc[train_start:test_end, 'general_ward_in'], dtype=tf.float32)
-        y_test['G_count'] = tf.cast(df.loc[train_start:test_end, 'general_ward_count'], dtype=tf.float32)
-        y_test['I_count'] = tf.cast(df.loc[train_start:test_end, 'icu_count'], dtype=tf.float32)
-        y_test['D_in'] = tf.cast(df.loc[train_start:test_end, 'deaths_covid'], dtype=tf.float32)
+    y_test = {}
+    y_test['G_in'] = tf.cast(df.loc[train_start:test_end, 'general_ward_in'], dtype=tf.float32)
+    y_test['G_count'] = tf.cast(df.loc[train_start:test_end, 'general_ward_count'], dtype=tf.float32)
+    y_test['I_count'] = tf.cast(df.loc[train_start:test_end, 'icu_count'], dtype=tf.float32)
+    y_test['D_in'] = tf.cast(df.loc[train_start:test_end, 'deaths_covid'], dtype=tf.float32)
 
-        T_serial = {}
-        T_serial['prior'] = {'loc': 5.8, 'scale': 1}
+    T_serial = {}
+    T_serial['prior'] = {'loc': 5.8, 'scale': 1}
 
-        epsilon = {}
-        epsilon['prior'] = {'a': 1, 'b': 1}
+    epsilon = {}
+    epsilon['prior'] = {'a': 1, 'b': 1}
 
-        delta = {}
-        delta['prior'] = {'a': 1, 'b': 1}
+    delta = {}
+    delta['prior'] = {'a': 1, 'b': 1}
 
-        rho_M = {}
-        lambda_M = {}
-        nu_M = {}
-        rho_G = {}
-        lambda_G = {}
-        nu_G = {}
+    rho_M = {}
+    lambda_M = {}
+    nu_M = {}
+    rho_G = {}
+    lambda_G = {}
+    nu_G = {}
 
-        rho_I = {}
-        lambda_I = {}
-        nu_I = {}
-        lambda_I_bar = {}
-        nu_I_bar = {}
+    rho_I = {}
+    lambda_I = {}
+    nu_I = {}
+    lambda_I_bar = {}
+    nu_I_bar = {}
 
-        rho_D = {}
-        lambda_D = {}
-        nu_D = {}
-        lambda_D_bar = {}
-        nu_D_bar = {}
+    rho_D = {}
+    lambda_D = {}
+    nu_D = {}
+    lambda_D_bar = {}
+    nu_D_bar = {}
 
-        for vax_status in [status.value for status in vax_statuses]:
-            rho_M[vax_status] = {}
-            rho_M[vax_status]['prior'] = {'a': 1, 'b': 1}
-            # rho_M[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
+    for vax_status in [status.value for status in vax_statuses]:
+        rho_M[vax_status] = {}
+        rho_M[vax_status]['prior'] = {'a': 1, 'b': 1}
+        # rho_M[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
 
-            lambda_M[vax_status] = {}
-            lambda_M[vax_status]['prior'] = {'loc': 4.7, 'scale': 1}
+        lambda_M[vax_status] = {}
+        lambda_M[vax_status]['prior'] = {'loc': 4.7, 'scale': 1}
 
-            nu_M[vax_status] = {}
-            nu_M[vax_status]['prior'] = {'loc': 3.1, 'scale': 1.2}
+        nu_M[vax_status] = {}
+        nu_M[vax_status]['prior'] = {'loc': 3.1, 'scale': 1.2}
 
-            rho_G[vax_status] = {}
-            rho_G[vax_status]['prior'] = {'a': 1, 'b': 1}
-            # rho_G[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
-            lambda_G[vax_status] = {}
-            lambda_G[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
-            nu_G[vax_status] = {}
-            nu_G[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
+        rho_G[vax_status] = {}
+        rho_G[vax_status]['prior'] = {'a': 1, 'b': 1}
+        # rho_G[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
+        lambda_G[vax_status] = {}
+        lambda_G[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
+        nu_G[vax_status] = {}
+        nu_G[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
 
-            rho_I[vax_status] = {}
-            rho_I[vax_status]['prior'] = {'a': 1, 'b': 1}
-            # rho_I[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
-            lambda_I[vax_status] = {}
-            lambda_I[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
-            nu_I[vax_status] = {}
-            nu_I[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
-            lambda_I_bar[vax_status] = {}
-            lambda_I_bar[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
-            nu_I_bar[vax_status] = {}
-            nu_I_bar[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
+        rho_I[vax_status] = {}
+        rho_I[vax_status]['prior'] = {'a': 1, 'b': 1}
+        # rho_I[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
+        lambda_I[vax_status] = {}
+        lambda_I[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
+        nu_I[vax_status] = {}
+        nu_I[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
+        lambda_I_bar[vax_status] = {}
+        lambda_I_bar[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
+        nu_I_bar[vax_status] = {}
+        nu_I_bar[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
 
-            rho_D[vax_status] = {}
-            rho_D[vax_status]['prior'] = {'a': 1, 'b': 1}
-            # rho_D[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
-            lambda_D[vax_status] = {}
-            lambda_D[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
-            nu_D[vax_status] = {}
-            nu_D[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
-            lambda_D_bar[vax_status] = {}
-            lambda_D_bar[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
-            nu_D_bar[vax_status] = {}
-            nu_D_bar[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
+        rho_D[vax_status] = {}
+        rho_D[vax_status]['prior'] = {'a': 1, 'b': 1}
+        # rho_D[vax_status]['prior'] = {'a': 31.8, 'b': 10.3}
+        lambda_D[vax_status] = {}
+        lambda_D[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
+        nu_D[vax_status] = {}
+        nu_D[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
+        lambda_D_bar[vax_status] = {}
+        lambda_D_bar[vax_status]['prior'] = {'loc': 3.3, 'scale': 1.0}
+        nu_D_bar[vax_status] = {}
+        nu_D_bar[vax_status]['prior'] = {'loc': 9.0, 'scale': 3}
 
     T_serial_scale = 1.0
     delta_scale = 0.2
@@ -240,92 +260,182 @@ def run_model(learning_rate=None, fix_variance=None, data_dir=None, log_dir=None
     epsilon['posterior_init'] = {'loc': tf.cast(np.log(0.2 / (1 - 0.5)), dtype=tf.float32),
                                  'scale': tf.cast(tfp.math.softplus_inverse(epsilon_scale), dtype=tf.float32)}
 
-    for vax_status in [status.value for status in vax_statuses]:
-        rho_M[vax_status]['posterior_init'] = {'loc': tf.cast(np.log(0.5 / (1 - 0.5)), dtype=tf.float32),
-                                               'scale': tf.cast(tfp.math.softplus_inverse(rho_M_scale),
-                                                                dtype=tf.float32)}
 
-        lambda_M[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.0), dtype=tf.float32),
-                                                  'scale': tf.cast(tfp.math.softplus_inverse(lambda_M_scale),
+    rho_M_unvax =0.5
+    rho_M_vax = 0.45
+    rho_M[0]['posterior_init'] = {'loc': tf.cast(np.log(rho_M_unvax / (1 - rho_M_unvax)), dtype=tf.float32),
+                                           'scale': tf.cast(tfp.math.softplus_inverse(rho_M_scale),
+                                                            dtype=tf.float32)}
+    rho_M[1]['posterior_init'] = {'loc': tf.cast(np.log(rho_M_vax / (1 - rho_M_vax)), dtype=tf.float32),
+                                  'scale': tf.cast(tfp.math.softplus_inverse(rho_M_scale),
+                                                   dtype=tf.float32)}
+
+    lambda_M[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.0), dtype=tf.float32),
+                                              'scale': tf.cast(tfp.math.softplus_inverse(lambda_M_scale),
+                                                               dtype=tf.float32)}
+    lambda_M[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.0), dtype=tf.float32),
+                                              'scale': tf.cast(tfp.math.softplus_inverse(lambda_M_scale),
+                                                               dtype=tf.float32)}
+
+    nu_M[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(5.0), dtype=tf.float32),
+                                          'scale': tf.cast(tfp.math.softplus_inverse(nu_M_scale), dtype=tf.float32)}
+    nu_M[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(5.0), dtype=tf.float32),
+                                 'scale': tf.cast(tfp.math.softplus_inverse(nu_M_scale), dtype=tf.float32)}
+
+    rho_G_unvax = 0.1
+    rho_G_vax = 0.01
+    rho_G[0]['posterior_init'] = {'loc': tf.cast(np.log(rho_G_unvax / (1 - rho_G_unvax)), dtype=tf.float32),
+                                           'scale': tf.cast(tfp.math.softplus_inverse(rho_G_scale),
+                                                            dtype=tf.float32)}
+    rho_G[1]['posterior_init'] = {'loc': tf.cast(np.log(rho_G_vax / (1 - rho_G_vax)), dtype=tf.float32),
+                                  'scale': tf.cast(tfp.math.softplus_inverse(rho_G_scale),
+                                                   dtype=tf.float32)}
+
+    lambda_G[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                              'scale': tf.cast(tfp.math.softplus_inverse(lambda_G_scale),
+                                                               dtype=tf.float32)}
+    lambda_G[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                     'scale': tf.cast(tfp.math.softplus_inverse(lambda_G_scale),
+                                                      dtype=tf.float32)}
+
+    nu_G[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                          'scale': tf.cast(tfp.math.softplus_inverse(nu_G_scale), dtype=tf.float32)}
+    nu_G[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                 'scale': tf.cast(tfp.math.softplus_inverse(nu_G_scale), dtype=tf.float32)}
+
+    rho_I_unvax = 0.1
+    rho_I_vax = 0.01
+    rho_I[0]['posterior_init'] = {'loc': tf.cast(np.log(rho_I_unvax / (1 - rho_I_unvax)), dtype=tf.float32),
+                                           'scale': tf.cast(tfp.math.softplus_inverse(rho_I_scale),
+                                                            dtype=tf.float32)}
+    rho_I[1]['posterior_init'] = {'loc': tf.cast(np.log(rho_I_vax / (1 - rho_I_vax)), dtype=tf.float32),
+                                 'scale': tf.cast(tfp.math.softplus_inverse(rho_I_scale),
+                                                  dtype=tf.float32)}
+
+    lambda_I[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                              'scale': tf.cast(tfp.math.softplus_inverse(lambda_I_scale),
+                                                               dtype=tf.float32)}
+    lambda_I[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                     'scale': tf.cast(tfp.math.softplus_inverse(lambda_I_scale),
+                                                      dtype=tf.float32)}
+
+    nu_I[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                          'scale': tf.cast(tfp.math.softplus_inverse(nu_I_scale), dtype=tf.float32)}
+    nu_I[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                 'scale': tf.cast(tfp.math.softplus_inverse(nu_I_scale), dtype=tf.float32)}
+
+    lambda_I_bar[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                                  'scale': tf.cast(tfp.math.softplus_inverse(lambda_I_bar_scale),
                                                                    dtype=tf.float32)}
+    lambda_I_bar[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                         'scale': tf.cast(tfp.math.softplus_inverse(lambda_I_bar_scale),
+                                                          dtype=tf.float32)}
+    nu_I_bar[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                              'scale': tf.cast(tfp.math.softplus_inverse(nu_I_bar_scale),
+                                                               dtype=tf.float32)}
+    nu_I_bar[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                     'scale': tf.cast(tfp.math.softplus_inverse(nu_I_bar_scale),
+                                                      dtype=tf.float32)}
 
-        nu_M[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(5.0), dtype=tf.float32),
-                                              'scale': tf.cast(tfp.math.softplus_inverse(nu_M_scale), dtype=tf.float32)}
+    rho_D_unvax = 0.1
+    rho_D_vax = 0.01
+    rho_D[0]['posterior_init'] = {'loc': tf.cast(np.log(rho_D_unvax / (1 - rho_D_unvax)), dtype=tf.float32),
+                                           'scale': tf.cast(tfp.math.softplus_inverse(rho_D_scale),
+                                                            dtype=tf.float32)}
+    rho_D[1]['posterior_init'] = {'loc': tf.cast(np.log(rho_D_vax / (1 - rho_D_vax)), dtype=tf.float32),
+                                  'scale': tf.cast(tfp.math.softplus_inverse(rho_D_scale),
+                                                   dtype=tf.float32)}
 
-        rho_G[vax_status]['posterior_init'] = {'loc': tf.cast(np.log(0.1 / (1 - 0.1)), dtype=tf.float32),
-                                               'scale': tf.cast(tfp.math.softplus_inverse(rho_G_scale),
-                                                                dtype=tf.float32)}
-
-        lambda_G[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
-                                                  'scale': tf.cast(tfp.math.softplus_inverse(lambda_G_scale),
+    lambda_D[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                              'scale': tf.cast(tfp.math.softplus_inverse(lambda_D_scale),
+                                                               dtype=tf.float32)}
+    lambda_D[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                     'scale': tf.cast(tfp.math.softplus_inverse(lambda_D_scale),
+                                                      dtype=tf.float32)}
+    nu_D[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                          'scale': tf.cast(tfp.math.softplus_inverse(nu_D_scale), dtype=tf.float32)}
+    nu_D[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                 'scale': tf.cast(tfp.math.softplus_inverse(nu_D_scale), dtype=tf.float32)}
+    lambda_D_bar[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                                  'scale': tf.cast(tfp.math.softplus_inverse(lambda_D_bar_scale),
                                                                    dtype=tf.float32)}
+    lambda_D_bar[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
+                                         'scale': tf.cast(tfp.math.softplus_inverse(lambda_D_bar_scale),
+                                                          dtype=tf.float32)}
+    nu_D_bar[0]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                              'scale': tf.cast(tfp.math.softplus_inverse(nu_D_bar_scale),
+                                                               dtype=tf.float32)}
+    nu_D_bar[1]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
+                                     'scale': tf.cast(tfp.math.softplus_inverse(nu_D_bar_scale),
+                                                      dtype=tf.float32)}
 
-        nu_G[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
-                                              'scale': tf.cast(tfp.math.softplus_inverse(nu_G_scale), dtype=tf.float32)}
+    init_count_G[0]['posterior_init'] = {
+        'loc': tf.cast(tfp.math.softplus_inverse(count_gen[0]*0.9 / 100), dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(count_gen[0]*0.9 / 100 / 10), dtype=tf.float32)}
+    init_count_G[1]['posterior_init'] = {
+        'loc': tf.cast(tfp.math.softplus_inverse(count_gen[0] * 0.1 / 100), dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(count_gen[0] * 0.1 / 100 / 10), dtype=tf.float32)}
+    init_count_I[0]['posterior_init'] = {
+        'loc': tf.cast(tfp.math.softplus_inverse(count_icu[0] *0.9/ 100), dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(count_icu[0]*0.9 / 100 / 10), dtype=tf.float32)}
+    init_count_I[1]['posterior_init'] = {
+        'loc': tf.cast(tfp.math.softplus_inverse(count_icu[0] * 0.1 / 100), dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(count_icu[0] * 0.1 / 100 / 10), dtype=tf.float32)}
 
-        rho_I[vax_status]['posterior_init'] = {'loc': tf.cast(np.log(0.1 / (1 - 0.1)), dtype=tf.float32),
-                                               'scale': tf.cast(tfp.math.softplus_inverse(rho_I_scale),
-                                                                dtype=tf.float32)}
-        lambda_I[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
-                                                  'scale': tf.cast(tfp.math.softplus_inverse(lambda_I_scale),
-                                                                   dtype=tf.float32)}
-        nu_I[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
-                                              'scale': tf.cast(tfp.math.softplus_inverse(nu_I_scale), dtype=tf.float32)}
-        lambda_I_bar[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
-                                                      'scale': tf.cast(tfp.math.softplus_inverse(lambda_I_bar_scale),
-                                                                       dtype=tf.float32)}
-        nu_I_bar[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
-                                                  'scale': tf.cast(tfp.math.softplus_inverse(nu_I_bar_scale),
-                                                                   dtype=tf.float32)}
+    # must be positive so reverse softplus the mean
+    warmup_A_params[0]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(1000.0 / 100 ), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(250.0 / 100 ), dtype=tf.float32)}
+    warmup_A_params[1]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(1000.0 / 100 ), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(250.0 / 100 ), dtype=tf.float32)}
 
-        rho_D[vax_status]['posterior_init'] = {'loc': tf.cast(np.log(0.1 / (1 - 0.1)), dtype=tf.float32),
-                                               'scale': tf.cast(tfp.math.softplus_inverse(rho_D_scale),
-                                                                dtype=tf.float32)}
-        lambda_D[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
-                                                  'scale': tf.cast(tfp.math.softplus_inverse(lambda_D_scale),
-                                                                   dtype=tf.float32)}
-        nu_D[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
-                                              'scale': tf.cast(tfp.math.softplus_inverse(nu_D_scale), dtype=tf.float32)}
-        lambda_D_bar[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(3.3), dtype=tf.float32),
-                                                      'scale': tf.cast(tfp.math.softplus_inverse(lambda_D_bar_scale),
-                                                                       dtype=tf.float32)}
-        nu_D_bar[vax_status]['posterior_init'] = {'loc': tf.cast(tfp.math.softplus_inverse(9.0), dtype=tf.float32),
-                                                  'scale': tf.cast(tfp.math.softplus_inverse(nu_D_bar_scale),
-                                                                   dtype=tf.float32)}
+    warmup_M_params[0]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(500.0 / 100 ), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(50.0 / 100 ), dtype=tf.float32)}
+    warmup_M_params[1]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(500.0 / 100 ), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(50.0 / 100  ), dtype=tf.float32)}
 
-        init_count_G[vax_status]['posterior_init'] = {
-            'loc': tf.cast(tfp.math.softplus_inverse(count_gen[vax_status] / 100), dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(count_gen[vax_status] / 100 / 10), dtype=tf.float32)}
-        init_count_I[vax_status]['posterior_init'] = {
-            'loc': tf.cast(tfp.math.softplus_inverse(count_icu[vax_status] / 100), dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(count_icu[vax_status] / 100 / 10), dtype=tf.float32)}
+    warmup_G_params[0]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(250 / 100 ), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(25 / 100 ), dtype=tf.float32)}
+    warmup_G_params[1]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(25 / 100), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(10 / 100 ), dtype=tf.float32)}
 
-        # must be positive so reverse softplus the mean
-        warmup_A_params[vax_status]['posterior_init'] = {
-            'intercept': tf.cast(tfp.math.softplus_inverse(2000.0 / 100 / 2), dtype=tf.float32),
-            'slope': tf.cast(0.0, dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(500.0 / 100 / 2), dtype=tf.float32)}
-        warmup_M_params[vax_status]['posterior_init'] = {
-            'intercept': tf.cast(tfp.math.softplus_inverse(1000.0 / 100 / 2), dtype=tf.float32),
-            'slope': tf.cast(0.0, dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(100.0 / 100 / 2), dtype=tf.float32)}
+    warmup_GR_params[0]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(200.0 / 100 ), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(25.0 / 100 ), dtype=tf.float32)}
+    warmup_GR_params[1]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(12.5 / 100), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(5/ 100), dtype=tf.float32)}
 
-        warmup_G_params[vax_status]['posterior_init'] = {
-            'intercept': tf.cast(tfp.math.softplus_inverse(500.0 / 100 / 2), dtype=tf.float32),
-            'slope': tf.cast(0.0, dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(50.0 / 100 / 2), dtype=tf.float32)}
-        warmup_GR_params[vax_status]['posterior_init'] = {
-            'intercept': tf.cast(tfp.math.softplus_inverse(400.0 / 100 / 2), dtype=tf.float32),
-            'slope': tf.cast(0.0, dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(50.0 / 100 / 2), dtype=tf.float32)}
-        warmup_I_params[vax_status]['posterior_init'] = {
-            'intercept': tf.cast(tfp.math.softplus_inverse(100.0 / 100 / 2), dtype=tf.float32),
-            'slope': tf.cast(0.0, dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(30.0 / 100 / 2), dtype=tf.float32)}
-        warmup_IR_params[vax_status]['posterior_init'] = {
-            'intercept': tf.cast(tfp.math.softplus_inverse(90.0 / 100 / 2), dtype=tf.float32),
-            'slope': tf.cast(0.0, dtype=tf.float32),
-            'scale': tf.cast(tfp.math.softplus_inverse(30.0 / 100 / 2), dtype=tf.float32)}
+    warmup_I_params[0]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(90 / 100 ), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(30.0 / 100 ), dtype=tf.float32)}
+    warmup_I_params[1]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(10 / 100), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(3 / 100), dtype=tf.float32)}
+
+    warmup_IR_params[0]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(45 / 100), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(20.0 / 100 ), dtype=tf.float32)}
+    warmup_IR_params[1]['posterior_init'] = {
+        'intercept': tf.cast(tfp.math.softplus_inverse(5 / 100), dtype=tf.float32),
+        'slope': tf.cast(0.0, dtype=tf.float32),
+        'scale': tf.cast(tfp.math.softplus_inverse(2 / 100), dtype=tf.float32)}
 
     model = CovidModel([Vax.no, Vax.yes], [Comp.A, Comp.M, Comp.G, Comp.GR, Comp.I, Comp.IR, Comp.D],
                        transition_window,
