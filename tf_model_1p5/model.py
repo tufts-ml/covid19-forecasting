@@ -1939,6 +1939,24 @@ class VarLogCallback(tf.keras.callbacks.Callback):
             tf.summary.scalar(f'nu_I_scale_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_I[vax_status]['scale'])),
                               step=epoch)
+            tf.summary.scalar(f'rho_D_mean_{vax_status}',
+                              data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_D[vax_status]['loc'])),
+                              step=epoch)
+            tf.summary.scalar(f'rho_D_scale_{vax_status}',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_D[vax_status]['scale'])),
+                              step=epoch)
+            tf.summary.scalar(f'lambda_D_mean_{vax_status}',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_D[vax_status]['loc'])),
+                              step=epoch)
+            tf.summary.scalar(f'lambda_D_scale_{vax_status}',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_D[vax_status]['scale'])),
+                              step=epoch)
+            tf.summary.scalar(f'nu_D_mean_{vax_status}',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_D[vax_status]['loc'])),
+                              step=epoch)
+            tf.summary.scalar(f'nu_D_scale_{vax_status}',
+                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_D[vax_status]['scale'])),
+                              step=epoch)
             tf.summary.scalar(f'lambda_D_bar_mean_{vax_status}',
                               data=tf.squeeze(
                                   tf.math.softplus(self.model.unconstrained_lambda_D_bar[vax_status]['loc'])),
