@@ -9,7 +9,7 @@ from model import Comp, Vax
 no = Vax.no.value
 yes = Vax.yes.value
 
-def replace_keys(old_dict, type):
+def replace_keys(old_dict, type, from_tensor=False):
     new_dict = { }
     for key in old_dict.keys():
         if isinstance(old_dict[key], dict):
@@ -17,9 +17,12 @@ def replace_keys(old_dict, type):
                 new_key = int(key)
             else:
                 new_key = key
-            new_dict[new_key] = replace_keys(old_dict[key], type)
+            new_dict[new_key] = replace_keys(old_dict[key], type, from_tensor=from_tensor)
         else:
-            new_dict[key] = type(old_dict[key])
+            if from_tensor:
+                new_dict[key] = type(old_dict[key].numpy()[0])
+            else:
+                new_dict[key] = type(old_dict[key])
     return new_dict
 
 class ModelConfig(object):
