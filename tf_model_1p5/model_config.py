@@ -186,6 +186,8 @@ class ModelConfig(object):
             1: {
             'loc': self.init_count_I.mean_transform.forward(model.unconstrained_init_count_I_params[1]['loc']),
             'scale': self.init_count_I.scale_transform.forward(model.unconstrained_init_count_I_params[1]['scale'])}}
+
+        return self
         
     def to_json(self, filepath):
         
