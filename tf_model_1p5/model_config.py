@@ -17,7 +17,7 @@ def replace_keys(old_dict, type):
                 new_key = int(key)
             else:
                 new_key = key
-            new_dict[new_key] = replace_keys(old_dict[key])
+            new_dict[new_key] = replace_keys(old_dict[key], type)
         else:
             new_dict[key] = type(old_dict[key])
     return new_dict
