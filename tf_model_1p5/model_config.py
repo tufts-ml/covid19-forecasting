@@ -287,7 +287,7 @@ class ModelConfig(object):
         data['init_count']['I']['prior'] = self.init_count_I.prior
         data['init_count']['I']['value'] = self.init_count_I.value
 
-        data = replace_keys(data, str)
+        data = replace_keys(data, str, from_tensor=True)
 
         with open(filepath, 'w') as json_file:
             json.dump(data, json_file)
