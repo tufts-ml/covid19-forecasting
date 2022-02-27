@@ -9,7 +9,7 @@ from model import Comp, Vax
 no = Vax.no.value
 yes = Vax.yes.value
 
-def replace_keys(old_dict):
+def replace_keys(old_dict, type):
     new_dict = { }
     for key in old_dict.keys():
         if isinstance(old_dict[key], dict):
@@ -19,7 +19,7 @@ def replace_keys(old_dict):
                 new_key = key
             new_dict[new_key] = replace_keys(old_dict[key])
         else:
-            new_dict[key] = np.float32(old_dict[key])
+            new_dict[key] = type(old_dict[key])
     return new_dict
 
 class ModelConfig(object):
@@ -284,6 +284,8 @@ class ModelConfig(object):
         data['init_count']['I']['prior'] = self.init_count_I.prior
         data['init_count']['I']['value'] = self.init_count_I.value
 
+        data = replace_keys(data, str)
+
         with open(filepath, 'w') as json_file:
             json.dump(data, json_file)
 
@@ -295,7 +297,7 @@ class ModelConfig(object):
         with open(filepath, 'r') as json_file:
             data = json.load(json_file)
 
-        data = replace_keys(data)
+        data = replace_keys(data, np.float32)
             
         cnfg.T_serial = ModelVar('T_serial', data['T_serial']['prior'], data['T_serial']['value'],
                                  tfp.bijectors.Softplus())
