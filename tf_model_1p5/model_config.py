@@ -35,84 +35,157 @@ class ModelConfig(object):
         self.delta.value = {'loc': self.delta.mean_transform.forward(model.unconstrained_delta['loc']),
                                'scale': self.delta.scale_transform.forward(model.unconstrained_delta['scale'])}
 
-        self.rho_M.value = {'loc': self.rho_M.mean_transform.forward(model.unconstrained_rho_M['loc']),
-                               'scale': self.rho_M.scale_transform.forward(model.unconstrained_rho_M['scale'])}
-        self.lambda_M.value = {'loc': self.lambda_M.mean_transform.forward(model.unconstrained_lambda_M['loc']),
-                            'scale': self.lambda_M.scale_transform.forward(model.unconstrained_lambda_M['scale'])}
-        self.nu_M.value = {'loc': self.nu_M.mean_transform.forward(model.unconstrained_nu_M['loc']),
-                               'scale': self.nu_M.scale_transform.forward(model.unconstrained_nu_M['scale'])}
-        self.rho_G.value = {'loc': self.rho_G.mean_transform.forward(model.unconstrained_rho_G['loc']),
-                            'scale': self.rho_G.scale_transform.forward(model.unconstrained_rho_G['scale'])}
-        self.lambda_G.value = {'loc': self.lambda_G.mean_transform.forward(model.unconstrained_lambda_G['loc']),
-                               'scale': self.lambda_G.scale_transform.forward(model.unconstrained_lambda_G['scale'])}
-        self.nu_G.value = {'loc': self.nu_G.mean_transform.forward(model.unconstrained_nu_G['loc']),
-                           'scale': self.nu_G.scale_transform.forward(model.unconstrained_nu_G['scale'])}
-        self.rho_I.value = {'loc': self.rho_I.mean_transform.forward(model.unconstrained_rho_I['loc']),
-                            'scale': self.rho_I.scale_transform.forward(model.unconstrained_rho_I['scale'])}
-        self.lambda_I.value = {'loc': self.lambda_I.mean_transform.forward(model.unconstrained_lambda_I['loc']),
-                               'scale': self.lambda_I.scale_transform.forward(model.unconstrained_lambda_I['scale'])}
-        self.lambda_I_bar.value = {'loc': self.lambda_I_bar.mean_transform.forward(model.unconstrained_lambda_I_bar['loc']),
-                               'scale': self.lambda_I_bar.scale_transform.forward(model.unconstrained_lambda_I_bar['scale'])}
-        self.nu_I.value = {'loc': self.nu_I.mean_transform.forward(model.unconstrained_nu_I['loc']),
-                           'scale': self.nu_I.scale_transform.forward(model.unconstrained_nu_I['scale'])}
-        self.nu_I_bar.value = {'loc': self.nu_I_bar.mean_transform.forward(model.unconstrained_nu_I_bar['loc']),
-                           'scale': self.nu_I_bar.scale_transform.forward(model.unconstrained_nu_I_bar['scale'])}
-        self.rho_D.value = {'loc': self.rho_D.mean_transform.forward(model.unconstrained_rho_D['loc']),
-                            'scale': self.rho_D.scale_transform.forward(model.unconstrained_rho_D['scale'])}
-        self.lambda_D.value = {'loc': self.lambda_D.mean_transform.forward(model.unconstrained_lambda_D['loc']),
-                               'scale': self.lambda_D.scale_transform.forward(model.unconstrained_lambda_D['scale'])}
+        self.rho_M.value = {0: {'loc': self.rho_M.mean_transform.forward(model.unconstrained_rho_M[0]['loc']),
+                               'scale': self.rho_M.scale_transform.forward(model.unconstrained_rho_M[0]['scale'])},
+                            1: {'loc': self.rho_M.mean_transform.forward(model.unconstrained_rho_M[1]['loc']),
+                               'scale': self.rho_M.scale_transform.forward(model.unconstrained_rho_M[1]['scale'])}}
+        self.lambda_M.value = {0: {'loc': self.lambda_M.mean_transform.forward(model.unconstrained_lambda_M[0]['loc']),
+                               'scale': self.lambda_M.scale_transform.forward(model.unconstrained_lambda_M[0]['scale'])},
+                            1: {'loc': self.lambda_M.mean_transform.forward(model.unconstrained_lambda_M[1]['loc']),
+                               'scale': self.lambda_M.scale_transform.forward(model.unconstrained_lambda_M[1]['scale'])}}
+        self.nu_M.value = {0: {'loc': self.nu_M.mean_transform.forward(model.unconstrained_nu_M[0]['loc']),
+                               'scale': self.nu_M.scale_transform.forward(model.unconstrained_nu_M[0]['scale'])},
+                            1: {'loc': self.nu_M.mean_transform.forward(model.unconstrained_nu_M[1]['loc']),
+                               'scale': self.nu_M.scale_transform.forward(model.unconstrained_nu_M[1]['scale'])}}
+        self.rho_G.value = {0: {'loc': self.rho_G.mean_transform.forward(model.unconstrained_rho_G[0]['loc']),
+                                'scale': self.rho_G.scale_transform.forward(model.unconstrained_rho_G[0]['scale'])},
+                            1: {'loc': self.rho_G.mean_transform.forward(model.unconstrained_rho_G[1]['loc']),
+                                'scale': self.rho_G.scale_transform.forward(model.unconstrained_rho_G[1]['scale'])}}
+        self.lambda_G.value = {0: {'loc': self.lambda_G.mean_transform.forward(model.unconstrained_lambda_G[0]['loc']),
+                                   'scale': self.lambda_G.scale_transform.forward(
+                                       model.unconstrained_lambda_G[0]['scale'])},
+                               1: {'loc': self.lambda_G.mean_transform.forward(model.unconstrained_lambda_G[1]['loc']),
+                                   'scale': self.lambda_G.scale_transform.forward(
+                                       model.unconstrained_lambda_G[1]['scale'])}}
+        self.nu_G.value = {0: {'loc': self.nu_G.mean_transform.forward(model.unconstrained_nu_G[0]['loc']),
+                               'scale': self.nu_G.scale_transform.forward(model.unconstrained_nu_G[0]['scale'])},
+                           1: {'loc': self.nu_G.mean_transform.forward(model.unconstrained_nu_G[1]['loc']),
+                               'scale': self.nu_G.scale_transform.forward(model.unconstrained_nu_G[1]['scale'])}}
+        self.rho_I.value = {0: {'loc': self.rho_I.mean_transform.forward(model.unconstrained_rho_I[0]['loc']),
+                                'scale': self.rho_I.scale_transform.forward(model.unconstrained_rho_I[0]['scale'])},
+                            1: {'loc': self.rho_I.mean_transform.forward(model.unconstrained_rho_I[1]['loc']),
+                                'scale': self.rho_I.scale_transform.forward(model.unconstrained_rho_I[1]['scale'])}}
+        self.lambda_I.value = {0: {'loc': self.lambda_I.mean_transform.forward(model.unconstrained_lambda_I[0]['loc']),
+                                   'scale': self.lambda_I.scale_transform.forward(
+                                       model.unconstrained_lambda_I[0]['scale'])},
+                               1: {'loc': self.lambda_I.mean_transform.forward(model.unconstrained_lambda_I[1]['loc']),
+                                   'scale': self.lambda_I.scale_transform.forward(
+                                       model.unconstrained_lambda_I[1]['scale'])}}
+        self.lambda_I_bar.value = {0: {'loc': self.lambda_I_bar.mean_transform.forward(model.unconstrained_lambda_I_bar[0]['loc']),
+                                   'scale': self.lambda_I_bar.scale_transform.forward(
+                                       model.unconstrained_lambda_I_bar[0]['scale'])},
+                               1: {'loc': self.lambda_I_bar.mean_transform.forward(model.unconstrained_lambda_I_bar[1]['loc']),
+                                   'scale': self.lambda_I_bar.scale_transform.forward(
+                                       model.unconstrained_lambda_I_bar[1]['scale'])}}
+        self.nu_I.value = {0: {'loc': self.nu_I.mean_transform.forward(model.unconstrained_nu_I[0]['loc']),
+                               'scale': self.nu_I.scale_transform.forward(model.unconstrained_nu_I[0]['scale'])},
+                           1: {'loc': self.nu_I.mean_transform.forward(model.unconstrained_nu_I[1]['loc']),
+                               'scale': self.nu_I.scale_transform.forward(model.unconstrained_nu_I[1]['scale'])}}
+        self.nu_I_bar.value = {0: {'loc': self.nu_I_bar.mean_transform.forward(model.unconstrained_nu_I_bar[0]['loc']),
+                               'scale': self.nu_I_bar.scale_transform.forward(model.unconstrained_nu_I_bar[0]['scale'])},
+                           1: {'loc': self.nu_I_bar.mean_transform.forward(model.unconstrained_nu_I_bar[1]['loc']),
+                               'scale': self.nu_I_bar.scale_transform.forward(model.unconstrained_nu_I_bar[1]['scale'])}}
+        self.rho_D.value = {0: {'loc': self.rho_D.mean_transform.forward(model.unconstrained_rho_D[0]['loc']),
+                                'scale': self.rho_D.scale_transform.forward(model.unconstrained_rho_D[0]['scale'])},
+                            1: {'loc': self.rho_D.mean_transform.forward(model.unconstrained_rho_D[1]['loc']),
+                                'scale': self.rho_D.scale_transform.forward(model.unconstrained_rho_D[1]['scale'])}}
+        self.lambda_D.value = {0: {'loc': self.lambda_D.mean_transform.forward(model.unconstrained_lambda_D[0]['loc']),
+                                   'scale': self.lambda_D.scale_transform.forward(
+                                       model.unconstrained_lambda_D[0]['scale'])},
+                               1: {'loc': self.lambda_D.mean_transform.forward(model.unconstrained_lambda_D[1]['loc']),
+                                   'scale': self.lambda_D.scale_transform.forward(
+                                       model.unconstrained_lambda_D[1]['scale'])}}
         self.lambda_D_bar.value = {
-            'loc': self.lambda_D_bar.mean_transform.forward(model.unconstrained_lambda_D_bar['loc']),
-            'scale': self.lambda_D_bar.scale_transform.forward(model.unconstrained_lambda_D_bar['scale'])}
-        self.nu_D.value = {'loc': self.nu_D.mean_transform.forward(model.unconstrained_nu_D['loc']),
-                           'scale': self.nu_D.scale_transform.forward(model.unconstrained_nu_D['scale'])}
-        self.nu_D_bar.value = {'loc': self.nu_D_bar.mean_transform.forward(model.unconstrained_nu_D_bar['loc']),
-                               'scale': self.nu_D_bar.scale_transform.forward(model.unconstrained_nu_D_bar['scale'])}
+            0: {'loc': self.lambda_D_bar.mean_transform.forward(model.unconstrained_lambda_D_bar[0]['loc']),
+                'scale': self.lambda_D_bar.scale_transform.forward(
+                    model.unconstrained_lambda_D_bar[0]['scale'])},
+            1: {'loc': self.lambda_D_bar.mean_transform.forward(model.unconstrained_lambda_D_bar[1]['loc']),
+                'scale': self.lambda_D_bar.scale_transform.forward(
+                    model.unconstrained_lambda_D_bar[1]['scale'])}}
+        self.nu_D.value = {0: {'loc': self.nu_D.mean_transform.forward(model.unconstrained_nu_D[0]['loc']),
+                               'scale': self.nu_D.scale_transform.forward(model.unconstrained_nu_D[0]['scale'])},
+                           1: {'loc': self.nu_D.mean_transform.forward(model.unconstrained_nu_D[1]['loc']),
+                               'scale': self.nu_D.scale_transform.forward(model.unconstrained_nu_D[1]['scale'])}}
+        self.nu_D_bar.value = {0: {'loc': self.nu_D_bar.mean_transform.forward(model.unconstrained_nu_D_bar[0]['loc']),
+                                   'scale': self.nu_D_bar.scale_transform.forward(
+                                       model.unconstrained_nu_D_bar[0]['scale'])},
+                               1: {'loc': self.nu_D_bar.mean_transform.forward(model.unconstrained_nu_D_bar[1]['loc']),
+                                   'scale': self.nu_D_bar.scale_transform.forward(
+                                       model.unconstrained_nu_D_bar[1]['scale'])}}
 
-        self.warmup_A.value = {'slope': self.warmup_A.mean_transform.forward(model.unconstrained_warmup_A_params['slope']),
+        self.warmup_A.value = {0: {'slope': self.warmup_A.mean_transform.forward(model.unconstrained_warmup_A_params[0]['slope']),
                                'intercept': self.warmup_A.mean_transform.forward(
-                                   model.unconstrained_warmup_A_params['intercept']),
-                               'slope': self.warmup_A.scale_transform.forward(
-                                   model.unconstrained_warmup_A_params['intercept']),}
-        self.warmup_M.value = {
-            'slope': self.warmup_M.mean_transform.forward(model.unconstrained_warmup_M_params['slope']),
-            'intercept': self.warmup_M.mean_transform.forward(
-                model.unconstrained_warmup_M_params['intercept']),
-            'slope': self.warmup_M.scale_transform.forward(
-                model.unconstrained_warmup_M_params['intercept']), }
-        self.warmup_G.value = {
-            'slope': self.warmup_G.mean_transform.forward(model.unconstrained_warmup_G_params['slope']),
-            'intercept': self.warmup_G.mean_transform.forward(
-                model.unconstrained_warmup_G_params['intercept']),
-            'slope': self.warmup_G.scale_transform.forward(
-                model.unconstrained_warmup_G_params['intercept']), }
-        self.warmup_GR.value = {
-            'slope': self.warmup_GR.mean_transform.forward(model.unconstrained_warmup_GR_params['slope']),
-            'intercept': self.warmup_GR.mean_transform.forward(
-                model.unconstrained_warmup_GR_params['intercept']),
-            'slope': self.warmup_GR.scale_transform.forward(
-                model.unconstrained_warmup_GR_params['intercept']), }
-        self.warmup_I.value = {
-            'slope': self.warmup_I.mean_transform.forward(model.unconstrained_warmup_I_params['slope']),
-            'intercept': self.warmup_I.mean_transform.forward(
-                model.unconstrained_warmup_I_params['intercept']),
-            'slope': self.warmup_I.scale_transform.forward(
-                model.unconstrained_warmup_I_params['intercept']), }
-        self.warmup_IR.value = {
-            'slope': self.warmup_IR.mean_transform.forward(model.unconstrained_warmup_IR_params['slope']),
-            'intercept': self.warmup_IR.mean_transform.forward(
-                model.unconstrained_warmup_IR_params['intercept']),
-            'slope': self.warmup_IR.scale_transform.forward(
-                model.unconstrained_warmup_IR_params['intercept']), }
+                                   model.unconstrained_warmup_A_params[0]['intercept']),
+                               'scale': self.warmup_A.scale_transform.forward(
+                                   model.unconstrained_warmup_A_params[0]['scale'])},
+                               1: {'slope': self.warmup_A.mean_transform.forward(model.unconstrained_warmup_A_params[1]['slope']),
+                               'intercept': self.warmup_A.mean_transform.forward(
+                                   model.unconstrained_warmup_A_params[1]['intercept']),
+                               'scale': self.warmup_A.scale_transform.forward(
+                                   model.unconstrained_warmup_A_params[1]['scale'])}}
+        self.warmup_M.value = {0: {'slope': self.warmup_M.mean_transform.forward(model.unconstrained_warmup_M_params[0]['slope']),
+                               'intercept': self.warmup_M.mean_transform.forward(
+                                   model.unconstrained_warmup_M_params[0]['intercept']),
+                               'scale': self.warmup_M.scale_transform.forward(
+                                   model.unconstrained_warmup_M_params[0]['scale'])},
+                               1: {'slope': self.warmup_M.mean_transform.forward(model.unconstrained_warmup_M_params[1]['slope']),
+                               'intercept': self.warmup_M.mean_transform.forward(
+                                   model.unconstrained_warmup_M_params[1]['intercept']),
+                               'scale': self.warmup_M.scale_transform.forward(
+                                   model.unconstrained_warmup_M_params[1]['scale'])}}
+        self.warmup_G.value = {0: {'slope': self.warmup_G.mean_transform.forward(model.unconstrained_warmup_G_params[0]['slope']),
+                               'intercept': self.warmup_G.mean_transform.forward(
+                                   model.unconstrained_warmup_G_params[0]['intercept']),
+                               'scale': self.warmup_G.scale_transform.forward(
+                                   model.unconstrained_warmup_G_params[0]['scale'])},
+                               1: {'slope': self.warmup_G.mean_transform.forward(model.unconstrained_warmup_G_params[1]['slope']),
+                               'intercept': self.warmup_G.mean_transform.forward(
+                                   model.unconstrained_warmup_G_params[1]['intercept']),
+                               'scale': self.warmup_G.scale_transform.forward(
+                                   model.unconstrained_warmup_G_params[1]['scale'])}}
+        self.warmup_GR.value = {0: {'slope': self.warmup_GR.mean_transform.forward(model.unconstrained_warmup_GR_params[0]['slope']),
+                               'intercept': self.warmup_GR.mean_transform.forward(
+                                   model.unconstrained_warmup_GR_params[0]['intercept']),
+                               'scale': self.warmup_GR.scale_transform.forward(
+                                   model.unconstrained_warmup_GR_params[0]['scale'])},
+                               1: {'slope': self.warmup_GR.mean_transform.forward(model.unconstrained_warmup_GR_params[1]['slope']),
+                               'intercept': self.warmup_GR.mean_transform.forward(
+                                   model.unconstrained_warmup_GR_params[1]['intercept']),
+                               'scale': self.warmup_GR.scale_transform.forward(
+                                   model.unconstrained_warmup_GR_params[1]['scale'])}}
+        self.warmup_I.value = {0: {'slope': self.warmup_I.mean_transform.forward(model.unconstrained_warmup_I_params[0]['slope']),
+                               'intercept': self.warmup_I.mean_transform.forward(
+                                   model.unconstrained_warmup_I_params[0]['intercept']),
+                               'scale': self.warmup_I.scale_transform.forward(
+                                   model.unconstrained_warmup_I_params[0]['scale'])},
+                               1: {'slope': self.warmup_I.mean_transform.forward(model.unconstrained_warmup_I_params[1]['slope']),
+                               'intercept': self.warmup_I.mean_transform.forward(
+                                   model.unconstrained_warmup_I_params[1]['intercept']),
+                               'scale': self.warmup_I.scale_transform.forward(
+                                   model.unconstrained_warmup_I_params[1]['scale'])}}
+        self.warmup_IR.value = {0: {'slope': self.warmup_IR.mean_transform.forward(model.unconstrained_warmup_IR_params[0]['slope']),
+                               'intercept': self.warmup_IR.mean_transform.forward(
+                                   model.unconstrained_warmup_IR_params[0]['intercept']),
+                               'scale': self.warmup_IR.scale_transform.forward(
+                                   model.unconstrained_warmup_IR_params[0]['scale'])},
+                               1: {'slope': self.warmup_IR.mean_transform.forward(model.unconstrained_warmup_IR_params[1]['slope']),
+                               'intercept': self.warmup_IR.mean_transform.forward(
+                                   model.unconstrained_warmup_IR_params[1]['intercept']),
+                               'scale': self.warmup_IR.scale_transform.forward(
+                                   model.unconstrained_warmup_IR_params[1]['scale'])}}
 
-        self.init_count_G.value = {
-            'loc': self.init_count_G.mean_transform.forward(model.unconstrained_init_count_G_params['loc']),
-            'scale': self.init_count_G.scale_transform.forward(model.unconstrained_init_count_G_params['scale']),
-        }
-        self.init_count_I.value = {
-            'loc': self.init_count_I.mean_transform.forward(model.unconstrained_init_count_I_params['loc']),
-            'scale': self.init_count_I.scale_transform.forward(model.unconstrained_init_count_I_params['scale']),
-        }
+        self.init_count_G.value = {0: {
+            'loc': self.init_count_G.mean_transform.forward(model.unconstrained_init_count_G_params[0]['loc']),
+            'scale': self.init_count_G.scale_transform.forward(model.unconstrained_init_count_G_params[0]['scale'])},
+            1: {
+            'loc': self.init_count_G.mean_transform.forward(model.unconstrained_init_count_G_params[1]['loc']),
+            'scale': self.init_count_G.scale_transform.forward(model.unconstrained_init_count_G_params[1]['scale'])}}
+        self.init_count_I.value = {0: {
+            'loc': self.init_count_I.mean_transform.forward(model.unconstrained_init_count_I_params[0]['loc']),
+            'scale': self.init_count_I.scale_transform.forward(model.unconstrained_init_count_I_params[0]['scale'])},
+            1: {
+            'loc': self.init_count_I.mean_transform.forward(model.unconstrained_init_count_I_params[1]['loc']),
+            'scale': self.init_count_I.scale_transform.forward(model.unconstrained_init_count_I_params[1]['scale'])}}
         
     def to_json(self, filepath):
         
