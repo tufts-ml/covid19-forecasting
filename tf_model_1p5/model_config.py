@@ -22,7 +22,7 @@ def replace_keys(old_dict):
             new_dict[key] = np.float32(old_dict[key])
     return new_dict
 
-class ModelConifg(object):
+class ModelConfig(object):
 
     def __init__(self):
         return
