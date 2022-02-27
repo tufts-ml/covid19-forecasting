@@ -1786,6 +1786,19 @@ class LogPoissonProb(tf.keras.losses.Loss):
                -I_count_log_likelihood + \
                -D_in_log_likelihood
 
+class ConfigCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, config_outpath, every_nth_epoch=10):
+        self.every_nth_epoch = every_nth_epoch
+        self.config_outpath = config_outpath
+
+    def on_epoch_end(self, epoch, logs):
+
+        if epoch % self.every_nth_epoch != 0:
+            return
+
+        self.model.config = self.model.config.update_from_model(self.model)
+        self.model.config.to_json(self.config_outpath)
 
 class VarLogCallback(tf.keras.callbacks.Callback):
     """Logs all our model parameters"""
@@ -1991,5 +2004,6 @@ def get_logging_callbacks(log_dir):
     file_writer.set_as_default()
     logging_callback = VarLogCallback()
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
-    return [logging_callback, tensorboard_callback]
+    config_callback = ConfigCallback(log_dir + "/saved_config.json")
+    return [logging_callback, tensorboard_callback, config_callback]
 
