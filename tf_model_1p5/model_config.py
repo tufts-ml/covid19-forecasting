@@ -285,7 +285,7 @@ class ModelConfig(object):
         data['init_count']['I']['value'] = self.init_count_I.value
 
         with open(filepath, 'w') as json_file:
-            json.dump(data, filepath)
+            json.dump(data, json_file)
 
     @classmethod
     def from_json(cls, filepath):
