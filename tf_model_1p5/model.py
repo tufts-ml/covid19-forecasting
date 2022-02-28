@@ -874,105 +874,105 @@ class CovidModel(tf.keras.Model):
             self.rho_M_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_rho_M[vax_status]['scale'])
 
             self.lambda_M_params[vax_status]['loc'] = self.unconstrained_lambda_M[vax_status]['loc']
-            self.lambda_M_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_lambda_M[vax_status]['scale'])
+            self.lambda_M_params[vax_status]['scale'] = self.config.lambda_M.scale_transform.forward(self.unconstrained_lambda_M[vax_status]['scale'])
 
             self.nu_M_params[vax_status]['loc'] = self.unconstrained_nu_M[vax_status]['loc']
-            self.nu_M_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_nu_M[vax_status]['scale'])
+            self.nu_M_params[vax_status]['scale'] = self.config.nu_M.scale_transform.forward(self.unconstrained_nu_M[vax_status]['scale'])
 
             self.rho_G_params[vax_status]['loc'] = self.unconstrained_rho_G[vax_status]['loc']
-            self.rho_G_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_rho_G[vax_status]['scale'])
+            self.rho_G_params[vax_status]['scale'] = self.config.rho_G.scale_transform.forward(self.unconstrained_rho_G[vax_status]['scale'])
 
             self.lambda_G_params[vax_status]['loc'] = self.unconstrained_lambda_G[vax_status]['loc']
-            self.lambda_G_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_lambda_G[vax_status]['scale'])
+            self.lambda_G_params[vax_status]['scale'] = self.config.lambda_G.scale_transform.forward(self.unconstrained_lambda_G[vax_status]['scale'])
 
             self.nu_G_params[vax_status]['loc'] = self.unconstrained_nu_G[vax_status]['loc']
-            self.nu_G_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_nu_G[vax_status]['scale'])
+            self.nu_G_params[vax_status]['scale'] = self.config.nu_G.scale_transform.forward(self.unconstrained_nu_G[vax_status]['scale'])
 
             self.rho_I_params[vax_status]['loc'] = self.unconstrained_rho_I[vax_status]['loc']
-            self.rho_I_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_rho_I[vax_status]['scale'])
+            self.rho_I_params[vax_status]['scale'] = self.config.rho_I.scale_transform.forward(self.unconstrained_rho_I[vax_status]['scale'])
 
             self.lambda_I_params[vax_status]['loc'] = self.unconstrained_lambda_I[vax_status]['loc']
-            self.lambda_I_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(
+            self.lambda_I_params[vax_status]['scale'] = self.config.lambda_I.scale_transform.forward(
                 self.unconstrained_lambda_I[vax_status]['scale'])
 
             self.lambda_I_bar_params[vax_status]['loc'] = self.unconstrained_lambda_I_bar[vax_status]['loc']
-            self.lambda_I_bar_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(
+            self.lambda_I_bar_params[vax_status]['scale'] = self.config.lambda_I_bar.scale_transform.forward(
                 self.unconstrained_lambda_I_bar[vax_status]['scale'])
 
             self.nu_I_params[vax_status]['loc'] = self.unconstrained_nu_I[vax_status]['loc']
-            self.nu_I_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_nu_I[vax_status]['scale'])
+            self.nu_I_params[vax_status]['scale'] = self.config.nu_I.scale_transform.forward(self.unconstrained_nu_I[vax_status]['scale'])
 
             self.nu_I_bar_params[vax_status]['loc'] = self.unconstrained_nu_I_bar[vax_status]['loc']
-            self.nu_I_bar_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_nu_I_bar[vax_status]['scale'])
+            self.nu_I_bar_params[vax_status]['scale'] = self.config.nu_I_bar.scale_transform.forward(self.unconstrained_nu_I_bar[vax_status]['scale'])
 
             self.rho_D_params[vax_status]['loc'] = self.unconstrained_rho_D[vax_status]['loc']
-            self.rho_D_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_rho_D[vax_status]['scale'])
+            self.rho_D_params[vax_status]['scale'] = self.config.rho_D.scale_transform.forward(self.unconstrained_rho_D[vax_status]['scale'])
 
             self.lambda_D_params[vax_status]['loc'] = self.unconstrained_lambda_D[vax_status]['loc']
-            self.lambda_D_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(
+            self.lambda_D_params[vax_status]['scale'] = self.config.lambda_D.scale_transform.forward(
                 self.unconstrained_lambda_D[vax_status]['scale'])
 
             self.lambda_D_bar_params[vax_status]['loc'] = self.unconstrained_lambda_D_bar[vax_status]['loc']
-            self.lambda_D_bar_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(
+            self.lambda_D_bar_params[vax_status]['scale'] = self.config.lambda_D_bar.scale_transform.forward(
                 self.unconstrained_lambda_D_bar[vax_status]['scale'])
 
             self.nu_D_params[vax_status]['loc'] = self.unconstrained_nu_D[vax_status]['loc']
-            self.nu_D_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_nu_D[vax_status]['scale'])
+            self.nu_D_params[vax_status]['scale'] = self.config.nu_D.scale_transform.forward(self.unconstrained_nu_D[vax_status]['scale'])
 
             self.nu_D_bar_params[vax_status]['loc'] = self.unconstrained_nu_D_bar[vax_status]['loc']
-            self.nu_D_bar_params[vax_status]['scale'] = self.config.rho_M.scale_transform.forward(self.unconstrained_nu_D_bar[vax_status]['scale'])
+            self.nu_D_bar_params[vax_status]['scale'] = self.config.nu_D_bar.scale_transform.forward(self.unconstrained_nu_D_bar[vax_status]['scale'])
 
             self.warmup_A_params[vax_status]['slope'] = \
                 self.unconstrained_warmup_A_params[vax_status]['slope']
             self.warmup_A_params[vax_status]['intercept'] = \
                 self.unconstrained_warmup_A_params[vax_status]['intercept']
             self.warmup_A_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_warmup_A_params[vax_status]['scale'])
+                self.config.warmup_A.scale_transform.forward(self.unconstrained_warmup_A_params[vax_status]['scale'])
 
             self.warmup_M_params[vax_status]['slope'] = \
                 self.unconstrained_warmup_M_params[vax_status]['slope']
             self.warmup_M_params[vax_status]['intercept'] = \
                 self.unconstrained_warmup_M_params[vax_status]['intercept']
             self.warmup_M_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_warmup_M_params[vax_status]['scale'])
+                self.config.warmup_M.scale_transform.forward(self.unconstrained_warmup_M_params[vax_status]['scale'])
 
             self.warmup_G_params[vax_status]['slope'] = \
                 self.unconstrained_warmup_G_params[vax_status]['slope']
             self.warmup_G_params[vax_status]['intercept'] = \
                 self.unconstrained_warmup_G_params[vax_status]['intercept']
             self.warmup_G_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_warmup_G_params[vax_status]['scale'])
+                self.config.warmup_G.scale_transform.forward(self.unconstrained_warmup_G_params[vax_status]['scale'])
 
             self.warmup_GR_params[vax_status]['slope'] = \
                 self.unconstrained_warmup_GR_params[vax_status]['slope']
             self.warmup_GR_params[vax_status]['intercept'] = \
                 self.unconstrained_warmup_GR_params[vax_status]['intercept']
             self.warmup_GR_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_warmup_GR_params[vax_status]['scale'])
+                self.config.warmup_GR.scale_transform.forward(self.unconstrained_warmup_GR_params[vax_status]['scale'])
 
             self.warmup_I_params[vax_status]['slope'] = \
                 self.unconstrained_warmup_I_params[vax_status]['slope']
             self.warmup_I_params[vax_status]['intercept'] = \
                 self.unconstrained_warmup_I_params[vax_status]['intercept']
             self.warmup_I_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_warmup_I_params[vax_status]['scale'])
+                self.config.warmup_I.scale_transform.forward(self.unconstrained_warmup_I_params[vax_status]['scale'])
 
             self.warmup_IR_params[vax_status]['slope'] = \
                 self.unconstrained_warmup_IR_params[vax_status]['slope']
             self.warmup_IR_params[vax_status]['intercept'] = \
                 self.unconstrained_warmup_IR_params[vax_status]['intercept']
             self.warmup_IR_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_warmup_IR_params[vax_status]['scale'])
+                self.config.warmup_IR.scale_transform.forward(self.unconstrained_warmup_IR_params[vax_status]['scale'])
 
             self.init_count_G_params[vax_status]['loc'] = \
                 self.unconstrained_init_count_G_params[vax_status]['loc']
             self.init_count_G_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_init_count_G_params[vax_status]['scale'])
+                self.config.init_count_G.scale_transform.forward(self.unconstrained_init_count_G_params[vax_status]['scale'])
 
             self.init_count_I_params[vax_status]['loc'] = \
                 self.unconstrained_init_count_I_params[vax_status]['loc']
             self.init_count_I_params[vax_status]['scale'] = \
-                self.config.rho_M.scale_transform.forward(self.unconstrained_init_count_I_params[vax_status]['scale'])
+                self.config.init_count_I.scale_transform.forward(self.unconstrained_init_count_I_params[vax_status]['scale'])
 
         return
 

@@ -353,29 +353,29 @@ class ModelConfig(object):
         
         cnfg.warmup_A = ModelVar('warmup', data['warmup']['A']['prior'], data['warmup']['A']['value'],
                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                 compartment=Comp.A.value)
+                                 compartment=Comp.A.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
         cnfg.warmup_M = ModelVar('warmup', data['warmup']['M']['prior'], data['warmup']['M']['value'],
                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                 compartment=Comp.M.value)
+                                 compartment=Comp.M.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
         cnfg.warmup_G = ModelVar('warmup', data['warmup']['G']['prior'], data['warmup']['G']['value'],
                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                 compartment=Comp.G.value)
+                                 compartment=Comp.G.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
         cnfg.warmup_GR = ModelVar('warmup', data['warmup']['GR']['prior'], data['warmup']['GR']['value'],
                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                 compartment=Comp.GR.value)
+                                 compartment=Comp.GR.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
         cnfg.warmup_I = ModelVar('warmup', data['warmup']['I']['prior'], data['warmup']['I']['value'],
                                  tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                 compartment=Comp.I.value)
+                                 compartment=Comp.I.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
         cnfg.warmup_IR = ModelVar('warmup', data['warmup']['IR']['prior'], data['warmup']['IR']['value'],
                                   tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                  compartment=Comp.IR.value)
+                                  compartment=Comp.IR.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
         
         cnfg.init_count_G = ModelVar('init_count', data['init_count']['G']['prior'], data['init_count']['G']['value'],
                                      tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                     compartment=Comp.G.value)
+                                     compartment=Comp.G.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
         cnfg.init_count_I = ModelVar('init_count', data['init_count']['I']['prior'], data['init_count']['I']['value'],
                                      tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]),
-                                     compartment=Comp.I.value)
+                                     compartment=Comp.I.value, scale_transform=tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()]))
 
         return cnfg
 
