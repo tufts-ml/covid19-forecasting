@@ -121,62 +121,62 @@ class ModelConfig(object):
                                    'scale': self.nu_D_bar.scale_transform.forward(
                                        model.unconstrained_nu_D_bar[1]['scale'])}}
 
-        self.warmup_A.value = {0: {'slope': self.warmup_A.mean_transform.forward(model.unconstrained_warmup_A_params[0]['slope']),
+        self.warmup_A.value = {0: {'slope': model.unconstrained_warmup_A_params[0]['slope'],
                                'intercept': self.warmup_A.mean_transform.forward(
                                    model.unconstrained_warmup_A_params[0]['intercept']),
                                'scale': self.warmup_A.scale_transform.forward(
                                    model.unconstrained_warmup_A_params[0]['scale'])},
-                               1: {'slope': self.warmup_A.mean_transform.forward(model.unconstrained_warmup_A_params[1]['slope']),
+                               1: {'slope': model.unconstrained_warmup_A_params[1]['slope'],
                                'intercept': self.warmup_A.mean_transform.forward(
                                    model.unconstrained_warmup_A_params[1]['intercept']),
                                'scale': self.warmup_A.scale_transform.forward(
                                    model.unconstrained_warmup_A_params[1]['scale'])}}
-        self.warmup_M.value = {0: {'slope': self.warmup_M.mean_transform.forward(model.unconstrained_warmup_M_params[0]['slope']),
+        self.warmup_M.value = {0: {'slope': model.unconstrained_warmup_M_params[0]['slope'],
                                'intercept': self.warmup_M.mean_transform.forward(
                                    model.unconstrained_warmup_M_params[0]['intercept']),
                                'scale': self.warmup_M.scale_transform.forward(
                                    model.unconstrained_warmup_M_params[0]['scale'])},
-                               1: {'slope': self.warmup_M.mean_transform.forward(model.unconstrained_warmup_M_params[1]['slope']),
+                               1: {'slope': model.unconstrained_warmup_M_params[1]['slope'],
                                'intercept': self.warmup_M.mean_transform.forward(
                                    model.unconstrained_warmup_M_params[1]['intercept']),
                                'scale': self.warmup_M.scale_transform.forward(
                                    model.unconstrained_warmup_M_params[1]['scale'])}}
-        self.warmup_G.value = {0: {'slope': self.warmup_G.mean_transform.forward(model.unconstrained_warmup_G_params[0]['slope']),
+        self.warmup_G.value = {0: {'slope': model.unconstrained_warmup_G_params[0]['slope'],
                                'intercept': self.warmup_G.mean_transform.forward(
                                    model.unconstrained_warmup_G_params[0]['intercept']),
                                'scale': self.warmup_G.scale_transform.forward(
                                    model.unconstrained_warmup_G_params[0]['scale'])},
-                               1: {'slope': self.warmup_G.mean_transform.forward(model.unconstrained_warmup_G_params[1]['slope']),
+                               1: {'slope': model.unconstrained_warmup_G_params[1]['slope'],
                                'intercept': self.warmup_G.mean_transform.forward(
                                    model.unconstrained_warmup_G_params[1]['intercept']),
                                'scale': self.warmup_G.scale_transform.forward(
                                    model.unconstrained_warmup_G_params[1]['scale'])}}
-        self.warmup_GR.value = {0: {'slope': self.warmup_GR.mean_transform.forward(model.unconstrained_warmup_GR_params[0]['slope']),
+        self.warmup_GR.value = {0: {'slope': model.unconstrained_warmup_GR_params[0]['slope'],
                                'intercept': self.warmup_GR.mean_transform.forward(
                                    model.unconstrained_warmup_GR_params[0]['intercept']),
                                'scale': self.warmup_GR.scale_transform.forward(
                                    model.unconstrained_warmup_GR_params[0]['scale'])},
-                               1: {'slope': self.warmup_GR.mean_transform.forward(model.unconstrained_warmup_GR_params[1]['slope']),
+                               1: {'slope': model.unconstrained_warmup_GR_params[1]['slope'],
                                'intercept': self.warmup_GR.mean_transform.forward(
                                    model.unconstrained_warmup_GR_params[1]['intercept']),
                                'scale': self.warmup_GR.scale_transform.forward(
                                    model.unconstrained_warmup_GR_params[1]['scale'])}}
-        self.warmup_I.value = {0: {'slope': self.warmup_I.mean_transform.forward(model.unconstrained_warmup_I_params[0]['slope']),
+        self.warmup_I.value = {0: {'slope': model.unconstrained_warmup_I_params[0]['slope'],
                                'intercept': self.warmup_I.mean_transform.forward(
                                    model.unconstrained_warmup_I_params[0]['intercept']),
                                'scale': self.warmup_I.scale_transform.forward(
                                    model.unconstrained_warmup_I_params[0]['scale'])},
-                               1: {'slope': self.warmup_I.mean_transform.forward(model.unconstrained_warmup_I_params[1]['slope']),
+                               1: {'slope': model.unconstrained_warmup_I_params[1]['slope'],
                                'intercept': self.warmup_I.mean_transform.forward(
                                    model.unconstrained_warmup_I_params[1]['intercept']),
                                'scale': self.warmup_I.scale_transform.forward(
                                    model.unconstrained_warmup_I_params[1]['scale'])}}
-        self.warmup_IR.value = {0: {'slope': self.warmup_IR.mean_transform.forward(model.unconstrained_warmup_IR_params[0]['slope']),
+        self.warmup_IR.value = {0: {'slope': model.unconstrained_warmup_IR_params[0]['slope'],
                                'intercept': self.warmup_IR.mean_transform.forward(
                                    model.unconstrained_warmup_IR_params[0]['intercept']),
                                'scale': self.warmup_IR.scale_transform.forward(
                                    model.unconstrained_warmup_IR_params[0]['scale'])},
-                               1: {'slope': self.warmup_IR.mean_transform.forward(model.unconstrained_warmup_IR_params[1]['slope']),
+                               1: {'slope': model.unconstrained_warmup_IR_params[1]['slope'],
                                'intercept': self.warmup_IR.mean_transform.forward(
                                    model.unconstrained_warmup_IR_params[1]['intercept']),
                                'scale': self.warmup_IR.scale_transform.forward(
