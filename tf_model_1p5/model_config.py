@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import tensorflow_probability as tfp
+import tensorflow as tf
 
 from model import Comp, Vax
 
@@ -20,7 +21,11 @@ def replace_keys(old_dict, type, from_tensor=False):
             new_dict[new_key] = replace_keys(old_dict[key], type, from_tensor=from_tensor)
         else:
             if from_tensor:
-                new_dict[key] = type(old_dict[key].numpy()[0])
+                if isinstance(old_dict[key], tf.Tensor):
+                    new_val = type(old_dict[key].numpy())
+                else:
+                    new_val = type(old_dict[key])
+                new_dict[key] = new_val
             else:
                 new_dict[key] = type(old_dict[key])
     return new_dict
