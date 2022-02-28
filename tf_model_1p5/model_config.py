@@ -21,10 +21,11 @@ def replace_keys(old_dict, type, from_tensor=False):
             new_dict[new_key] = replace_keys(old_dict[key], type, from_tensor=from_tensor)
         else:
             if from_tensor:
-                if isinstance(old_dict[key], tf.Tensor):
+                if isinstance(old_dict[key], tf.Tensor) or isinstance(old_dict[key], tf.Variable):
                     new_val = type(old_dict[key].numpy())
                 else:
                     new_val = type(old_dict[key])
+
                 new_dict[key] = new_val
             else:
                 new_dict[key] = type(old_dict[key])
