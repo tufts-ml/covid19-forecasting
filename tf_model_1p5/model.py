@@ -291,10 +291,10 @@ class CovidModel(tf.keras.Model):
 
         self.unconstrained_delta = {}
         self.unconstrained_delta['loc'] = \
-            tf.Variable(config.delta.mean_transform.inverse(config.epsilon.value['loc']), dtype=tf.float32,
+            tf.Variable(config.delta.mean_transform.inverse(config.delta.value['loc']), dtype=tf.float32,
                         name=f'delta_A_loc', trainable=train_theta)
         self.unconstrained_delta['scale'] = \
-            tf.Variable(config.delta.scale_transform.inverse(config.epsilon.value['scale']), dtype=tf.float32,
+            tf.Variable(config.delta.scale_transform.inverse(config.delta.value['scale']), dtype=tf.float32,
                         name=f'delta_A_scale', trainable=train_variance)
 
         for vax_status in [status.value for status in self.vax_statuses]:
