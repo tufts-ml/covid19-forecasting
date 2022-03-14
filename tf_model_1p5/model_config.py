@@ -296,7 +296,7 @@ class ModelConfig(object):
         data = replace_keys(data, str, from_tensor=True)
 
         with open(filepath, 'w') as json_file:
-            json.dump(data, json_file)
+            json.dump(data, json_file, indent=4)
 
     @classmethod
     def from_json(cls, filepath):
