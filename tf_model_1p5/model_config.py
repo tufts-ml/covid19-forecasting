@@ -45,9 +45,9 @@ class ModelConfig(object):
                                'scale': self.delta.scale_transform.forward(model.unconstrained_delta['scale'])}
 
         self.rho_M.value = {0: {'loc': self.rho_M.mean_transform.forward(model.unconstrained_rho_M[0]['loc']),
-                               'scale': self.rho_M.scale_transform.forward(model.unconstrained_rho_M[0]['scale'])},
-                            1: {'loc': self.rho_M.mean_transform.forward(model.unconstrained_rho_M[1]['loc']),
-                               'scale': self.rho_M.scale_transform.forward(model.unconstrained_rho_M[1]['scale'])}}
+                               'scale': self.rho_M.scale_transform.forward(model.unconstrained_rho_M[0]['scale'])}}
+        self.eff_M.value = {1: {'loc': self.eff_M.mean_transform.forward(model.unconstrained_eff_M[1]['loc']),
+                                'scale': self.eff_M.scale_transform.forward(model.unconstrained_eff_M[1]['scale'])}}
         self.lambda_M.value = {0: {'loc': self.lambda_M.mean_transform.forward(model.unconstrained_lambda_M[0]['loc']),
                                'scale': self.lambda_M.scale_transform.forward(model.unconstrained_lambda_M[0]['scale'])},
                             1: {'loc': self.lambda_M.mean_transform.forward(model.unconstrained_lambda_M[1]['loc']),
@@ -57,9 +57,9 @@ class ModelConfig(object):
                             1: {'loc': self.nu_M.mean_transform.forward(model.unconstrained_nu_M[1]['loc']),
                                'scale': self.nu_M.scale_transform.forward(model.unconstrained_nu_M[1]['scale'])}}
         self.rho_G.value = {0: {'loc': self.rho_G.mean_transform.forward(model.unconstrained_rho_G[0]['loc']),
-                                'scale': self.rho_G.scale_transform.forward(model.unconstrained_rho_G[0]['scale'])},
-                            1: {'loc': self.rho_G.mean_transform.forward(model.unconstrained_rho_G[1]['loc']),
-                                'scale': self.rho_G.scale_transform.forward(model.unconstrained_rho_G[1]['scale'])}}
+                                'scale': self.rho_G.scale_transform.forward(model.unconstrained_rho_G[0]['scale'])}}
+        self.eff_G.value = {1: {'loc': self.eff_G.mean_transform.forward(model.unconstrained_eff_G[1]['loc']),
+                                'scale': self.eff_G.scale_transform.forward(model.unconstrained_eff_G[1]['scale'])}}
         self.lambda_G.value = {0: {'loc': self.lambda_G.mean_transform.forward(model.unconstrained_lambda_G[0]['loc']),
                                    'scale': self.lambda_G.scale_transform.forward(
                                        model.unconstrained_lambda_G[0]['scale'])},
@@ -71,9 +71,9 @@ class ModelConfig(object):
                            1: {'loc': self.nu_G.mean_transform.forward(model.unconstrained_nu_G[1]['loc']),
                                'scale': self.nu_G.scale_transform.forward(model.unconstrained_nu_G[1]['scale'])}}
         self.rho_I.value = {0: {'loc': self.rho_I.mean_transform.forward(model.unconstrained_rho_I[0]['loc']),
-                                'scale': self.rho_I.scale_transform.forward(model.unconstrained_rho_I[0]['scale'])},
-                            1: {'loc': self.rho_I.mean_transform.forward(model.unconstrained_rho_I[1]['loc']),
-                                'scale': self.rho_I.scale_transform.forward(model.unconstrained_rho_I[1]['scale'])}}
+                                'scale': self.rho_I.scale_transform.forward(model.unconstrained_rho_I[0]['scale'])}}
+        self.eff_I.value = {1: {'loc': self.eff_I.mean_transform.forward(model.unconstrained_eff_I[1]['loc']),
+                                'scale': self.eff_I.scale_transform.forward(model.unconstrained_eff_I[1]['scale'])}}
         self.lambda_I.value = {0: {'loc': self.lambda_I.mean_transform.forward(model.unconstrained_lambda_I[0]['loc']),
                                    'scale': self.lambda_I.scale_transform.forward(
                                        model.unconstrained_lambda_I[0]['scale'])},
@@ -95,9 +95,9 @@ class ModelConfig(object):
                            1: {'loc': self.nu_I_bar.mean_transform.forward(model.unconstrained_nu_I_bar[1]['loc']),
                                'scale': self.nu_I_bar.scale_transform.forward(model.unconstrained_nu_I_bar[1]['scale'])}}
         self.rho_D.value = {0: {'loc': self.rho_D.mean_transform.forward(model.unconstrained_rho_D[0]['loc']),
-                                'scale': self.rho_D.scale_transform.forward(model.unconstrained_rho_D[0]['scale'])},
-                            1: {'loc': self.rho_D.mean_transform.forward(model.unconstrained_rho_D[1]['loc']),
-                                'scale': self.rho_D.scale_transform.forward(model.unconstrained_rho_D[1]['scale'])}}
+                                'scale': self.rho_D.scale_transform.forward(model.unconstrained_rho_D[0]['scale'])}}
+        self.eff_D.value = {1: {'loc': self.eff_D.mean_transform.forward(model.unconstrained_eff_D[1]['loc']),
+                                'scale': self.eff_D.scale_transform.forward(model.unconstrained_eff_D[1]['scale'])}}
         self.lambda_D.value = {0: {'loc': self.lambda_D.mean_transform.forward(model.unconstrained_lambda_D[0]['loc']),
                                    'scale': self.lambda_D.scale_transform.forward(
                                        model.unconstrained_lambda_D[0]['scale'])},
@@ -225,6 +225,20 @@ class ModelConfig(object):
         data['rho']['D']['prior'] = self.rho_D.prior
         data['rho']['D']['value'] = self.rho_D.value
 
+        data['eff'] = {}
+        data['eff']['M'] = {}
+        data['eff']['M']['prior'] = self.eff_M.prior
+        data['eff']['M']['value'] = self.eff_M.value
+        data['eff']['G'] = {}
+        data['eff']['G']['prior'] = self.eff_G.prior
+        data['eff']['G']['value'] = self.eff_G.value
+        data['eff']['I'] = {}
+        data['eff']['I']['prior'] = self.eff_I.prior
+        data['eff']['I']['value'] = self.eff_I.value
+        data['eff']['D'] = {}
+        data['eff']['D']['prior'] = self.eff_D.prior
+        data['eff']['D']['value'] = self.eff_D.value
+
         data['lambda'] = {}
         data['lambda']['M'] = {}
         data['lambda']['M']['prior'] = self.lambda_M.prior
@@ -317,6 +331,8 @@ class ModelConfig(object):
         
         cnfg.rho_M = ModelVar('rho', data['rho']['M']['prior'], data['rho']['M']['value'],
                               tfp.bijectors.Sigmoid(), compartment=Comp.M.value)
+        cnfg.eff_M = ModelVar('eff', data['eff']['M']['prior'], data['eff']['M']['value'],
+                              tfp.bijectors.Sigmoid(), compartment=Comp.M.value)
         cnfg.lambda_M = ModelVar('lambda', data['lambda']['M']['prior'], data['lambda']['M']['value'],
                                  tfp.bijectors.Softplus(), compartment=Comp.M.value)
         cnfg.nu_M = ModelVar('nu', data['nu']['M']['prior'], data['nu']['M']['value'],
@@ -324,12 +340,16 @@ class ModelConfig(object):
 
         cnfg.rho_G = ModelVar('rho', data['rho']['G']['prior'], data['rho']['G']['value'],
                               tfp.bijectors.Sigmoid(), compartment=Comp.G.value)
+        cnfg.eff_G = ModelVar('eff', data['eff']['G']['prior'], data['eff']['G']['value'],
+                              tfp.bijectors.Sigmoid(), compartment=Comp.G.value)
         cnfg.lambda_G = ModelVar('lambda', data['lambda']['G']['prior'], data['lambda']['G']['value'],
                                  tfp.bijectors.Softplus(), compartment=Comp.G.value)
         cnfg.nu_G = ModelVar('nu', data['nu']['G']['prior'], data['nu']['G']['value'],
                              tfp.bijectors.Softplus(), compartment=Comp.G.value)
 
         cnfg.rho_I = ModelVar('rho', data['rho']['I']['prior'], data['rho']['I']['value'],
+                              tfp.bijectors.Sigmoid(), compartment=Comp.I.value)
+        cnfg.eff_I = ModelVar('eff', data['eff']['I']['prior'], data['eff']['I']['value'],
                               tfp.bijectors.Sigmoid(), compartment=Comp.I.value)
         cnfg.lambda_I = ModelVar('lambda', data['lambda']['I']['prior'], data['lambda']['I']['value'],
                                  tfp.bijectors.Softplus(), compartment=Comp.I.value)
@@ -341,6 +361,8 @@ class ModelConfig(object):
                              tfp.bijectors.Softplus(), compartment=Comp.GR.value)
 
         cnfg.rho_D = ModelVar('rho', data['rho']['D']['prior'], data['rho']['D']['value'],
+                              tfp.bijectors.Sigmoid(), compartment=Comp.D.value)
+        cnfg.eff_D = ModelVar('eff', data['eff']['D']['prior'], data['eff']['D']['value'],
                               tfp.bijectors.Sigmoid(), compartment=Comp.D.value)
         cnfg.lambda_D = ModelVar('lambda', data['lambda']['D']['prior'], data['lambda']['D']['value'],
                                  tfp.bijectors.Softplus(), compartment=Comp.D.value)

@@ -132,22 +132,36 @@ class CovidModel(tf.keras.Model):
                     self._get_prev_tensors(forecasted_fluxes, vax_status, day)
 
                 # Today's A->M = sum of last J day of A * rho * pi
+                if  vax_status == Vax.no.value:
+                    rho_M_eff = self.rho_M_samples_constrained[vax_status]
+                    rho_G_eff = self.rho_G_samples_constrained[vax_status]
+                    rho_I_eff = self.rho_I_samples_constrained[vax_status]
+                    rho_D_eff = self.rho_D_samples_constrained[vax_status]
+                elif vax_status == Vax.yes.value:
+                    rho_M_eff = self.rho_M_samples_constrained[vax_status] * self.eff_M_samples_constrained[vax_status]
+                    rho_G_eff = self.rho_G_samples_constrained[vax_status] * self.eff_G_samples_constrained[vax_status]
+                    rho_I_eff = self.rho_I_samples_constrained[vax_status] * self.eff_I_samples_constrained[vax_status]
+                    rho_D_eff = self.rho_D_samples_constrained[vax_status] * self.eff_D_samples_constrained[vax_status]
+                else:
+                    raise ValueError('never happens')
+
+
                 forecasted_fluxes[Comp.M.value][vax_status] = \
                     forecasted_fluxes[Comp.M.value][vax_status].write(day,
                                                                      tf.reduce_sum(
                                                                          previously_asymptomatic_tensor *
-                                                                         self.rho_M_samples_constrained[vax_status] * self.pi_M_samples[vax_status],
+                                                                         rho_M_eff * self.pi_M_samples[vax_status],
                                                                          axis=0)
                                                                      )
 
                 current_G_in = tf.reduce_sum(previously_mild_tensor *
-                                               self.rho_G_samples_constrained[vax_status] * self.pi_G_samples[vax_status],
+                                               rho_G_eff * self.pi_G_samples[vax_status],
                                                axis=0)
                 current_I_in = tf.reduce_sum(previously_gen_tensor *
-                                             self.rho_I_samples_constrained[vax_status] * self.pi_I_samples[vax_status],
+                                             rho_I_eff * self.pi_I_samples[vax_status],
                                              axis=0)
                 current_D_in = tf.reduce_sum(previously_icu_tensor *
-                                             self.rho_D_samples_constrained[vax_status] * self.pi_D_samples[vax_status],
+                                             rho_D_eff * self.pi_D_samples[vax_status],
                                              axis=0)
 
 
@@ -156,7 +170,7 @@ class CovidModel(tf.keras.Model):
                 
                 # People who recover from G = people who used to be in G * (1-prob moving to I) * I recovery duration
                 current_GR = tf.reduce_sum(previously_gen_tensor *
-                                              (1-self.rho_I_samples_constrained[vax_status]) *
+                                              (1-rho_I_eff) *
                                               self.pi_I_bar_samples[vax_status],
                                               axis=0)
 
@@ -181,7 +195,7 @@ class CovidModel(tf.keras.Model):
                     forecasted_fluxes[Comp.I.value][vax_status].write(day, current_I_in)
 
                 current_IR = tf.reduce_sum(previously_icu_tensor *
-                                           (1 - self.rho_D_samples_constrained[vax_status]) *
+                                           (1 - rho_D_eff) *
                                            self.pi_D_bar_samples[vax_status],
                                            axis=0)
 
@@ -239,19 +253,23 @@ class CovidModel(tf.keras.Model):
         self.unconstrained_delta = {}
 
         self.unconstrained_rho_M = {}
+        self.unconstrained_eff_M = {}
         self.unconstrained_lambda_M = {}
         self.unconstrained_nu_M = {}
         self.unconstrained_rho_G = {}
+        self.unconstrained_eff_G = {}
         self.unconstrained_lambda_G = {}
         self.unconstrained_nu_G = {}
 
         self.unconstrained_rho_I = {}
+        self.unconstrained_eff_I = {}
         self.unconstrained_lambda_I = {}
         self.unconstrained_nu_I = {}
         self.unconstrained_lambda_I_bar = {}
         self.unconstrained_nu_I_bar = {}
 
         self.unconstrained_rho_D = {}
+        self.unconstrained_eff_D = {}
         self.unconstrained_lambda_D = {}
         self.unconstrained_nu_D = {}
         self.unconstrained_lambda_D_bar = {}
@@ -299,39 +317,75 @@ class CovidModel(tf.keras.Model):
             tf.Variable(config.delta.scale_transform.inverse(config.delta.value['scale']), dtype=tf.float32,
                         name=f'delta_A_scale', trainable=train_variance)
 
+        self.unconstrained_rho_M[Vax.no.value] = {}
+        self.unconstrained_rho_M[Vax.no.value]['loc'] = \
+            tf.Variable(config.rho_M.mean_transform.inverse(config.rho_M.value[Vax.no.value]['loc']), dtype=tf.float32,
+                        name=f'rho_M_loc_{Vax.no.value}', trainable=train_theta)
+        self.unconstrained_rho_M[Vax.no.value]['scale'] = \
+            tf.Variable(config.rho_M.scale_transform.inverse(config.rho_M.value[Vax.no.value]['scale']), dtype=tf.float32,
+                        name=f'rho_M_scale_{Vax.no.value}', trainable=train_variance)
+
+        self.unconstrained_rho_G[Vax.no.value] = {}
+        self.unconstrained_rho_G[Vax.no.value]['loc'] = \
+            tf.Variable(config.rho_G.mean_transform.inverse(config.rho_G.value[Vax.no.value]['loc']), dtype=tf.float32,
+                        name=f'rho_G_loc_{Vax.no.value}', trainable=train_theta)
+        self.unconstrained_rho_G[Vax.no.value]['scale'] = \
+            tf.Variable(config.rho_G.scale_transform.inverse(config.rho_G.value[Vax.no.value]['scale']), dtype=tf.float32,
+                        name=f'rho_G_scale_{Vax.no.value}', trainable=train_variance)
+
+        self.unconstrained_rho_I[Vax.no.value] = {}
+        self.unconstrained_rho_I[Vax.no.value]['loc'] = \
+            tf.Variable(config.rho_I.mean_transform.inverse(config.rho_I.value[Vax.no.value]['loc']), dtype=tf.float32,
+                        name=f'rho_I_loc_{Vax.no.value}', trainable=train_theta)
+        self.unconstrained_rho_I[Vax.no.value]['scale'] = \
+            tf.Variable(config.rho_I.scale_transform.inverse(config.rho_I.value[Vax.no.value]['scale']), dtype=tf.float32,
+                        name=f'rho_I_scale_{Vax.no.value}', trainable=train_variance)
+
+        self.unconstrained_rho_D[Vax.no.value] = {}
+        self.unconstrained_rho_D[Vax.no.value]['loc'] = \
+            tf.Variable(config.rho_D.mean_transform.inverse(config.rho_D.value[Vax.no.value]['loc']), dtype=tf.float32,
+                        name=f'rho_D_loc_{Vax.no.value}', trainable=train_theta)
+        self.unconstrained_rho_D[Vax.no.value]['scale'] = \
+            tf.Variable(config.rho_D.scale_transform.inverse(config.rho_D.value[Vax.no.value]['scale']), dtype=tf.float32,
+                        name=f'rho_D_scale_{Vax.no.value}', trainable=train_variance)
+
+        self.unconstrained_eff_M[Vax.yes.value] = {}
+        self.unconstrained_eff_M[Vax.yes.value]['loc'] = \
+            tf.Variable(config.eff_M.mean_transform.inverse(config.eff_M.value[Vax.yes.value]['loc']), dtype=tf.float32,
+                        name=f'eff_M_loc_{Vax.yes.value}', trainable=train_theta)
+        self.unconstrained_eff_M[Vax.yes.value]['scale'] = \
+            tf.Variable(config.eff_M.scale_transform.inverse(config.eff_M.value[Vax.yes.value]['scale']),
+                        dtype=tf.float32,
+                        name=f'eff_M_scale_{Vax.yes.value}', trainable=train_variance)
+
+        self.unconstrained_eff_G[Vax.yes.value] = {}
+        self.unconstrained_eff_G[Vax.yes.value]['loc'] = \
+            tf.Variable(config.eff_G.mean_transform.inverse(config.eff_G.value[Vax.yes.value]['loc']), dtype=tf.float32,
+                        name=f'eff_G_loc_{Vax.yes.value}', trainable=train_theta)
+        self.unconstrained_eff_G[Vax.yes.value]['scale'] = \
+            tf.Variable(config.eff_G.scale_transform.inverse(config.eff_G.value[Vax.yes.value]['scale']),
+                        dtype=tf.float32,
+                        name=f'eff_G_scale_{Vax.yes.value}', trainable=train_variance)
+
+        self.unconstrained_eff_I[Vax.yes.value] = {}
+        self.unconstrained_eff_I[Vax.yes.value]['loc'] = \
+            tf.Variable(config.eff_I.mean_transform.inverse(config.eff_I.value[Vax.yes.value]['loc']), dtype=tf.float32,
+                        name=f'eff_I_loc_{Vax.yes.value}', trainable=train_theta)
+        self.unconstrained_eff_I[Vax.yes.value]['scale'] = \
+            tf.Variable(config.eff_I.scale_transform.inverse(config.eff_I.value[Vax.yes.value]['scale']),
+                        dtype=tf.float32,
+                        name=f'eff_I_scale_{Vax.yes.value}', trainable=train_variance)
+
+        self.unconstrained_eff_D[Vax.yes.value] = {}
+        self.unconstrained_eff_D[Vax.yes.value]['loc'] = \
+            tf.Variable(config.eff_D.mean_transform.inverse(config.eff_D.value[Vax.yes.value]['loc']), dtype=tf.float32,
+                        name=f'eff_D_loc_{Vax.yes.value}', trainable=train_theta)
+        self.unconstrained_eff_D[Vax.yes.value]['scale'] = \
+            tf.Variable(config.eff_D.scale_transform.inverse(config.eff_D.value[Vax.yes.value]['scale']),
+                        dtype=tf.float32,
+                        name=f'eff_D_scale_{Vax.yes.value}', trainable=train_variance)
+
         for vax_status in [status.value for status in self.vax_statuses]:
-
-            self.unconstrained_rho_M[vax_status] = {}
-            self.unconstrained_rho_M[vax_status]['loc'] = \
-                tf.Variable(config.rho_M.mean_transform.inverse(config.rho_M.value[vax_status]['loc']), dtype=tf.float32,
-                            name=f'rho_M_loc_{vax_status}', trainable=train_theta)
-            self.unconstrained_rho_M[vax_status]['scale'] = \
-                tf.Variable(config.rho_M.scale_transform.inverse(config.rho_M.value[vax_status]['scale']), dtype=tf.float32,
-                            name=f'rho_M_scale_{vax_status}', trainable=train_variance)
-
-            self.unconstrained_rho_G[vax_status] = {}
-            self.unconstrained_rho_G[vax_status]['loc'] = \
-                tf.Variable(config.rho_G.mean_transform.inverse(config.rho_G.value[vax_status]['loc']), dtype=tf.float32,
-                            name=f'rho_G_loc_{vax_status}', trainable=train_theta)
-            self.unconstrained_rho_G[vax_status]['scale'] = \
-                tf.Variable(config.rho_G.scale_transform.inverse(config.rho_G.value[vax_status]['scale']), dtype=tf.float32,
-                            name=f'rho_G_scale_{vax_status}', trainable=train_variance)
-
-            self.unconstrained_rho_I[vax_status] = {}
-            self.unconstrained_rho_I[vax_status]['loc'] = \
-                tf.Variable(config.rho_I.mean_transform.inverse(config.rho_I.value[vax_status]['loc']), dtype=tf.float32,
-                            name=f'rho_I_loc_{vax_status}', trainable=train_theta)
-            self.unconstrained_rho_I[vax_status]['scale'] = \
-                tf.Variable(config.rho_I.scale_transform.inverse(config.rho_I.value[vax_status]['scale']), dtype=tf.float32,
-                            name=f'rho_I_scale_{vax_status}', trainable=train_variance)
-
-            self.unconstrained_rho_D[vax_status] = {}
-            self.unconstrained_rho_D[vax_status]['loc'] = \
-                tf.Variable(config.rho_D.mean_transform.inverse(config.rho_D.value[vax_status]['loc']), dtype=tf.float32,
-                            name=f'rho_D_loc_{vax_status}', trainable=train_theta)
-            self.unconstrained_rho_D[vax_status]['scale'] = \
-                tf.Variable(config.rho_D.scale_transform.inverse(config.rho_D.value[vax_status]['scale']), dtype=tf.float32,
-                            name=f'rho_D_scale_{vax_status}', trainable=train_variance)
 
             self.unconstrained_lambda_M[vax_status] = {}
             self.unconstrained_lambda_M[vax_status]['loc'] = \
@@ -580,35 +634,62 @@ class CovidModel(tf.keras.Model):
             bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
         )
 
+        self.prior_distros[Comp.M.value][Vax.no.value]['rho_M'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.rho_M.prior[Vax.no.value]['a'],
+                config.rho_M.prior[Vax.no.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+
+        self.prior_distros[Comp.G.value][Vax.no.value]['rho_G'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.rho_G.prior[Vax.no.value]['a'],
+                config.rho_G.prior[Vax.no.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+        self.prior_distros[Comp.I.value][Vax.no.value]['rho_I'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.rho_I.prior[Vax.no.value]['a'],
+                config.rho_I.prior[Vax.no.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+
+        self.prior_distros[Comp.D.value][Vax.no.value]['rho_D'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.rho_D.prior[Vax.no.value]['a'],
+                config.rho_D.prior[Vax.no.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+
+        self.prior_distros[Comp.M.value][Vax.yes.value]['eff_M'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.eff_M.prior[Vax.yes.value]['a'],
+                config.eff_M.prior[Vax.yes.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+
+        self.prior_distros[Comp.G.value][Vax.yes.value]['eff_G'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.eff_G.prior[Vax.yes.value]['a'],
+                config.eff_G.prior[Vax.yes.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+        self.prior_distros[Comp.I.value][Vax.yes.value]['eff_I'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.eff_I.prior[Vax.yes.value]['a'],
+                config.eff_I.prior[Vax.yes.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+
+        self.prior_distros[Comp.D.value][Vax.yes.value]['eff_D'] = tfp.distributions.TransformedDistribution(
+            tfp.distributions.Beta(
+                config.eff_D.prior[Vax.yes.value]['a'],
+                config.eff_D.prior[Vax.yes.value]['b']),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
+        )
+
         # create prior distributions
         for vax_status in [status.value for status in self.vax_statuses]:
-
-            self.prior_distros[Comp.M.value][vax_status]['rho_M'] = tfp.distributions.TransformedDistribution(
-                tfp.distributions.Beta(
-                    config.rho_M.prior[vax_status]['a'],
-                    config.rho_M.prior[vax_status]['b']),
-                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
-            )
-
-            self.prior_distros[Comp.G.value][vax_status]['rho_G'] = tfp.distributions.TransformedDistribution(
-                tfp.distributions.Beta(
-                    config.rho_G.prior[vax_status]['a'],
-                    config.rho_G.prior[vax_status]['b']),
-                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
-            )
-            self.prior_distros[Comp.I.value][vax_status]['rho_I'] = tfp.distributions.TransformedDistribution(
-                tfp.distributions.Beta(
-                    config.rho_I.prior[vax_status]['a'],
-                    config.rho_I.prior[vax_status]['b']),
-                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
-            )
-
-            self.prior_distros[Comp.D.value][vax_status]['rho_D'] = tfp.distributions.TransformedDistribution(
-                tfp.distributions.Beta(
-                    config.rho_D.prior[vax_status]['a'],
-                    config.rho_D.prior[vax_status]['b']),
-                bijector=tfp.bijectors.Invert(tfp.bijectors.Sigmoid())
-            )
 
             #  must be positive
             self.prior_distros[Comp.M.value][vax_status]['lambda_M'] = tfp.distributions.TransformedDistribution(
@@ -807,17 +888,21 @@ class CovidModel(tf.keras.Model):
         self.epsilon_params = {}
         self.delta_params = {}
         self.rho_M_params = {}
+        self.eff_M_params = {}
         self.lambda_M_params = {}
         self.nu_M_params = {}
         self.rho_G_params = {}
+        self.eff_G_params = {}
         self.lambda_G_params = {}
         self.nu_G_params = {}
         self.rho_I_params = {}
+        self.eff_I_params = {}
         self.lambda_I_params = {}
         self.nu_I_params = {}
         self.lambda_I_bar_params = {}
         self.nu_I_bar_params = {}
         self.rho_D_params = {}
+        self.eff_D_params = {}
         self.lambda_D_params = {}
         self.lambda_D_bar_params = {}
         self.nu_D_params = {}
@@ -834,6 +919,15 @@ class CovidModel(tf.keras.Model):
         self.T_serial_params[Vax.total.value] = {}
         self.epsilon_params[Vax.total.value] = {}
         self.delta_params[Vax.yes.value] = {}
+        self.rho_M_params[Vax.no.value] = {}
+        self.eff_M_params[Vax.yes.value] = {}
+        self.rho_G_params[Vax.no.value] = {}
+        self.eff_G_params[Vax.yes.value] = {}
+        self.rho_I_params[Vax.no.value] = {}
+        self.eff_I_params[Vax.yes.value] = {}
+        self.rho_D_params[Vax.no.value] = {}
+        self.eff_D_params[Vax.yes.value] = {}
+
 
         self.T_serial_params[Vax.total.value]['loc'] = self.unconstrained_T_serial['loc']
         self.T_serial_params[Vax.total.value]['scale'] = self.scale_transform.forward(self.unconstrained_T_serial['scale'])
@@ -844,20 +938,47 @@ class CovidModel(tf.keras.Model):
         self.delta_params[Vax.yes.value]['loc'] = self.unconstrained_delta['loc']
         self.delta_params[Vax.yes.value]['scale'] = self.scale_transform.forward(self.unconstrained_delta['scale'])
 
+        self.rho_M_params[Vax.no.value]['loc'] = self.unconstrained_rho_M[Vax.no.value]['loc']
+        self.rho_M_params[Vax.no.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_rho_M[Vax.no.value]['scale'])
+        self.eff_M_params[Vax.yes.value]['loc'] = self.unconstrained_eff_M[Vax.yes.value]['loc']
+        self.eff_M_params[Vax.yes.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_eff_M[Vax.yes.value]['scale'])
+
+        self.rho_G_params[Vax.no.value]['loc'] = self.unconstrained_rho_G[Vax.no.value]['loc']
+        self.rho_G_params[Vax.no.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_rho_G[Vax.no.value]['scale'])
+        self.eff_G_params[Vax.yes.value]['loc'] = self.unconstrained_eff_G[Vax.yes.value]['loc']
+        self.eff_G_params[Vax.yes.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_eff_G[Vax.yes.value]['scale'])
+
+        self.rho_I_params[Vax.no.value]['loc'] = self.unconstrained_rho_I[Vax.no.value]['loc']
+        self.rho_I_params[Vax.no.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_rho_I[Vax.no.value]['scale'])
+        self.eff_I_params[Vax.yes.value]['loc'] = self.unconstrained_eff_I[Vax.yes.value]['loc']
+        self.eff_I_params[Vax.yes.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_eff_I[Vax.yes.value]['scale'])
+
+        self.rho_D_params[Vax.no.value]['loc'] = self.unconstrained_rho_D[Vax.no.value]['loc']
+        self.rho_D_params[Vax.no.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_rho_D[Vax.no.value]['scale'])
+        self.eff_D_params[Vax.yes.value]['loc'] = self.unconstrained_eff_D[Vax.yes.value]['loc']
+        self.eff_D_params[Vax.yes.value]['scale'] = self.scale_transform.forward(
+            self.unconstrained_eff_D[Vax.yes.value]['scale'])
+
         for vax_status in [status.value for status in self.vax_statuses]:
 
-            self.rho_M_params[vax_status] = {}
             self.lambda_M_params[vax_status] = {}
             self.nu_M_params[vax_status] = {}
-            self.rho_G_params[vax_status] = {}
+
             self.lambda_G_params[vax_status] = {}
             self.nu_G_params[vax_status] = {}
-            self.rho_I_params[vax_status] = {}
+
             self.lambda_I_params[vax_status] = {}
             self.nu_I_params[vax_status] = {}
             self.lambda_I_bar_params[vax_status] = {}
             self.nu_I_bar_params[vax_status] = {}
-            self.rho_D_params[vax_status] = {}
+
             self.lambda_D_params[vax_status] = {}
             self.nu_D_params[vax_status] = {}
             self.lambda_D_bar_params[vax_status] = {}
@@ -871,9 +992,7 @@ class CovidModel(tf.keras.Model):
             self.warmup_IR_params[vax_status] = {}
             self.init_count_I_params[vax_status] = {}
 
-
-            self.rho_M_params[vax_status]['loc'] = self.unconstrained_rho_M[vax_status]['loc']
-            self.rho_M_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_rho_M[vax_status]['scale'])
+            
 
             self.lambda_M_params[vax_status]['loc'] = self.unconstrained_lambda_M[vax_status]['loc']
             self.lambda_M_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_lambda_M[vax_status]['scale'])
@@ -881,8 +1000,6 @@ class CovidModel(tf.keras.Model):
             self.nu_M_params[vax_status]['loc'] = self.unconstrained_nu_M[vax_status]['loc']
             self.nu_M_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_nu_M[vax_status]['scale'])
 
-            self.rho_G_params[vax_status]['loc'] = self.unconstrained_rho_G[vax_status]['loc']
-            self.rho_G_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_rho_G[vax_status]['scale'])
 
             self.lambda_G_params[vax_status]['loc'] = self.unconstrained_lambda_G[vax_status]['loc']
             self.lambda_G_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_lambda_G[vax_status]['scale'])
@@ -890,8 +1007,7 @@ class CovidModel(tf.keras.Model):
             self.nu_G_params[vax_status]['loc'] = self.unconstrained_nu_G[vax_status]['loc']
             self.nu_G_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_nu_G[vax_status]['scale'])
 
-            self.rho_I_params[vax_status]['loc'] = self.unconstrained_rho_I[vax_status]['loc']
-            self.rho_I_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_rho_I[vax_status]['scale'])
+
 
             self.lambda_I_params[vax_status]['loc'] = self.unconstrained_lambda_I[vax_status]['loc']
             self.lambda_I_params[vax_status]['scale'] = self.scale_transform.forward(
@@ -907,8 +1023,6 @@ class CovidModel(tf.keras.Model):
             self.nu_I_bar_params[vax_status]['loc'] = self.unconstrained_nu_I_bar[vax_status]['loc']
             self.nu_I_bar_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_nu_I_bar[vax_status]['scale'])
 
-            self.rho_D_params[vax_status]['loc'] = self.unconstrained_rho_D[vax_status]['loc']
-            self.rho_D_params[vax_status]['scale'] = self.scale_transform.forward(self.unconstrained_rho_D[vax_status]['scale'])
 
             self.lambda_D_params[vax_status]['loc'] = self.unconstrained_lambda_D[vax_status]['loc']
             self.lambda_D_params[vax_status]['scale'] = self.scale_transform.forward(
@@ -999,27 +1113,47 @@ class CovidModel(tf.keras.Model):
          self.delta_probs[Vax.yes.value]) = \
             self._sample_reparam_single(self.delta_params[Vax.yes.value], tfp.bijectors.Sigmoid())
 
+        (self.rho_M_samples[Vax.no.value],
+         self.rho_M_samples_constrained[Vax.no.value],
+         self.rho_M_probs[Vax.no.value]) = self._sample_reparam_single(self.rho_M_params[Vax.no.value],
+                                                                     tfp.bijectors.Sigmoid())
+
+        (self.rho_G_samples[Vax.no.value],
+         self.rho_G_samples_constrained[Vax.no.value],
+         self.rho_G_probs[Vax.no.value]) = self._sample_reparam_single(self.rho_G_params[Vax.no.value],
+                                                                     tfp.bijectors.Sigmoid())
+
+        (self.rho_I_samples[Vax.no.value],
+         self.rho_I_samples_constrained[Vax.no.value],
+         self.rho_I_probs[Vax.no.value]) = self._sample_reparam_single(self.rho_I_params[Vax.no.value],
+                                                                     tfp.bijectors.Sigmoid())
+
+        (self.rho_D_samples[Vax.no.value],
+         self.rho_D_samples_constrained[Vax.no.value],
+         self.rho_D_probs[Vax.no.value]) = self._sample_reparam_single(self.rho_D_params[Vax.no.value],
+                                                                     tfp.bijectors.Sigmoid())
+
+        (self.eff_M_samples[Vax.yes.value],
+         self.eff_M_samples_constrained[Vax.yes.value],
+         self.eff_M_probs[Vax.yes.value]) = self._sample_reparam_single(self.eff_M_params[Vax.yes.value],
+                                                                       tfp.bijectors.Sigmoid())
+
+        (self.eff_G_samples[Vax.yes.value],
+         self.eff_G_samples_constrained[Vax.yes.value],
+         self.eff_G_probs[Vax.yes.value]) = self._sample_reparam_single(self.eff_G_params[Vax.yes.value],
+                                                                       tfp.bijectors.Sigmoid())
+
+        (self.eff_I_samples[Vax.yes.value],
+         self.eff_I_samples_constrained[Vax.yes.value],
+         self.eff_I_probs[Vax.yes.value]) = self._sample_reparam_single(self.eff_I_params[Vax.yes.value],
+                                                                       tfp.bijectors.Sigmoid())
+
+        (self.eff_D_samples[Vax.yes.value],
+         self.eff_D_samples_constrained[Vax.yes.value],
+         self.eff_D_probs[Vax.yes.value]) = self._sample_reparam_single(self.eff_D_params[Vax.yes.value],
+                                                                       tfp.bijectors.Sigmoid())
+
         for vax_status in [status.value for status in self.vax_statuses]:
-
-            (self.rho_M_samples[vax_status],
-             self.rho_M_samples_constrained[vax_status],
-             self.rho_M_probs[vax_status]) =self._sample_reparam_single(self.rho_M_params[vax_status],
-                                                                        tfp.bijectors.Sigmoid())
-
-            (self.rho_G_samples[vax_status],
-             self.rho_G_samples_constrained[vax_status],
-             self.rho_G_probs[vax_status]) = self._sample_reparam_single(self.rho_G_params[vax_status],
-                                                                         tfp.bijectors.Sigmoid())
-
-            (self.rho_I_samples[vax_status],
-             self.rho_I_samples_constrained[vax_status],
-             self.rho_I_probs[vax_status]) = self._sample_reparam_single(self.rho_I_params[vax_status],
-                                                                         tfp.bijectors.Sigmoid())
-
-            (self.rho_D_samples[vax_status],
-             self.rho_D_samples_constrained[vax_status],
-             self.rho_D_probs[vax_status]) = self._sample_reparam_single(self.rho_D_params[vax_status],
-                                                                         tfp.bijectors.Sigmoid())
 
             (self.lambda_M_samples[vax_status],
              self.lambda_M_samples_constrained[vax_status],
@@ -1284,41 +1418,55 @@ class CovidModel(tf.keras.Model):
         epsilon_posterior_prob = self.epsilon_probs[Vax.total.value]
         self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(epsilon_prior_prob - epsilon_posterior_prob, axis=-1)))
 
-        rho_M_prior_probs = [
-            self.prior_distros[Comp.M.value][status.value]['rho_M'].log_prob(self.rho_M_samples_constrained[status.value]) + \
-            tfp.bijectors.Softplus().forward_log_det_jacobian(self.rho_M_samples[status.value]) for status in self.vax_statuses]
-        rho_M_posterior_probs = self.rho_M_probs
-        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
-            tf.reduce_mean(rho_M_prior_probs[status.value] - rho_M_posterior_probs[status.value], axis=-1))
-                                             for status in self.vax_statuses]))
+        rho_M_prior_prob = self.prior_distros[Comp.M.value][Vax.no.value]['rho_M'].log_prob(
+            self.rho_M_samples_constrained[Vax.no.value]) + \
+                             tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.rho_M_samples[Vax.no.value])
+        rho_M_posterior_prob = self.rho_M_probs[Vax.no.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(rho_M_prior_prob - rho_M_posterior_prob, axis=-1)))
 
-        rho_G_prior_probs = [
-            self.prior_distros[Comp.G.value][status.value]['rho_G'].log_prob(self.rho_G_samples_constrained[status.value]) + \
-            tfp.bijectors.Softplus().forward_log_det_jacobian(self.rho_G_samples[status.value]) for status in self.vax_statuses]
-        rho_G_posterior_probs = self.rho_G_probs
-        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
-            tf.reduce_mean(rho_G_prior_probs[status.value] - rho_G_posterior_probs[status.value], axis=-1))
-                                             for status in self.vax_statuses]))
+        rho_G_prior_prob = self.prior_distros[Comp.G.value][Vax.no.value]['rho_G'].log_prob(
+            self.rho_G_samples_constrained[Vax.no.value]) + \
+                           tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.rho_G_samples[Vax.no.value])
+        rho_G_posterior_prob = self.rho_G_probs[Vax.no.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(rho_G_prior_prob - rho_G_posterior_prob, axis=-1)))
 
-        rho_I_prior_probs = [
-            self.prior_distros[Comp.I.value][status.value]['rho_I'].log_prob(
-                self.rho_I_samples_constrained[status.value]) + \
-            tfp.bijectors.Softplus().forward_log_det_jacobian(self.rho_I_samples[status.value]) for status in
-            self.vax_statuses]
-        rho_I_posterior_probs = self.rho_I_probs
-        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
-            tf.reduce_mean(rho_I_prior_probs[status.value] - rho_I_posterior_probs[status.value], axis=-1))
-                                             for status in self.vax_statuses]))
-        rho_D_prior_probs = [
-            self.prior_distros[Comp.D.value][status.value]['rho_D'].log_prob(
-                self.rho_D_samples_constrained[status.value]) + \
-            tfp.bijectors.Softplus().forward_log_det_jacobian(self.rho_D_samples[status.value]) for status in
-            self.vax_statuses]
-        rho_D_posterior_probs = self.rho_D_probs
-        self.add_loss(lambda: tf.reduce_sum([-tf.reduce_sum(
-            tf.reduce_mean(rho_D_prior_probs[status.value] - rho_D_posterior_probs[status.value], axis=-1))
-                                             for status in self.vax_statuses]))
+        rho_I_prior_prob = self.prior_distros[Comp.I.value][Vax.no.value]['rho_I'].log_prob(
+            self.rho_I_samples_constrained[Vax.no.value]) + \
+                           tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.rho_I_samples[Vax.no.value])
+        rho_I_posterior_prob = self.rho_I_probs[Vax.no.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(rho_I_prior_prob - rho_I_posterior_prob, axis=-1)))
 
+        rho_D_prior_prob = self.prior_distros[Comp.D.value][Vax.no.value]['rho_D'].log_prob(
+            self.rho_D_samples_constrained[Vax.no.value]) + \
+                           tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.rho_D_samples[Vax.no.value])
+        rho_D_posterior_prob = self.rho_D_probs[Vax.no.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(rho_D_prior_prob - rho_D_posterior_prob, axis=-1)))
+
+        eff_M_prior_prob = self.prior_distros[Comp.M.value][Vax.yes.value]['eff_M'].log_prob(
+            self.eff_M_samples_constrained[Vax.yes.value]) + \
+                           tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.eff_M_samples[Vax.yes.value])
+        eff_M_posterior_prob = self.eff_M_probs[Vax.yes.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(eff_M_prior_prob - eff_M_posterior_prob, axis=-1)))
+
+        eff_G_prior_prob = self.prior_distros[Comp.G.value][Vax.yes.value]['eff_G'].log_prob(
+            self.eff_G_samples_constrained[Vax.yes.value]) + \
+                           tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.eff_G_samples[Vax.yes.value])
+        eff_G_posterior_prob = self.eff_G_probs[Vax.yes.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(eff_G_prior_prob - eff_G_posterior_prob, axis=-1)))
+
+        eff_I_prior_prob = self.prior_distros[Comp.I.value][Vax.yes.value]['eff_I'].log_prob(
+            self.eff_I_samples_constrained[Vax.yes.value]) + \
+                           tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.eff_I_samples[Vax.yes.value])
+        eff_I_posterior_prob = self.eff_I_probs[Vax.yes.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(eff_I_prior_prob - eff_I_posterior_prob, axis=-1)))
+
+        eff_D_prior_prob = self.prior_distros[Comp.D.value][Vax.yes.value]['eff_D'].log_prob(
+            self.eff_D_samples_constrained[Vax.yes.value]) + \
+                           tfp.bijectors.Sigmoid().forward_log_det_jacobian(self.eff_D_samples[Vax.yes.value])
+        eff_D_posterior_prob = self.eff_D_probs[Vax.yes.value]
+        self.add_loss(lambda: -tf.reduce_sum(tf.reduce_mean(eff_D_prior_prob - eff_D_posterior_prob, axis=-1)))
+
+        
         lambda_M_prior_probs = [
             self.prior_distros[Comp.M.value][status.value]['lambda_M'].log_prob(self.lambda_M_samples_constrained[status.value]) + \
             tfp.bijectors.Softplus().forward_log_det_jacobian(self.lambda_M_samples[status.value]) for status in self.vax_statuses]
@@ -1599,6 +1747,22 @@ class CovidModel(tf.keras.Model):
         self.rho_D_samples_constrained = defaultdict(int)
         self.rho_D_probs = defaultdict(int)
 
+        self.eff_M_samples = defaultdict(int)
+        self.eff_M_samples_constrained = defaultdict(int)
+        self.eff_M_probs = defaultdict(int)
+
+        self.eff_G_samples = defaultdict(int)
+        self.eff_G_samples_constrained = defaultdict(int)
+        self.eff_G_probs = defaultdict(int)
+
+        self.eff_I_samples = defaultdict(int)
+        self.eff_I_samples_constrained = defaultdict(int)
+        self.eff_I_probs = defaultdict(int)
+
+        self.eff_D_samples = defaultdict(int)
+        self.eff_D_samples_constrained = defaultdict(int)
+        self.eff_D_probs = defaultdict(int)
+
         self.lambda_M_samples = defaultdict(int)
         self.lambda_M_samples_constrained = defaultdict(int)
         self.lambda_M_probs = defaultdict(int)
@@ -1836,15 +2000,59 @@ class VarLogCallback(tf.keras.callbacks.Callback):
                               tf.math.softplus(self.model.unconstrained_delta['scale'])),
                           step=epoch)
 
+        tf.summary.scalar(f'rho_M_mean_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_M[Vax.no.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'rho_M_scale_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_M[Vax.no.value]['scale'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_M_mean_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_eff_M[Vax.yes.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_M_scale_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_eff_M[Vax.yes.value]['scale'])),
+                          step=epoch)
+        tf.summary.scalar(f'rho_G_mean_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_G[Vax.no.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'rho_G_scale_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_G[Vax.no.value]['scale'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_G_mean_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_eff_G[Vax.yes.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_G_scale_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_eff_G[Vax.yes.value]['scale'])),
+                          step=epoch)
+        tf.summary.scalar(f'rho_I_mean_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_I[Vax.no.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'rho_I_scale_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_I[Vax.no.value]['scale'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_I_mean_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_eff_I[Vax.yes.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_I_scale_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_eff_I[Vax.yes.value]['scale'])),
+                          step=epoch)
+        tf.summary.scalar(f'rho_D_mean_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_D[Vax.no.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'rho_D_scale_{Vax.no.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_D[Vax.no.value]['scale'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_D_mean_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_eff_D[Vax.yes.value]['loc'])),
+                          step=epoch)
+        tf.summary.scalar(f'eff_D_scale_{Vax.yes.value}',
+                          data=tf.squeeze(tf.math.softplus(self.model.unconstrained_eff_D[Vax.yes.value]['scale'])),
+                          step=epoch)
+
         for vax_status in [status.value for status in self.model.vax_statuses]:
 
             
-            tf.summary.scalar(f'rho_M_mean_{vax_status}',
-                              data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_M[vax_status]['loc'])),
-                              step=epoch)
-            tf.summary.scalar(f'rho_M_scale_{vax_status}',
-                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_M[vax_status]['scale'])),
-                              step=epoch)
+
             tf.summary.scalar(f'lambda_M_mean_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_M[vax_status]['loc'])),
                               step=epoch)
@@ -1857,12 +2065,7 @@ class VarLogCallback(tf.keras.callbacks.Callback):
             tf.summary.scalar(f'nu_M_scale_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_M[vax_status]['scale'])),
                               step=epoch)
-            tf.summary.scalar(f'rho_G_mean_{vax_status}',
-                              data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_G[vax_status]['loc'])),
-                              step=epoch)
-            tf.summary.scalar(f'rho_G_scale_{vax_status}',
-                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_G[vax_status]['scale'])),
-                              step=epoch)
+
             tf.summary.scalar(f'lambda_G_mean_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_G[vax_status]['loc'])),
                               step=epoch)
@@ -1887,12 +2090,7 @@ class VarLogCallback(tf.keras.callbacks.Callback):
             tf.summary.scalar(f'nu_I_bar_scale_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_I_bar[vax_status]['scale'])),
                               step=epoch)
-            tf.summary.scalar(f'rho_I_mean_{vax_status}',
-                              data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_I[vax_status]['loc'])),
-                              step=epoch)
-            tf.summary.scalar(f'rho_I_scale_{vax_status}',
-                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_I[vax_status]['scale'])),
-                              step=epoch)
+
             tf.summary.scalar(f'lambda_I_mean_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_I[vax_status]['loc'])),
                               step=epoch)
@@ -1905,12 +2103,7 @@ class VarLogCallback(tf.keras.callbacks.Callback):
             tf.summary.scalar(f'nu_I_scale_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_nu_I[vax_status]['scale'])),
                               step=epoch)
-            tf.summary.scalar(f'rho_D_mean_{vax_status}',
-                              data=tf.squeeze(tf.math.sigmoid(self.model.unconstrained_rho_D[vax_status]['loc'])),
-                              step=epoch)
-            tf.summary.scalar(f'rho_D_scale_{vax_status}',
-                              data=tf.squeeze(tf.math.softplus(self.model.unconstrained_rho_D[vax_status]['scale'])),
-                              step=epoch)
+
             tf.summary.scalar(f'lambda_D_mean_{vax_status}',
                               data=tf.squeeze(tf.math.softplus(self.model.unconstrained_lambda_D[vax_status]['loc'])),
                               step=epoch)
