@@ -54,7 +54,7 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
     config = ModelConfig.from_json(model_config_path)
 
     if rescale_state is not None and rescale_state_abbrev is not None:
-        df_config = read_data(data_dir=data_dir,
+        df_rescale = read_data(data_dir=data_dir,
                           covid_estim_date=covid_estim_date,
                           hhs_date=hhs_date,
                           owid_date=owid_date,
@@ -137,7 +137,7 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
 
     pre_training_preds = model.call(x_train)
 
-    logging_callbacks = get_logging_callbacks(log_dir, df, x_test, train_start, train_end, test_start, test_end)
+    logging_callbacks = get_logging_callbacks(log_dir, df, x_test, y_test, state_abbrev, train_start, train_end, test_start, test_end)
     loss = LogPoissonProb()
     optimizer = tf.keras.optimizers.Adam(
         learning_rate=learning_rate,  # beta_1=0.1, beta_2=0.1

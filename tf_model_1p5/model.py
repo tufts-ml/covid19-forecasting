@@ -2,6 +2,7 @@ from collections import defaultdict
 import copy
 from enum import Enum
 
+import os
 import numpy as np
 
 import tensorflow as tf
@@ -11,6 +12,8 @@ from tensorflow.keras.layers import Dense
 import tensorflow_probability as tfp
 from scipy.stats import beta, truncnorm
 
+import matplotlib
+import matplotlib.pyplot as plt
 
 class Comp(Enum):
     """"""
@@ -1970,11 +1973,13 @@ class ConfigCallback(tf.keras.callbacks.Callback):
 
 class GraphCallback(tf.keras.callbacks.Callback):
 
-    def __init__(self, log_dir, df, x_test, train_start, train_end, test_start, test_end, every_nth_epoch=10):
+    def __init__(self, log_dir, df, x_test, y_test, state_abbrev, train_start, train_end, test_start, test_end, every_nth_epoch=25):
         self.every_nth_epoch = every_nth_epoch
-        self.log_dir = config_outpath
+        self.log_dir = log_dir
         self.df  = df
         self.x_test = x_test
+        self.y_test = y_test
+        self.state_abbrev = state_abbrev
         self.train_start = train_start
         self.train_end = train_end
         self.test_start = test_start
@@ -1990,7 +1995,7 @@ class GraphCallback(tf.keras.callbacks.Callback):
         I_count_plot_loc = os.path.join(self.log_dir, 'icu_count.png')
         D_in_plot_loc = os.path.join(self.log_dir, 'death_in.png')
 
-        pred_draws = model.call(self.x_test)
+        pred_draws = self.model.call(self.x_test)
         numpy_draws = pred_draws.numpy().squeeze()
         pred_G_count = numpy_draws[0, :, :]
         pred_G_in = numpy_draws[1, :, :]
@@ -2014,11 +2019,11 @@ class GraphCallback(tf.keras.callbacks.Callback):
 
         plt.figure(figsize=(20, 12))
         plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_G_count_mean, label='Predicted Mean')
-        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['G_count'], label='Data')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, self.y_test['G_count'], label='Data')
         plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_G_count_lower, pred_G_count_upper,
                          label='95% CI', alpha=0.3)
 
-        max_y = max(max(pred_G_count_upper), max(y_test['G_count']))
+        max_y = max(max(pred_G_count_upper), max(self.y_test['G_count']))
         plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
                  '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
 
@@ -2027,16 +2032,16 @@ class GraphCallback(tf.keras.callbacks.Callback):
         ax.xaxis.set_major_locator(month_ticks)
         plt.legend()
         plt.ylabel('Patients')
-        plt.title('General Ward Census')
+        plt.title(f'General Ward Census {self.state_abbrev}, {epoch}')
         plt.savefig(G_count_plot_loc)
 
         plt.figure(figsize=(20, 12))
         plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_G_in_mean, label='Predicted Mean')
-        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['G_in'], label='Data')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, self.y_test['G_in'], label='Data')
         plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_G_in_lower, pred_G_in_upper,
                          label='95% CI', alpha=0.3)
 
-        max_y = max(max(pred_G_in_upper), max(y_test['G_in']))
+        max_y = max(max(pred_G_in_upper), max(self.y_test['G_in']))
         plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
                  '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
 
@@ -2045,16 +2050,16 @@ class GraphCallback(tf.keras.callbacks.Callback):
         ax.xaxis.set_major_locator(month_ticks)
         plt.legend()
         plt.ylabel('Patients')
-        plt.title('General Ward Daily New Patients')
+        plt.title(f'General Ward Daily New Patients {self.state_abbrev}, {epoch}')
         plt.savefig(G_in_plot_loc)
 
         plt.figure(figsize=(20, 12))
         plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_I_count_mean, label='Predicted Mean')
-        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['I_count'], label='Data')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, self.y_test['I_count'], label='Data')
         plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_I_count_lower, pred_I_count_upper,
                          label='95% CI', alpha=0.3)
 
-        max_y = max(max(pred_I_count_upper), max(y_test['I_count']))
+        max_y = max(max(pred_I_count_upper), max(self.y_test['I_count']))
         plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
                  '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
 
@@ -2063,16 +2068,16 @@ class GraphCallback(tf.keras.callbacks.Callback):
         ax.xaxis.set_major_locator(month_ticks)
         plt.legend()
         plt.ylabel('Patients')
-        plt.title('ICU Census')
+        plt.title(f'ICU Census {self.state_abbrev}, {epoch}')
         plt.savefig(I_count_plot_loc)
 
         plt.figure(figsize=(20, 12))
         plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_D_in_mean, label='Predicted Mean')
-        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['D_in'], label='Data')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, self.y_test['D_in'], label='Data')
         plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_D_in_lower, pred_D_in_upper,
                          label='95% CI', alpha=0.3)
 
-        max_y = max(max(pred_D_in_upper), max(y_test['D_in']))
+        max_y = max(max(pred_D_in_upper), max(self.y_test['D_in']))
         plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
                  '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
 
@@ -2081,7 +2086,7 @@ class GraphCallback(tf.keras.callbacks.Callback):
         ax.xaxis.set_major_locator(month_ticks)
         plt.legend()
         plt.ylabel('Patients')
-        plt.title('Daily Deaths')
+        plt.title(f'Daily Deaths {self.state_abbrev}, {epoch}')
         plt.savefig(D_in_plot_loc)
 
 
@@ -2313,13 +2318,13 @@ class VarLogCallback(tf.keras.callbacks.Callback):
 
         return
 
-def get_logging_callbacks(log_dir, df, x_test, train_start, train_end, test_start, test_end):
+def get_logging_callbacks(log_dir, df, x_test, y_test, state_abbrev, train_start, train_end, test_start, test_end):
     """Get tensorflow callbacks to write tensorboard logs to given log_dir"""
     file_writer = tf.summary.create_file_writer(log_dir + "/metrics")
     file_writer.set_as_default()
     logging_callback = VarLogCallback()
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
     config_callback = ConfigCallback(log_dir + "/saved_config.json")
-    graph_callback = GraphCallback(log_dir, df, x_test, train_start, train_end, test_start, test_end)
+    graph_callback = GraphCallback(log_dir, df, x_test, y_test, state_abbrev, train_start, train_end, test_start, test_end)
     return [logging_callback, tensorboard_callback, config_callback, graph_callback]
 
