@@ -1966,6 +1966,126 @@ class ConfigCallback(tf.keras.callbacks.Callback):
         self.model.config = self.model.config.update_from_model(self.model)
         self.model.config.to_json(self.config_outpath)
 
+
+
+class GraphCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, log_dir, df, x_test, train_start, train_end, test_start, test_end, every_nth_epoch=10):
+        self.every_nth_epoch = every_nth_epoch
+        self.log_dir = config_outpath
+        self.df  = df
+        self.x_test = x_test
+        self.train_start = train_start
+        self.train_end = train_end
+        self.test_start = test_start
+        self.test_end = test_end
+
+    def on_epoch_end(self, epoch, logs):
+
+        if epoch % self.every_nth_epoch != 0:
+            return
+
+        G_count_plot_loc = os.path.join(self.log_dir, 'gen_count.png')
+        G_in_plot_loc = os.path.join(self.log_dir, 'gen_in.png')
+        I_count_plot_loc = os.path.join(self.log_dir, 'icu_count.png')
+        D_in_plot_loc = os.path.join(self.log_dir, 'death_in.png')
+
+        pred_draws = model.call(self.x_test)
+        numpy_draws = pred_draws.numpy().squeeze()
+        pred_G_count = numpy_draws[0, :, :]
+        pred_G_in = numpy_draws[1, :, :]
+        pred_I_count = numpy_draws[2, :, :]
+        pred_D_in = numpy_draws[3, :, :]
+        pred_G_count_lower, pred_G_count_mean, pred_G_count_upper = (np.percentile(pred_G_count, 2.5, axis=1),
+                                                                     np.mean(pred_G_count, axis=1),
+                                                                     np.percentile(pred_G_count, 97.5, axis=1))
+
+        pred_G_in_lower, pred_G_in_mean, pred_G_in_upper = (np.percentile(pred_G_in, 2.5, axis=1),
+                                                            np.mean(pred_G_in, axis=1),
+                                                            np.percentile(pred_G_in, 97.5, axis=1))
+
+        pred_I_count_lower, pred_I_count_mean, pred_I_count_upper = (np.percentile(pred_I_count, 2.5, axis=1),
+                                                                     np.mean(pred_I_count, axis=1),
+                                                                     np.percentile(pred_I_count, 97.5, axis=1))
+
+        pred_D_in_lower, pred_D_in_mean, pred_D_in_upper = (np.percentile(pred_D_in, 2.5, axis=1),
+                                                            np.mean(pred_D_in, axis=1),
+                                                            np.percentile(pred_D_in, 97.5, axis=1))
+
+        plt.figure(figsize=(20, 12))
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_G_count_mean, label='Predicted Mean')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['G_count'], label='Data')
+        plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_G_count_lower, pred_G_count_upper,
+                         label='95% CI', alpha=0.3)
+
+        max_y = max(max(pred_G_count_upper), max(y_test['G_count']))
+        plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
+                 '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
+
+        month_ticks = matplotlib.dates.MonthLocator(interval=1)
+        ax = plt.gca()
+        ax.xaxis.set_major_locator(month_ticks)
+        plt.legend()
+        plt.ylabel('Patients')
+        plt.title('General Ward Census')
+        plt.savefig(G_count_plot_loc)
+
+        plt.figure(figsize=(20, 12))
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_G_in_mean, label='Predicted Mean')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['G_in'], label='Data')
+        plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_G_in_lower, pred_G_in_upper,
+                         label='95% CI', alpha=0.3)
+
+        max_y = max(max(pred_G_in_upper), max(y_test['G_in']))
+        plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
+                 '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
+
+        month_ticks = matplotlib.dates.MonthLocator(interval=1)
+        ax = plt.gca()
+        ax.xaxis.set_major_locator(month_ticks)
+        plt.legend()
+        plt.ylabel('Patients')
+        plt.title('General Ward Daily New Patients')
+        plt.savefig(G_in_plot_loc)
+
+        plt.figure(figsize=(20, 12))
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_I_count_mean, label='Predicted Mean')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['I_count'], label='Data')
+        plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_I_count_lower, pred_I_count_upper,
+                         label='95% CI', alpha=0.3)
+
+        max_y = max(max(pred_I_count_upper), max(y_test['I_count']))
+        plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
+                 '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
+
+        month_ticks = matplotlib.dates.MonthLocator(interval=1)
+        ax = plt.gca()
+        ax.xaxis.set_major_locator(month_ticks)
+        plt.legend()
+        plt.ylabel('Patients')
+        plt.title('ICU Census')
+        plt.savefig(I_count_plot_loc)
+
+        plt.figure(figsize=(20, 12))
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, pred_D_in_mean, label='Predicted Mean')
+        plt.plot(self.df.loc[self.train_start:self.test_end].index.values, y_test['D_in'], label='Data')
+        plt.fill_between(self.df.loc[self.train_start:self.test_end].index.values, pred_D_in_lower, pred_D_in_upper,
+                         label='95% CI', alpha=0.3)
+
+        max_y = max(max(pred_D_in_upper), max(y_test['D_in']))
+        plt.plot([self.df.loc[self.train_end:self.train_end].index.values, self.df.loc[self.train_end:self.train_end].index.values], [0, max_y],
+                 '--', color='red', linewidth=5, alpha=0.15, label='Train/Test Split')
+
+        month_ticks = matplotlib.dates.MonthLocator(interval=1)
+        ax = plt.gca()
+        ax.xaxis.set_major_locator(month_ticks)
+        plt.legend()
+        plt.ylabel('Patients')
+        plt.title('Daily Deaths')
+        plt.savefig(D_in_plot_loc)
+
+
+
 class VarLogCallback(tf.keras.callbacks.Callback):
     """Logs all our model parameters"""
 
@@ -2193,12 +2313,13 @@ class VarLogCallback(tf.keras.callbacks.Callback):
 
         return
 
-def get_logging_callbacks(log_dir):
+def get_logging_callbacks(log_dir, df, x_test, train_start, train_end, test_start, test_end):
     """Get tensorflow callbacks to write tensorboard logs to given log_dir"""
     file_writer = tf.summary.create_file_writer(log_dir + "/metrics")
     file_writer.set_as_default()
     logging_callback = VarLogCallback()
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
     config_callback = ConfigCallback(log_dir + "/saved_config.json")
-    return [logging_callback, tensorboard_callback, config_callback]
+    graph_callback = GraphCallback(log_dir, df, x_test, train_start, train_end, test_start, test_end)
+    return [logging_callback, tensorboard_callback, config_callback, graph_callback]
 
