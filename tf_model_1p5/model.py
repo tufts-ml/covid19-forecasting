@@ -1967,7 +1967,7 @@ class ConfigCallback(tf.keras.callbacks.Callback):
             return
 
         self.model.config = self.model.config.update_from_model(self.model)
-        self.model.config.to_json(self.config_outpath)
+        self.model.config.to_json(self.config_outpath.format(epoch=epoch))
 
 
 
@@ -1990,10 +1990,10 @@ class GraphCallback(tf.keras.callbacks.Callback):
         if epoch % self.every_nth_epoch != 0:
             return
 
-        G_count_plot_loc = os.path.join(self.log_dir, 'gen_count.png')
-        G_in_plot_loc = os.path.join(self.log_dir, 'gen_in.png')
-        I_count_plot_loc = os.path.join(self.log_dir, 'icu_count.png')
-        D_in_plot_loc = os.path.join(self.log_dir, 'death_in.png')
+        G_count_plot_loc = os.path.join(self.log_dir, f'gen_count_{epoch}.png')
+        G_in_plot_loc = os.path.join(self.log_dir, f'gen_in_{epoch}.png')
+        I_count_plot_loc = os.path.join(self.log_dir, f'icu_count_{epoch}.png')
+        D_in_plot_loc = os.path.join(self.log_dir, f'death_in_{epoch}.png')
 
         pred_draws = self.model.call(self.x_test)
         numpy_draws = pred_draws.numpy().squeeze()
@@ -2324,7 +2324,7 @@ def get_logging_callbacks(log_dir, df, x_test, y_test, state_abbrev, train_start
     file_writer.set_as_default()
     logging_callback = VarLogCallback()
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
-    config_callback = ConfigCallback(log_dir + "/saved_config.json")
+    config_callback = ConfigCallback(log_dir + "/saved_config_{epoch}.json")
     graph_callback = GraphCallback(log_dir, df, x_test, y_test, state_abbrev, train_start, train_end, test_start, test_end)
     return [logging_callback, tensorboard_callback, config_callback, graph_callback]
 
