@@ -165,115 +165,146 @@ class ModelConfig(object):
             'scale': model.unconstrained_init_count_I_params[1]['scale']}}
 
         return self
-        
+
     def to_json(self, filepath):
-        
+
         data = {}
         data['T_serial']={}
         data['T_serial']['prior'] = self.T_serial.prior
         data['T_serial']['value'] = self.T_serial.value
+        data['T_serial']['mean_transform'] = self.T_serial.mean_transform_str
         data['delta'] = {}
         data['delta']['prior'] = self.delta.prior
         data['delta']['value'] = self.delta.value
+        data['delta']['mean_transform'] = self.delta.mean_transform_str
         data['epsilon'] = {}
         data['epsilon']['prior'] = self.epsilon.prior
         data['epsilon']['value'] = self.epsilon.value
-        
+        data['epsilon']['mean_transform'] = self.epsilon.mean_transform_str
+
         data['rho']={}
         data['rho']['M']={}
         data['rho']['M']['prior'] = self.rho_M.prior
         data['rho']['M']['value'] = self.rho_M.value
+        data['rho']['M']['mean_transform'] = self.rho_M.mean_transform
         data['rho']['G'] = {}
         data['rho']['G']['prior'] = self.rho_G.prior
         data['rho']['G']['value'] = self.rho_G.value
+        data['rho']['G']['mean_transform'] = self.rho_G.mean_transform
         data['rho']['I'] = {}
         data['rho']['I']['prior'] = self.rho_I.prior
         data['rho']['I']['value'] = self.rho_I.value
+        data['rho']['I']['mean_transform'] = self.rho_I.mean_transform
         data['rho']['D'] = {}
         data['rho']['D']['prior'] = self.rho_D.prior
         data['rho']['D']['value'] = self.rho_D.value
+        data['rho']['D']['mean_transform'] = self.rho_D.mean_transform
 
         data['eff'] = {}
         data['eff']['M'] = {}
         data['eff']['M']['prior'] = self.eff_M.prior
         data['eff']['M']['value'] = self.eff_M.value
+        data['eff']['M']['mean_transform'] = self.eff_M.mean_transform
         data['eff']['G'] = {}
         data['eff']['G']['prior'] = self.eff_G.prior
         data['eff']['G']['value'] = self.eff_G.value
+        data['eff']['G']['mean_transform'] = self.eff_G.mean_transform
         data['eff']['I'] = {}
         data['eff']['I']['prior'] = self.eff_I.prior
         data['eff']['I']['value'] = self.eff_I.value
+        data['eff']['I']['mean_transform'] = self.eff_I.mean_transform
         data['eff']['D'] = {}
         data['eff']['D']['prior'] = self.eff_D.prior
         data['eff']['D']['value'] = self.eff_D.value
+        data['eff']['D']['mean_transform'] = self.eff_D.mean_transform
 
         data['lambda'] = {}
         data['lambda']['M'] = {}
         data['lambda']['M']['prior'] = self.lambda_M.prior
         data['lambda']['M']['value'] = self.lambda_M.value
+        data['lambda']['M']['mean_transform'] = self.lambda_M.mean_transform
         data['lambda']['G'] = {}
         data['lambda']['G']['prior'] = self.lambda_G.prior
         data['lambda']['G']['value'] = self.lambda_G.value
+        data['lambda']['G']['mean_transform'] = self.lambda_G.mean_transform
         data['lambda']['I'] = {}
         data['lambda']['I']['prior'] = self.lambda_I.prior
         data['lambda']['I']['value'] = self.lambda_I.value
+        data['lambda']['I']['mean_transform'] = self.lambda_I.mean_transform
         data['lambda']['I_bar'] = {}
         data['lambda']['I_bar']['prior'] = self.lambda_I_bar.prior
         data['lambda']['I_bar']['value'] = self.lambda_I_bar.value
+        data['lambda']['I_bar']['mean_transform'] = self.lambda_I_bar.mean_transform
         data['lambda']['D'] = {}
         data['lambda']['D']['prior'] = self.lambda_D.prior
         data['lambda']['D']['value'] = self.lambda_D.value
+        data['lambda']['D']['mean_transform'] = self.lambda_D.mean_transform
         data['lambda']['D_bar'] = {}
         data['lambda']['D_bar']['prior'] = self.lambda_D_bar.prior
         data['lambda']['D_bar']['value'] = self.lambda_D_bar.value
+        data['lambda']['D_bar']['mean_transform'] = self.lambda_D_bar.mean_transform
 
         data['nu'] = {}
         data['nu']['M'] = {}
         data['nu']['M']['prior'] = self.nu_M.prior
         data['nu']['M']['value'] = self.nu_M.value
+        data['nu']['M']['mean_transform'] = self.nu_M.mean_transform
         data['nu']['G'] = {}
         data['nu']['G']['prior'] = self.nu_G.prior
         data['nu']['G']['value'] = self.nu_G.value
+        data['nu']['G']['mean_transform'] = self.nu_G.mean_transform
         data['nu']['I'] = {}
         data['nu']['I']['prior'] = self.nu_I.prior
         data['nu']['I']['value'] = self.nu_I.value
+        data['nu']['I']['mean_transform'] = self.nu_I.mean_transform
         data['nu']['I_bar'] = {}
         data['nu']['I_bar']['prior'] = self.nu_I_bar.prior
         data['nu']['I_bar']['value'] = self.nu_I_bar.value
+        data['nu']['I_bar']['mean_transform'] = self.nu_I_bar.mean_transform
         data['nu']['D'] = {}
         data['nu']['D']['prior'] = self.nu_D.prior
         data['nu']['D']['value'] = self.nu_D.value
+        data['nu']['D']['mean_transform'] = self.nu_D.mean_transform
         data['nu']['D_bar'] = {}
         data['nu']['D_bar']['prior'] = self.nu_D_bar.prior
         data['nu']['D_bar']['value'] = self.nu_D_bar.value
+        data['nu']['D_bar']['mean_transform'] = self.nu_D_bar.mean_transform
 
         data['warmup'] = {}
         data['warmup']['A'] = {}
         data['warmup']['A']['prior'] = self.warmup_A.prior
         data['warmup']['A']['value'] = self.warmup_A.value
+        data['warmup']['A']['mean_transform'] = self.warmup_A.mean_transform
         data['warmup']['M'] = {}
         data['warmup']['M']['prior'] = self.warmup_M.prior
         data['warmup']['M']['value'] = self.warmup_M.value
+        data['warmup']['M']['mean_transform'] = self.warmup_M.mean_transform
         data['warmup']['G'] = {}
         data['warmup']['G']['prior'] = self.warmup_G.prior
         data['warmup']['G']['value'] = self.warmup_G.value
+        data['warmup']['G']['mean_transform'] = self.warmup_G.mean_transform
         data['warmup']['GR'] = {}
         data['warmup']['GR']['prior'] = self.warmup_GR.prior
         data['warmup']['GR']['value'] = self.warmup_GR.value
+        data['warmup']['GR']['mean_transform'] = self.warmup_GR.mean_transform
         data['warmup']['I'] = {}
         data['warmup']['I']['prior'] = self.warmup_I.prior
         data['warmup']['I']['value'] = self.warmup_I.value
+        data['warmup']['I']['mean_transform'] = self.warmup_I.mean_transform
         data['warmup']['IR'] = {}
         data['warmup']['IR']['prior'] = self.warmup_IR.prior
         data['warmup']['IR']['value'] = self.warmup_IR.value
+        data['warmup']['IR']['mean_transform'] = self.warmup_IR.mean_transform
 
         data['init_count'] = {}
         data['init_count']['G'] = {}
         data['init_count']['G']['prior'] = self.init_count_G.prior
         data['init_count']['G']['value'] = self.init_count_G.value
+        data['init_count']['G']['mean_transform'] = self.init_count_G.mean_transform
         data['init_count']['I'] = {}
         data['init_count']['I']['prior'] = self.init_count_I.prior
         data['init_count']['I']['value'] = self.init_count_I.value
+        data['init_count']['I']['mean_transform'] = self.init_count_I.mean_transform
 
         data = replace_keys(data, str, from_tensor=True)
 
@@ -287,7 +318,7 @@ class ModelConfig(object):
 
         This is the way of loading a model from disk
         """
-        
+
         cnfg = cls()
 
         with open(filepath, 'r') as json_file:
@@ -295,11 +326,11 @@ class ModelConfig(object):
 
         data = replace_keys(data, np.float32)
 
-            
+
         cnfg.T_serial = ModelVar('T_serial', data['T_serial']['prior'], data['T_serial']['value'], data['T_serial']['mean_transform'])
         cnfg.epsilon = ModelVar('epsilon', data['epsilon']['prior'], data['epsilon']['value'], data['epsilon']['mean_transform'])
         cnfg.delta = ModelVar('delta', data['delta']['prior'], data['delta']['value'], data['delta']['mean_transform'])
-        
+
         cnfg.rho_M = ModelVar('rho', data['rho']['M']['prior'], data['rho']['M']['value'], data['rho']['mean_transform'], compartment=Comp.M.value)
         cnfg.eff_M = ModelVar('eff', data['eff']['M']['prior'], data['eff']['M']['value'], data['eff']['mean_transform'], compartment=Comp.M.value)
         cnfg.lambda_M = ModelVar('lambda', data['lambda']['M']['prior'], data['lambda']['M']['value'], data['lambda']['mean_transform'], compartment=Comp.M.value)
@@ -323,7 +354,7 @@ class ModelConfig(object):
         cnfg.lambda_D_bar = ModelVar('lambda', data['lambda']['D_bar']['prior'], data['lambda']['D_bar']['value'], data['lambda']['mean_transform'], compartment=Comp.IR.value)
         cnfg.nu_D = ModelVar('nu', data['nu']['D']['prior'], data['nu']['D']['value'], data['nu']['mean_transform'], compartment=Comp.D.value)
         cnfg.nu_D_bar = ModelVar('nu', data['nu']['D_bar']['prior'], data['nu']['D_bar']['value'], data['nu']['mean_transform'], compartment=Comp.IR.value)
-        
+
         cnfg.warmup_A = ModelVar('warmup', data['warmup']['A']['prior'], data['warmup']['A']['value'],
                                  data['warmup']['mean_transform'],
                                  compartment=Comp.A.value)
@@ -342,7 +373,7 @@ class ModelConfig(object):
         cnfg.warmup_IR = ModelVar('warmup', data['warmup']['IR']['prior'], data['warmup']['IR']['value'],
                                   data['warmup']['mean_transform'],
                                   compartment=Comp.IR.value)
-        
+
         cnfg.init_count_G = ModelVar('init_count', data['init_count']['G']['prior'], data['init_count']['G']['value'],
                                      data['init_count']['mean_transform'],
                                      compartment=Comp.G.value)
@@ -383,6 +414,3 @@ class ModelVar(object):
             raise ValueError(f'Transform {str_transform} is not one of the available transforms')
 
         return transform
-
-
-
