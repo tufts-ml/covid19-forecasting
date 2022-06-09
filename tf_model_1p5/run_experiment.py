@@ -149,6 +149,8 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
               epochs=1000, batch_size=0,
               callbacks=logging_callbacks)
 
+
+
     preds=tf.reduce_mean(model.call(x_test), axis=-1)
 
     icu_plot_loc = os.path.join(log_dir, 'icu.png')
@@ -184,6 +186,8 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
     plt.legend()
     plt.title('Death Influx')
     plt.savefig(death_plot_loc)
+
+    model.config.to_json(os.path.join(log_dir,'final_config.json'))
 
     return
 
