@@ -22,9 +22,64 @@ import scipy
 
 import matplotlib
 import matplotlib.pyplot as plt
+us_state_to_abbrev = {
+    "Alabama": "AL",
+    "Alaska": "AK",
+    "Arizona": "AZ",
+    "Arkansas": "AR",
+    "California": "CA",
+    "Colorado": "CO",
+    "Connecticut": "CT",
+    "Delaware": "DE",
+    "Florida": "FL",
+    "Georgia": "GA",
+    "Hawaii": "HI",
+    "Idaho": "ID",
+    "Illinois": "IL",
+    "Indiana": "IN",
+    "Iowa": "IA",
+    "Kansas": "KS",
+    "Kentucky": "KY",
+    "Louisiana": "LA",
+    "Maine": "ME",
+    "Maryland": "MD",
+    "Massachusetts": "MA",
+    "Michigan": "MI",
+    "Minnesota": "MN",
+    "Mississippi": "MS",
+    "Missouri": "MO",
+    "Montana": "MT",
+    "Nebraska": "NE",
+    "Nevada": "NV",
+    "New Hampshire": "NH",
+    "New Jersey": "NJ",
+    "New Mexico": "NM",
+    "New York": "NY",
+    "North Carolina": "NC",
+    "North Dakota": "ND",
+    "Ohio": "OH",
+    "Oklahoma": "OK",
+    "Oregon": "OR",
+    "Pennsylvania": "PA",
+    "Rhode Island": "RI",
+    "South Carolina": "SC",
+    "South Dakota": "SD",
+    "Tennessee": "TN",
+    "Texas": "TX",
+    "Utah": "UT",
+    "Vermont": "VT",
+    "Virginia": "VA",
+    "Washington": "WA",
+    "West Virginia": "WV",
+    "Wisconsin": "WI",
+    "Wyoming": "WY"}
+us_abbrev_to_state = {v:k for k, v in us_state_to_abbrev.items()}
+
 
 def run_model(model_config_path=None, learning_rate=None, fix_variance=None, data_dir=None, log_dir=None,
-              state=None, state_abbrev=None, rescale_state=None, rescale_state_abbrev=None):
+              state_abbrev=None, rescale_state=None, rescale_state_abbrev=None):
+
+    state = us_abbrev_to_state[state_abbrev]
 
     transition_window = 10
 
@@ -200,7 +255,6 @@ if __name__ == '__main__':
     parser.add_argument('--fix_variance', help='fix variance if present', action='store_true')
     parser.add_argument('--log_dir', help='Path to directory to write logs into', type=str)
     parser.add_argument('--data_dir', help='Wheres the data at', type=str)
-    parser.add_argument('--state', help='Full state name to model', type=str)
     parser.add_argument('--state_abbrev', help='2 letter state abbreviation to model', type=str)
     parser.add_argument('--rescale_state', help='Optional, state the config was trained on',
                         type=str, required=False)
