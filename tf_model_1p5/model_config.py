@@ -365,8 +365,8 @@ class ModelVar(object):
 
         self.prior = prior
         self.value = value
+        self.mean_transform_str = mean_transform
         self.mean_transform = self._parse_transform(mean_transform)
-
         return
 
     @classmethod

@@ -132,7 +132,7 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
 
     model = CovidModel([Vax.no, Vax.yes], [Comp.A, Comp.M, Comp.G, Comp.GR, Comp.I, Comp.IR, Comp.D],
                        transition_window,
-                       config, posterior_samples=1000,
+                       config, posterior_samples=100,
                        debug_disable_theta=False, fix_variance=fix_variance)
 
     pre_training_preds = model.call(x_train)
