@@ -183,68 +183,58 @@ class ModelConfig(object):
         data['epsilon']['mean_transform'] = self.epsilon.mean_transform_str
 
         data['rho']={}
+        data['rho']['mean_transform'] = self.rho_M.mean_transform_str
         data['rho']['M']={}
         data['rho']['M']['prior'] = self.rho_M.prior
         data['rho']['M']['value'] = self.rho_M.value
-        data['rho']['M']['mean_transform'] = self.rho_M.mean_transform_str
         data['rho']['G'] = {}
         data['rho']['G']['prior'] = self.rho_G.prior
         data['rho']['G']['value'] = self.rho_G.value
-        data['rho']['G']['mean_transform'] = self.rho_G.mean_transform_str
         data['rho']['I'] = {}
         data['rho']['I']['prior'] = self.rho_I.prior
         data['rho']['I']['value'] = self.rho_I.value
-        data['rho']['I']['mean_transform'] = self.rho_I.mean_transform_str
         data['rho']['D'] = {}
         data['rho']['D']['prior'] = self.rho_D.prior
         data['rho']['D']['value'] = self.rho_D.value
-        data['rho']['D']['mean_transform'] = self.rho_D.mean_transform_str
 
         data['eff'] = {}
+        data['eff']['mean_transform'] = self.eff_M.mean_transform_str
         data['eff']['M'] = {}
         data['eff']['M']['prior'] = self.eff_M.prior
         data['eff']['M']['value'] = self.eff_M.value
-        data['eff']['M']['mean_transform'] = self.eff_M.mean_transform_str
         data['eff']['G'] = {}
         data['eff']['G']['prior'] = self.eff_G.prior
         data['eff']['G']['value'] = self.eff_G.value
-        data['eff']['G']['mean_transform'] = self.eff_G.mean_transform_str
         data['eff']['I'] = {}
         data['eff']['I']['prior'] = self.eff_I.prior
         data['eff']['I']['value'] = self.eff_I.value
-        data['eff']['I']['mean_transform'] = self.eff_I.mean_transform_str
         data['eff']['D'] = {}
         data['eff']['D']['prior'] = self.eff_D.prior
         data['eff']['D']['value'] = self.eff_D.value
-        data['eff']['D']['mean_transform'] = self.eff_D.mean_transform_str
 
         data['lambda'] = {}
+        data['lambda']['mean_transform'] = self.lambda_M.mean_transform_str
         data['lambda']['M'] = {}
         data['lambda']['M']['prior'] = self.lambda_M.prior
         data['lambda']['M']['value'] = self.lambda_M.value
-        data['lambda']['M']['mean_transform'] = self.lambda_M.mean_transform_str
         data['lambda']['G'] = {}
         data['lambda']['G']['prior'] = self.lambda_G.prior
         data['lambda']['G']['value'] = self.lambda_G.value
-        data['lambda']['G']['mean_transform'] = self.lambda_G.mean_transform_str
         data['lambda']['I'] = {}
         data['lambda']['I']['prior'] = self.lambda_I.prior
         data['lambda']['I']['value'] = self.lambda_I.value
-        data['lambda']['I']['mean_transform'] = self.lambda_I.mean_transform_str
         data['lambda']['I_bar'] = {}
         data['lambda']['I_bar']['prior'] = self.lambda_I_bar.prior
         data['lambda']['I_bar']['value'] = self.lambda_I_bar.value
-        data['lambda']['I_bar']['mean_transform'] = self.lambda_I_bar.mean_transform_str
         data['lambda']['D'] = {}
         data['lambda']['D']['prior'] = self.lambda_D.prior
         data['lambda']['D']['value'] = self.lambda_D.value
-        data['lambda']['D']['mean_transform'] = self.lambda_D.mean_transform_str
         data['lambda']['D_bar'] = {}
         data['lambda']['D_bar']['prior'] = self.lambda_D_bar.prior
         data['lambda']['D_bar']['value'] = self.lambda_D_bar.value
-        data['lambda']['D_bar']['mean_transform'] = self.lambda_D_bar.mean_transform_str
 
         data['nu'] = {}
+        data['nu']['mean_transform'] = self.nu_M.mean_transform_str
         data['nu']['M'] = {}
         data['nu']['M']['prior'] = self.nu_M.prior
         data['nu']['M']['value'] = self.nu_M.value
@@ -271,6 +261,7 @@ class ModelConfig(object):
         data['nu']['D_bar']['mean_transform'] = self.nu_D_bar.mean_transform_str
 
         data['warmup'] = {}
+        data['warmup']['mean_transform'] = self.warmup_A.mean_transform_str
         data['warmup']['A'] = {}
         data['warmup']['A']['prior'] = self.warmup_A.prior
         data['warmup']['A']['value'] = self.warmup_A.value
@@ -297,6 +288,7 @@ class ModelConfig(object):
         data['warmup']['IR']['mean_transform'] = self.warmup_IR.mean_transform_str
 
         data['init_count'] = {}
+        data['init_count']['mean_transform'] = self.init_count_G.mean_transform_str
         data['init_count']['G'] = {}
         data['init_count']['G']['prior'] = self.init_count_G.prior
         data['init_count']['G']['value'] = self.init_count_G.value
