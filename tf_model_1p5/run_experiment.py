@@ -83,17 +83,17 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
 
     transition_window = 10
 
-    warmup_start = '20210421'
-    warmup_end = '20210430'
-    train_start = '20210501'
-    train_end = '20210731'
-    test_start = '20210801'
-    test_end = '20210831'
+    warmup_start = '20211121'
+    warmup_end = '20211130'
+    train_start = '20211201'
+    train_end = '20220228'
+    test_start = '20220301'
+    test_end = '20220331'
 
 
-    covid_estim_date = '20210901'
-    hhs_date = '20210903'
-    owid_date = '20210903'
+    covid_estim_date = '20220731'
+    hhs_date = '20220731'
+    owid_date = '20220731'
 
     df = read_data(data_dir=data_dir,
                    covid_estim_date=covid_estim_date,

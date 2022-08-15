@@ -44,7 +44,8 @@ def read_data(data_dir='./data', covid_estim_date='20210901', hhs_date='20210903
     # Rename to match our compartments
     covid_estim = covid_estim.rename(columns={'infections': 'asymp',
                                               'severe': 'extreme',
-                                              'symptomatic': 'mild'
+                                              'symptomatic': 'mild',
+                                              'r_t': 'Rt',
                                               })
 
     hhs = pd.read_csv(hhs_path)
