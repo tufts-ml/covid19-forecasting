@@ -48,8 +48,7 @@ def read_data(data_dir='./data', covid_estim_date='20210901', hhs_date='20210903
                                               'r_t': 'Rt',
                                               })
 
-    # Interpolate covid estim's weekly estimates
-    covid_estim = covid_estim.interpolate()
+
 
     hhs = pd.read_csv(hhs_path)
     hhs = hhs[hhs['state'] == state_abbrev]
@@ -83,6 +82,9 @@ def read_data(data_dir='./data', covid_estim_date='20210901', hhs_date='20210903
                   left_index=True, right_index=True).merge(
         gen[['general_ward_in']], how='outer', left_index=True, right_index=True
     ).merge(owid[['vax_pct']], how='outer', left_index=True, right_index=True)
+
+    # Interpolate covid estim's weekly estimates
+    df.loc[:, ['asymp', 'extreme', 'mild', 'Rt']] = df[['asymp', 'extreme', 'mild', 'Rt']].interpolate(method='linear')
 
     return df
 
