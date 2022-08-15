@@ -48,6 +48,9 @@ def read_data(data_dir='./data', covid_estim_date='20210901', hhs_date='20210903
                                               'r_t': 'Rt',
                                               })
 
+    # Interpolate covid estim's weekly estimates
+    covid_estim = covid_estim.interpolate()
+
     hhs = pd.read_csv(hhs_path)
     hhs = hhs[hhs['state'] == state_abbrev]
     assert len(hhs) == len(hhs.date.unique())
