@@ -127,11 +127,11 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
         G_count_scale = G_count_before / rescale_G_count_before
         G_in_scale = G_in_before / rescale_G_in_before
 
+        rescale_config_transform = tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()])
+
         I_count_vax_scale = rescale_config_transform.inverse(config.init_count_I.value[0]['loc']) / (rescale_config_transform.inverse(config.init_count_I.value[0]['loc'])+rescale_config_transform.inverse(config.init_count_I.value[1]['loc']))
         G_count_vax_scale = rescale_config_transform.inverse(config.init_count_G.value[0]['loc']) / (rescale_config_transform.inverse(config.init_count_G.value[0]['loc'])+rescale_config_transform.inverse(config.init_count_G.value[1]['loc']))
         G_in_vax_scale = rescale_config_transform.inverse(config.warmup_G.value[0]['intercept']) / (rescale_config_transform.inverse(config.warmup_G.value[0]['intercept'])+rescale_config_transform.inverse(config.warmup_G.value[1]['intercept']))
-
-        rescale_config_transform = tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()])
 
         config.init_count_G.value[0]['loc'] = rescale_config_transform.forward(G_count_before * G_count_vax_scale)
         config.init_count_G.value[1]['loc'] = rescale_config_transform.forward(G_count_before * (1-G_count_vax_scale))
