@@ -154,23 +154,23 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
         config.warmup_G.value[1]['slope'] = rescale_config_transform.forward(0.0)
 
         config.warmup_GR.value[0]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.backward(config.warmup_G.value[0]['intercept']) * 0.9)
+            rescale_config_transform.inverse(config.warmup_G.value[0]['intercept']) * 0.9)
         config.warmup_GR.value[1]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.backward(config.warmup_G.value[1]['intercept']) * 0.9)
+            rescale_config_transform.inverse(config.warmup_G.value[1]['intercept']) * 0.9)
         config.warmup_GR.value[0]['slope'] = rescale_config_transform.forward(0.0)
         config.warmup_GR.value[1]['slope'] = rescale_config_transform.forward(0.0)
 
         config.warmup_I.value[0]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.backward(config.warmup_G.value[0]['intercept']) * 0.1)
+            rescale_config_transform.inverse(config.warmup_G.value[0]['intercept']) * 0.1)
         config.warmup_I.value[1]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.backward(config.warmup_G.value[1]['intercept']) * 0.1)
+            rescale_config_transform.inverse(config.warmup_G.value[1]['intercept']) * 0.1)
         config.warmup_I.value[0]['slope'] = rescale_config_transform.forward(0.0)
         config.warmup_I.value[1]['slope'] = rescale_config_transform.forward(0.0)
 
         config.warmup_IR.value[0]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.backward(config.warmup_I.value[0]['intercept']) * 0.8)
+            rescale_config_transform.inverse(config.warmup_I.value[0]['intercept']) * 0.8)
         config.warmup_IR.value[1]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.backward(config.warmup_I.value[1]['intercept']) * 0.8)
+            rescale_config_transform.inverse(config.warmup_I.value[1]['intercept']) * 0.8)
         config.warmup_IR.value[0]['slope'] = rescale_config_transform.forward(0.0)
         config.warmup_IR.value[1]['slope'] = rescale_config_transform.forward(0.0)
 
