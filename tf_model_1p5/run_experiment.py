@@ -129,50 +129,50 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
 
         rescale_config_transform = tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()])
 
-        I_count_vax_scale = rescale_config_transform.inverse(config.init_count_I.value[0]['loc']) / (rescale_config_transform.inverse(config.init_count_I.value[0]['loc'])+rescale_config_transform.inverse(config.init_count_I.value[1]['loc']))
-        G_count_vax_scale = rescale_config_transform.inverse(config.init_count_G.value[0]['loc']) / (rescale_config_transform.inverse(config.init_count_G.value[0]['loc'])+rescale_config_transform.inverse(config.init_count_G.value[1]['loc']))
-        G_in_vax_scale = rescale_config_transform.inverse(config.warmup_G.value[0]['intercept']) / (rescale_config_transform.inverse(config.warmup_G.value[0]['intercept'])+rescale_config_transform.inverse(config.warmup_G.value[1]['intercept']))
+        I_count_vax_scale = rescale_config_transform.forward(config.init_count_I.value[0]['loc']) / (rescale_config_transform.forward(config.init_count_I.value[0]['loc'])+rescale_config_transform.forward(config.init_count_I.value[1]['loc']))
+        G_count_vax_scale = rescale_config_transform.forward(config.init_count_G.value[0]['loc']) / (rescale_config_transform.forward(config.init_count_G.value[0]['loc'])+rescale_config_transform.forward(config.init_count_G.value[1]['loc']))
+        G_in_vax_scale = rescale_config_transform.forward(config.warmup_G.value[0]['intercept']) / (rescale_config_transform.forward(config.warmup_G.value[0]['intercept'])+rescale_config_transform.forward(config.warmup_G.value[1]['intercept']))
 
-        config.init_count_G.value[0]['loc'] = rescale_config_transform.forward(G_count_before * G_count_vax_scale)
-        config.init_count_G.value[1]['loc'] = rescale_config_transform.forward(G_count_before * (1-G_count_vax_scale))
-        config.init_count_I.value[0]['loc'] = rescale_config_transform.forward(I_count_before * I_count_vax_scale)
-        config.init_count_I.value[1]['loc'] = rescale_config_transform.forward(I_count_before * (1-I_count_vax_scale))
+        config.init_count_G.value[0]['loc'] = rescale_config_transform.inverse(G_count_before * G_count_vax_scale)
+        config.init_count_G.value[1]['loc'] = rescale_config_transform.inverse(G_count_before * (1-G_count_vax_scale))
+        config.init_count_I.value[0]['loc'] = rescale_config_transform.inverse(I_count_before * I_count_vax_scale)
+        config.init_count_I.value[1]['loc'] = rescale_config_transform.inverse(I_count_before * (1-I_count_vax_scale))
 
-        config.warmup_A.value[0]['intercept'] = rescale_config_transform.forward(G_in_before * G_in_vax_scale * 100)
-        config.warmup_A.value[1]['intercept'] = rescale_config_transform.forward(G_in_before * (1-G_in_vax_scale) * 100)
-        config.warmup_A.value[0]['slope'] = rescale_config_transform.forward(0.0)
-        config.warmup_A.value[1]['slope'] = rescale_config_transform.forward(0.0)
+        config.warmup_A.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale * 100)
+        config.warmup_A.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale) * 100)
+        config.warmup_A.value[0]['slope'] = rescale_config_transform.inverse(0.0)
+        config.warmup_A.value[1]['slope'] = rescale_config_transform.inverse(0.0)
 
-        config.warmup_M.value[0]['intercept'] = rescale_config_transform.forward(G_in_before * G_in_vax_scale * 10)
-        config.warmup_M.value[1]['intercept'] = rescale_config_transform.forward(G_in_before * (1-G_in_vax_scale) * 10)
-        config.warmup_M.value[0]['slope'] = rescale_config_transform.forward(0.0)
-        config.warmup_M.value[1]['slope'] = rescale_config_transform.forward(0.0)
+        config.warmup_M.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale * 10)
+        config.warmup_M.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale) * 10)
+        config.warmup_M.value[0]['slope'] = rescale_config_transform.inverse(0.0)
+        config.warmup_M.value[1]['slope'] = rescale_config_transform.inverse(0.0)
 
-        config.warmup_G.value[0]['intercept'] = rescale_config_transform.forward(G_in_before * G_in_vax_scale)
-        config.warmup_G.value[1]['intercept'] = rescale_config_transform.forward(G_in_before * (1-G_in_vax_scale))
-        config.warmup_G.value[0]['slope'] = rescale_config_transform.forward(0.0)
-        config.warmup_G.value[1]['slope'] = rescale_config_transform.forward(0.0)
+        config.warmup_G.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale)
+        config.warmup_G.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale))
+        config.warmup_G.value[0]['slope'] = rescale_config_transform.inverse(0.0)
+        config.warmup_G.value[1]['slope'] = rescale_config_transform.inverse(0.0)
 
-        config.warmup_GR.value[0]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.inverse(config.warmup_G.value[0]['intercept']) * 0.9)
-        config.warmup_GR.value[1]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.inverse(config.warmup_G.value[1]['intercept']) * 0.9)
-        config.warmup_GR.value[0]['slope'] = rescale_config_transform.forward(0.0)
-        config.warmup_GR.value[1]['slope'] = rescale_config_transform.forward(0.0)
+        config.warmup_GR.value[0]['intercept'] = rescale_config_transform.inverse(
+            rescale_config_transform.forward(config.warmup_G.value[0]['intercept']) * 0.9)
+        config.warmup_GR.value[1]['intercept'] = rescale_config_transform.inverse(
+            rescale_config_transform.forward(config.warmup_G.value[1]['intercept']) * 0.9)
+        config.warmup_GR.value[0]['slope'] = rescale_config_transform.inverse(0.0)
+        config.warmup_GR.value[1]['slope'] = rescale_config_transform.inverse(0.0)
 
-        config.warmup_I.value[0]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.inverse(config.warmup_G.value[0]['intercept']) * 0.1)
-        config.warmup_I.value[1]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.inverse(config.warmup_G.value[1]['intercept']) * 0.1)
-        config.warmup_I.value[0]['slope'] = rescale_config_transform.forward(0.0)
-        config.warmup_I.value[1]['slope'] = rescale_config_transform.forward(0.0)
+        config.warmup_I.value[0]['intercept'] = rescale_config_transform.inverse(
+            rescale_config_transform.forward(config.warmup_G.value[0]['intercept']) * 0.1)
+        config.warmup_I.value[1]['intercept'] = rescale_config_transform.inverse(
+            rescale_config_transform.forward(config.warmup_G.value[1]['intercept']) * 0.1)
+        config.warmup_I.value[0]['slope'] = rescale_config_transform.inverse(0.0)
+        config.warmup_I.value[1]['slope'] = rescale_config_transform.inverse(0.0)
 
-        config.warmup_IR.value[0]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.inverse(config.warmup_I.value[0]['intercept']) * 0.8)
-        config.warmup_IR.value[1]['intercept'] = rescale_config_transform.forward(
-            rescale_config_transform.inverse(config.warmup_I.value[1]['intercept']) * 0.8)
-        config.warmup_IR.value[0]['slope'] = rescale_config_transform.forward(0.0)
-        config.warmup_IR.value[1]['slope'] = rescale_config_transform.forward(0.0)
+        config.warmup_IR.value[0]['intercept'] = rescale_config_transform.inverse(
+            rescale_config_transform.forward(config.warmup_I.value[0]['intercept']) * 0.8)
+        config.warmup_IR.value[1]['intercept'] = rescale_config_transform.inverse(
+            rescale_config_transform.forward(config.warmup_I.value[1]['intercept']) * 0.8)
+        config.warmup_IR.value[0]['slope'] = rescale_config_transform.inverse(0.0)
+        config.warmup_IR.value[1]['slope'] = rescale_config_transform.inverse(0.0)
 
 
     elif rescale_state is not None or rescale_state_abbrev is not None:
