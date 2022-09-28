@@ -142,10 +142,10 @@ class CovidModel(tf.keras.Model):
                     rho_I_eff = self.rho_I_samples_constrained[vax_status]
                     rho_D_eff = self.rho_D_samples_constrained[vax_status]
                 elif vax_status == Vax.yes.value:
-                    rho_M_eff = self.rho_M_samples_constrained[vax_status] * self.eff_M_samples_constrained[vax_status]
-                    rho_G_eff = self.rho_G_samples_constrained[vax_status] * self.eff_G_samples_constrained[vax_status]
-                    rho_I_eff = self.rho_I_samples_constrained[vax_status] * self.eff_I_samples_constrained[vax_status]
-                    rho_D_eff = self.rho_D_samples_constrained[vax_status] * self.eff_D_samples_constrained[vax_status]
+                    rho_M_eff = self.rho_M_samples_constrained[Vax.no.value] * self.eff_M_samples_constrained[Vax.yes.value]
+                    rho_G_eff = self.rho_G_samples_constrained[Vax.no.value] * self.eff_G_samples_constrained[Vax.yes.value]
+                    rho_I_eff = self.rho_I_samples_constrained[Vax.no.value] * self.eff_I_samples_constrained[Vax.yes.value]
+                    rho_D_eff = self.rho_D_samples_constrained[Vax.no.value] * self.eff_D_samples_constrained[Vax.yes.value]
                 else:
                     raise ValueError('never happens')
 
