@@ -123,9 +123,12 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
         G_count_before = df.loc[train_start, 'general_ward_count']
         G_in_before = df.loc[train_start, 'general_ward_in']
 
-        I_count_scale = I_count_before / rescale_I_count_before
-        G_count_scale = G_count_before / rescale_G_count_before
-        G_in_scale = G_in_before / rescale_G_in_before
+        rho_M_no_vax = config.rho_M.mean_transform.forward(config.rho_M.value[0]['loc'])
+        rho_G_no_vax = config.rho_G.mean_transform.forward(config.rho_G.value[0]['loc'])
+        eff_M = config.rho_M.mean_transform.forward(config.eff_M.value[1]['loc'])
+        eff_G = config.rho_G.mean_transform.forward(config.eff_G.value[1]['loc'])
+        rho_M_vax = rho_M_no_vax * eff_M
+        rho_G_vax = rho_G_no_vax * eff_G
 
         rescale_config_transform = tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()])
 
@@ -138,13 +141,13 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
         config.init_count_I.value[0]['loc'] = rescale_config_transform.inverse(I_count_before * I_count_vax_scale)
         config.init_count_I.value[1]['loc'] = rescale_config_transform.inverse(I_count_before * (1-I_count_vax_scale))
 
-        config.warmup_A.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale * 100)
-        config.warmup_A.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale) * 100)
+        config.warmup_A.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale  * 1/rho_G_no_vax * 1/rho_M_no_vax)
+        config.warmup_A.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale) * 1/rho_G_vax * 1/rho_M_vax)
         config.warmup_A.value[0]['slope'] = 0.0
         config.warmup_A.value[1]['slope'] = 0.0
 
-        config.warmup_M.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale * 10)
-        config.warmup_M.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale) * 10)
+        config.warmup_M.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale * 1/rho_G_no_vax)
+        config.warmup_M.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale) * 1/rho_G_vax)
         config.warmup_M.value[0]['slope'] = 0.0
         config.warmup_M.value[1]['slope'] = 0.0
 
