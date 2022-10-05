@@ -122,13 +122,17 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
         I_count_before = df.loc[train_start, 'icu_count']
         G_count_before = df.loc[train_start, 'general_ward_count']
         G_in_before = df.loc[train_start, 'general_ward_in']
+        D_in_before = df.loc[train_start, 'deaths_covid']
 
         rho_M_no_vax = config.rho_M.mean_transform.forward(config.rho_M.value[0]['loc'])
         rho_G_no_vax = config.rho_G.mean_transform.forward(config.rho_G.value[0]['loc'])
+        rho_D_no_vax = config.rho_D.mean_transform.forward(config.rho_D.value[0]['loc'])
         eff_M = config.rho_M.mean_transform.forward(config.eff_M.value[1]['loc'])
         eff_G = config.rho_G.mean_transform.forward(config.eff_G.value[1]['loc'])
+        eff_D = config.rho_D.mean_transform.forward(config.eff_D.value[1]['loc'])
         rho_M_vax = rho_M_no_vax * eff_M
         rho_G_vax = rho_G_no_vax * eff_G
+        rho_D_vax = rho_D_no_vax * eff_D
 
         rescale_config_transform = tfp.bijectors.Chain([tfp.bijectors.Scale(100), tfp.bijectors.Softplus()])
 
@@ -164,9 +168,9 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
         config.warmup_GR.value[1]['slope'] = 0.0
 
         config.warmup_I.value[0]['intercept'] = rescale_config_transform.inverse(
-            rescale_config_transform.forward(config.warmup_G.value[0]['intercept']) * 0.1)
+            D_in_before * I_count_vax_scale*1/rho_D_no_vax)
         config.warmup_I.value[1]['intercept'] = rescale_config_transform.inverse(
-            rescale_config_transform.forward(config.warmup_G.value[1]['intercept']) * 0.1)
+            D_in_before * (1-I_count_vax_scale)*1/rho_D_vax)
         config.warmup_I.value[0]['slope'] = 0.0
         config.warmup_I.value[1]['slope'] = 0.0
 
