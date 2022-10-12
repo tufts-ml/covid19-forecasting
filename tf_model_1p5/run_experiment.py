@@ -220,7 +220,7 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
     model.compile(loss=loss, optimizer=optimizer, run_eagerly=True)
     model.fit(x=np.asarray([x_train]),
               y=np.asarray([(y_train['G_count'], y_train['G_in'], y_train['I_count'], y_train['D_in'])]),
-              epochs=1000, batch_size=0,
+              epochs=6000, batch_size=0,
               callbacks=logging_callbacks)
 
 
