@@ -1929,10 +1929,10 @@ class LogPoissonProb(tf.keras.losses.Loss):
                                    fn_output_signature=tf.float32)
 
         # mean over days, mean over draws
-        G_count_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_G_count,axis=1))
-        G_in_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_G_in, axis=1))
-        I_count_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_I_count, axis=1))
-        D_in_log_likelihood = tf.reduce_mean(tf.reduce_mean(log_probs_D_in, axis=1))
+        G_count_log_likelihood = tf.reduce_sum(tf.reduce_mean(log_probs_G_count,axis=1))
+        G_in_log_likelihood = tf.reduce_sum(tf.reduce_mean(log_probs_G_in, axis=1))
+        I_count_log_likelihood = tf.reduce_sum(tf.reduce_mean(log_probs_I_count, axis=1))
+        D_in_log_likelihood = tf.reduce_sum(tf.reduce_mean(log_probs_D_in, axis=1))
 
         if True:
             print(f'G count: {G_count_log_likelihood}')
