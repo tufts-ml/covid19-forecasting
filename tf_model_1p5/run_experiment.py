@@ -146,10 +146,10 @@ def run_model(model_config_path=None, learning_rate=None, fix_variance=None, dat
         config.init_count_I.value[1]['loc'] = rescale_config_transform.inverse(I_count_before * (1-I_count_vax_scale))
 
         # Update priors, priors are real valued
-        config.init_count_G.prior[0]['intercept'] = G_count_before * G_count_vax_scale
-        config.init_count_G.prior[1]['intercept'] = G_count_before * (1-G_count_vax_scale)
-        config.init_count_I.prior[0]['intercept'] = I_count_before * I_count_vax_scale
-        config.init_count_I.prior[1]['intercept'] = I_count_before * (1 - I_count_vax_scale)
+        config.init_count_G.prior[0]['loc'] = G_count_before * G_count_vax_scale
+        config.init_count_G.prior[1]['loc'] = G_count_before * (1-G_count_vax_scale)
+        config.init_count_I.prior[0]['loc'] = I_count_before * I_count_vax_scale
+        config.init_count_I.prior[1]['loc'] = I_count_before * (1 - I_count_vax_scale)
 
         config.warmup_A.value[0]['intercept'] = rescale_config_transform.inverse(G_in_before * G_in_vax_scale  * 1/rho_G_no_vax * 1/rho_M_no_vax)
         config.warmup_A.value[1]['intercept'] = rescale_config_transform.inverse(G_in_before * (1-G_in_vax_scale) * 1/rho_G_vax * 1/rho_M_vax)
